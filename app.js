@@ -14,3 +14,44 @@ document.querySelector("#themeToggle").addEventListener("click",function(){const
 const saved=localStorage.getItem("aurore-memory-theme");if(saved){document.documentElement.dataset.theme=saved;document.querySelector("#themeToggle").textContent=saved==="light"?"☾":"☼"}
 document.querySelector("#searchBtn").addEventListener("click",function(){const q=document.querySelector("#searchInput").value.trim();toast(q?"Recherche : "+q:"Choisis une notion à mémoriser.")});
 document.querySelector("#searchInput").addEventListener("keydown",function(e){if(e.key==="Enter")document.querySelector("#searchBtn").click()});
+
+/* Palette Aurore — même logique de mémorisation locale que le mode clair/sombre. */
+const colorThemeNames=[
+  "violet","rouge","vert","bleu","orange","rose","indigo","emeraude","lime",
+  "corail","bordeaux","azur","petrole-cuivre","nuit-peche","prune-rouge",
+  "terre-orange","rose-sable","sarcelle-creme"
+];
+const colorToggle=document.querySelector("#colorThemeToggle");
+const colorPanel=document.querySelector("#colorThemePanel");
+
+function applyColorTheme(name){
+  const value=colorThemeNames.includes(name)?name:"violet";
+  document.documentElement.dataset.colorTheme=value;
+  localStorage.setItem("aurore-memory-color-theme",value);
+  document.querySelectorAll(".color-theme-choice").forEach(function(b){
+    b.setAttribute("aria-pressed",b.dataset.colorChoice===value?"true":"false");
+  });
+}
+
+if(colorToggle&&colorPanel){
+  colorToggle.addEventListener("click",function(e){
+    e.stopPropagation();
+    const open=colorToggle.getAttribute("aria-expanded")==="true";
+    colorToggle.setAttribute("aria-expanded",open?"false":"true");
+    colorPanel.hidden=open;
+  });
+  colorPanel.addEventListener("click",function(e){
+    const choice=e.target.closest("[data-color-choice]");
+    if(!choice)return;
+    applyColorTheme(choice.dataset.colorChoice);
+    colorPanel.hidden=true;
+    colorToggle.setAttribute("aria-expanded","false");
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest(".color-theme-wrap")){
+      colorPanel.hidden=true;
+      colorToggle.setAttribute("aria-expanded","false");
+    }
+  });
+}
+applyColorTheme(localStorage.getItem("aurore-memory-color-theme")||"violet");
