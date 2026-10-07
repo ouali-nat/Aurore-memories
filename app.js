@@ -119,7 +119,9 @@ applyColorTheme(localStorage.getItem("aurore-memory-color-theme")||"violet");
       });
     }
     let splitTimerA=0,splitTimerB=0;
-    function apply(){const s=shapes[index];hero.dataset.shape=s.name;hero.style.setProperty("--hero-clip","polygon("+s.gen()+")");index=(index+1)%shapes.length}
+    /* Correctif : le CSS enveloppait déjà var(--hero-clip) dans polygon(), ce qui
+       donnait polygon(polygon(...)) = invalide. On applique maintenant le clip-path complet en ligne. */
+    function apply(){const s=shapes[index];const clip="polygon("+s.gen()+")";hero.dataset.shape=s.name;hero.style.setProperty("--hero-clip",clip);hero.style.clipPath=clip;index=(index+1)%shapes.length}
     function splitAndMerge(){
       if(reduce.matches||document.hidden||!motif)return;
       hero.classList.add("is-split");
