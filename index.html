@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0912">
+<meta name="description" content="Aurore — Section Mémoire, un espace pour apprendre, mémoriser et réviser efficacement.">
+<title>Aurore — Section Mémoire</title><link rel="stylesheet" href="style.css">
+</head>
+<body><div class="aurora-bg" aria-hidden="true"></div>
+<header class="topbar"><div class="wrap topbar-inner">
+<a class="brand" href="#"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Section Mémoire</small></span></a>
+<nav class="top-actions"><button class="nav-link active" data-view="home">Accueil</button><button class="nav-link" data-view="library">Ma mémoire</button><button class="nav-link" data-view="session">Ma séance</button><button class="theme-btn" id="themeToggle">☼</button></nav>
+</div></header>
+<main class="wrap">
+<section class="hero"><div class="hero-glow glow-one"></div><div class="hero-glow glow-two"></div><div class="hero-content">
+<div class="hero-rule"></div><p class="eyebrow">AURORE · APPRENDRE AUTREMENT</p>
+<h1>Transforme ce que tu lis en <span>connaissances durables.</span></h1>
+<p class="hero-sub">Mémorise tes cours, formules et notions avec des méthodes actives adaptées à chaque matière.</p>
+<div class="search"><span class="search-icon">⌕</span><input id="searchInput" type="search" placeholder="Que veux-tu mémoriser aujourd'hui ?"><button id="searchBtn">Explorer</button></div>
+<div class="quick-tags"><button data-method="Rappel actif">Rappel actif</button><button data-method="Texte à trous">Texte à trous</button><button data-method="Premières lettres">Premières lettres</button><button data-method="QCM">QCM</button></div>
+</div></section>
+<section class="intro-grid">
+<article class="intro-card"><span class="intro-icon">🧠</span><h3>Rappelle</h3><p>Fais travailler ta mémoire plutôt que de relire passivement.</p></article>
+<article class="intro-card"><span class="intro-icon">↗</span><h3>Progresse</h3><p>Revois chaque notion au bon moment grâce à la répétition espacée.</p></article>
+<article class="intro-card"><span class="intro-icon">✦</span><h3>Comprends</h3><p>Associe mémorisation, compréhension et application dans tes cours.</p></article>
+</section>
+<section id="homeView" class="view active">
+<div class="section-head"><div><p class="kicker">COMMENCER</p><h2>Choisis ta façon de mémoriser</h2></div><span class="section-note">Des méthodes actives, pas une simple fiche de révision.</span></div>
+<div class="method-grid" id="methodGrid"></div>
+<div class="section-head lower"><div><p class="kicker">TON ESPACE</p><h2>Ma mémoire</h2></div><button class="outline-btn" data-view="library">Voir tout</button></div>
+<div class="memory-preview"><div><span class="empty-symbol">✦</span><div><strong>Ton espace de mémorisation est prêt.</strong><p>Ajoute bientôt ton premier cours, paragraphe ou formule depuis Aurore.</p></div><button class="primary-btn" data-view="library">Créer une mémoire</button></div></div>
+</section>
+<section id="libraryView" class="view"><div class="page-title"><p class="kicker">PERSONNEL</p><h2>Ma mémoire</h2><p>Retrouve ici les notions que tu veux apprendre durablement.</p></div>
+<div class="empty-panel"><span>🧠</span><h3>Aucune mémoire pour le moment</h3><p>Cette première interface prépare ton espace. La connexion et l'enregistrement Supabase seront branchés ensuite.</p><button class="primary-btn" data-method="Rappel actif">Commencer une mémoire</button></div></section>
+<section id="sessionView" class="view"><div class="page-title"><p class="kicker">ENTRAÎNEMENT</p><h2>Ma séance de mémorisation</h2><p>Une séance regroupera plusieurs blocs et méthodes sans modifier le document source.</p></div>
+<div class="session-layout"><div class="session-main"><div class="session-card"><span class="session-number">01</span><h3>Ta séance est vide</h3><p>Ajoute des éléments depuis ta mémoire pour commencer un entraînement actif.</p><button class="primary-btn" data-view="library">Ouvrir ma mémoire</button></div></div><aside class="session-side"><strong>Progression</strong><div class="progress"><span></span></div><p>0 élément révisé</p></aside></div></section>
+</main><footer><div class="wrap"><strong>Aurore</strong><span> · Section Mémoire</span><small>Une nouvelle façon de faire vivre les connaissances.</small></div></footer>
+<div class="toast" id="toast" role="status"></div><script src="app.js"></script></body></html>
