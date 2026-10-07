@@ -137,3 +137,89 @@ html[data-theme="light"][data-color-theme]{--theme-soft:color-mix(in srgb,var(--
   .color-theme-choice{padding:8px 5px}
   .color-theme-choice b{font-size:.54rem}
 }
+
+
+/* ==========================================================================
+   AURORE MÉMOIRE — copie ciblée du langage visuel Archives
+   Formes du héros + catalogue de blocs. Couche purement visuelle.
+   ========================================================================== */
+:root{--fx-s:12px;--fx-m:22px;--fx-l:32px;--fx-xl:46px;}
+@media(max-width:720px){:root{--fx-s:10px;--fx-m:18px;--fx-l:26px;--fx-xl:34px;}}
+
+/* Héros : même motif géométrique et mêmes halos que Section Archives. */
+.hero{
+  min-height:430px!important;
+  display:flex!important;
+  align-items:center!important;
+  padding:64px 54px 58px!important;
+  border-radius:var(--fx-m) calc(var(--fx-xl)*1.4) var(--fx-m) calc(var(--fx-xl)*1.4)!important;
+  corner-shape:round!important;
+}
+.hero-motif{
+  position:absolute;inset:0;opacity:.10;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M30 0 L90 0 L120 52 L90 104 L30 104 L0 52 Z' fill='none' stroke='%23ffffff' stroke-width='0.7'/%3E%3C/svg%3E");
+  background-size:150px 130px;
+}
+.hero-glow{
+  width:340px!important;height:340px!important;border-radius:50%!important;
+  filter:blur(70px)!important;opacity:.24!important;
+}
+.glow-one{background:var(--theme-primary)!important;top:-120px!important;right:-60px!important;}
+.glow-two{background:var(--theme-secondary)!important;bottom:-140px!important;left:10%!important;}
+.hero-content{max-width:790px!important;}
+.hero-rule{width:56px!important;height:4px!important;margin-bottom:20px!important;}
+.hero h1{font-size:clamp(2.6rem,6vw,5.2rem)!important;max-width:850px!important;}
+.hero-sub{font-size:1.04rem!important;max-width:670px!important;margin-top:18px!important;}
+
+/* Même famille de formes que Archives pour les blocs de présentation. */
+.intro-card:nth-child(3n+1){
+  border-radius:var(--fx-l) var(--fx-s) var(--fx-l) var(--fx-s)!important;
+  corner-shape:round!important;
+}
+.intro-card:nth-child(3n+2){
+  border-radius:var(--fx-s) var(--fx-l) var(--fx-s) var(--fx-l)!important;
+  corner-shape:round!important;
+}
+.intro-card:nth-child(3n){
+  border-radius:var(--fx-l) var(--fx-l) var(--fx-s) var(--fx-l)!important;
+  corner-shape:round!important;
+}
+
+/* Blocs de méthodes : cycle de formes type dossiers/cartes Archives. */
+.method-card:nth-child(4n+1){
+  border-radius:var(--fx-l) var(--fx-s) var(--fx-l) var(--fx-s)!important;
+  corner-shape:round!important;
+}
+.method-card:nth-child(4n+2){
+  border-radius:var(--fx-m) var(--fx-xl) var(--fx-m) var(--fx-xl)!important;
+  corner-shape:round!important;
+}
+.method-card:nth-child(4n+3){
+  border-radius:var(--fx-xl) var(--fx-s) var(--fx-l) var(--fx-s)!important;
+  corner-shape:round!important;
+}
+.method-card:nth-child(4n){
+  border-radius:var(--fx-s) var(--fx-l) var(--fx-s) var(--fx-xl)!important;
+  corner-shape:round!important;
+}
+
+/* Les autres surfaces reprennent les squircles/scoops d'Archives. */
+.memory-preview,.session-card,.session-side,.empty-panel{
+  border-radius:var(--aurore-shape-squircle)!important;
+  corner-shape:squircle;
+}
+.search,.outline-btn,.primary-btn{
+  border-radius:14px!important;
+  corner-shape:squircle;
+}
+.quick-tags button,.profile-theme-current{
+  border-radius:999px!important;
+  corner-shape:round;
+}
+
+@media(max-width:640px){
+  .hero{min-height:390px!important;padding:48px 25px 42px!important;border-radius:var(--fx-m) calc(var(--fx-xl)*1.4) var(--fx-m) calc(var(--fx-xl)*1.4)!important;}
+  .intro-card:nth-child(n),.method-card:nth-child(n){
+    border-radius:var(--fx-m) var(--fx-s) var(--fx-m) var(--fx-s)!important;
+  }
+}
