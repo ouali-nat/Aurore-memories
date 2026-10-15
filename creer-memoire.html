@@ -34,20 +34,57 @@
     <p>Donne un nom à ton contenu, puis colle ton cours ou saisis tes cartes.</p>
   </section>
   <section class="page-content">
-    <form class="form-panel" id="memoryCreateForm">
+    <form class="form-panel card-builder" id="memoryCreateForm">
       <label class="field-label" for="memoryTitle">Nom de la mémoire</label>
       <input class="text-field" id="memoryTitle" name="title" placeholder="Ex. : Biologie — la cellule" maxlength="100" required autocomplete="off">
-      <div class="field-label-row"><label class="field-label" for="memoryText">Contenu à mémoriser</label><span class="field-hint">Tu peux modifier les cartes plus tard en créant une nouvelle mémoire.</span></div>
-      <textarea class="text-area" id="memoryText" name="content" rows="10" placeholder="Pour créer des cartes précises, écris une par ligne :&#10;Qu’est-ce qu’une cellule ? :: L’unité de base du vivant.&#10;Où se trouve l’ADN ? :: Principalement dans le noyau.&#10;&#10;Tu peux aussi coller un cours : Aurore préparera des cartes à trous à partir de phrases suffisamment longues." required></textarea>
-      <div class="form-help"><strong>Format conseillé :</strong> une question suivie de <code>::</code> puis de sa réponse. Pour un cours en texte continu, Aurore extrait automatiquement un terme-clé des phrases assez longues.</div>
+
+      <div class="builder-intro">
+        <span class="builder-step">1</span>
+        <div><strong>Construis tes cartes</strong><p>Écris toi-même les questions et les réponses, ou importe un cours pour préparer les cartes.</p></div>
+      </div>
+
+      <div class="create-mode-switch" role="tablist" aria-label="Mode de création">
+        <button class="create-mode-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="manualEditor" data-create-mode="manual">Créer carte par carte</button>
+        <button class="create-mode-tab" type="button" role="tab" aria-selected="false" aria-controls="bulkEditor" data-create-mode="bulk">Coller ou importer un cours</button>
+      </div>
+
+      <div id="manualEditor" class="create-editor" data-editor="manual">
+        <div class="editor-heading"><div><h2>Mes cartes</h2><p>Chaque ligne devient une vraie carte question / réponse.</p></div><span class="card-counter" id="draftCardCount">2 cartes</span></div>
+        <div id="draftCards" class="draft-cards">
+          <article class="draft-card" data-draft-card>
+            <div class="draft-card-top"><strong>Carte 1</strong><button class="remove-draft-card" type="button" data-remove-card aria-label="Supprimer cette carte" title="Supprimer cette carte">×</button></div>
+            <label class="field-label" for="draft-q-1">Question</label><textarea class="text-area card-question" id="draft-q-1" rows="2" placeholder="Ex. : Qu’est-ce qu’une cellule ?"></textarea>
+            <label class="field-label answer-label" for="draft-a-1">Réponse</label><textarea class="text-area card-answer" id="draft-a-1" rows="2" placeholder="Ex. : L’unité de base du vivant."></textarea>
+          </article>
+          <article class="draft-card" data-draft-card>
+            <div class="draft-card-top"><strong>Carte 2</strong><button class="remove-draft-card" type="button" data-remove-card aria-label="Supprimer cette carte" title="Supprimer cette carte">×</button></div>
+            <label class="field-label" for="draft-q-2">Question</label><textarea class="text-area card-question" id="draft-q-2" rows="2" placeholder="Une autre question…"></textarea>
+            <label class="field-label answer-label" for="draft-a-2">Réponse</label><textarea class="text-area card-answer" id="draft-a-2" rows="2" placeholder="La réponse correspondante…"></textarea>
+          </article>
+        </div>
+        <button class="secondary-btn add-draft-card" id="addDraftCard" type="button">＋ Ajouter une carte</button>
+        <p class="form-help">Tu peux laisser une carte entièrement vide : elle sera ignorée. Une question sans réponse, ou l’inverse, sera signalée avant l’enregistrement.</p>
+      </div>
+
+      <div id="bulkEditor" class="create-editor" data-editor="bulk" hidden>
+        <label class="field-label" for="memoryText">Cours ou questions-réponses</label>
+        <textarea class="text-area bulk-text" id="memoryText" name="content" rows="9" placeholder="Qu’est-ce qu’une cellule ? :: L’unité de base du vivant.&#10;Où se trouve l’ADN ? :: Principalement dans le noyau.&#10;&#10;Tu peux aussi coller un cours complet : Aurore préparera des cartes à trous à partir des phrases."></textarea>
+        <div class="form-help"><strong>Formats acceptés :</strong> une carte par ligne avec <code>question :: réponse</code>, deux colonnes séparées par une tabulation, ou un cours rédigé. Les phrases d’un cours seront transformées en questions à trous que tu pourras vérifier avant d’enregistrer.</div>
+        <div class="import-row"><label class="secondary-btn file-button">Importer un fichier texte / CSV<input id="memoryFile" type="file" accept=".txt,.csv,.tsv,.md" hidden></label><button class="secondary-btn" id="prepareBulkCards" type="button">Préparer les cartes</button></div>
+        <div id="bulkPreview" class="bulk-preview" aria-live="polite"></div>
+      </div>
+
+      <div class="builder-bottom">
+        <div class="builder-step">2</div>
+        <div class="builder-bottom-copy"><strong>Enregistre ta mémoire</strong><p>Les cartes seront enregistrées sur cet appareil. Tu pourras les réviser ensuite.</p></div>
+      </div>
       <div class="form-actions">
-        <button class="primary-btn" type="submit">Créer la mémoire</button>
-        <label class="secondary-btn file-button">Importer un fichier texte<input id="memoryFile" type="file" accept=".txt,.csv,.tsv" hidden></label>
+        <button class="primary-btn" type="submit">Enregistrer les cartes</button>
         <a class="text-link" href="mes-memoires.html">Annuler</a>
       </div>
       <p class="form-feedback" id="createFeedback" role="status" aria-live="polite"></p>
     </form>
-  </section></main>
+  </section>
   <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore <span>· Section Mémoire</span></strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
