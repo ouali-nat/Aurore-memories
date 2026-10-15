@@ -67,6 +67,21 @@
       </div>
 
       <div id="bulkEditor" class="create-editor" data-editor="bulk" hidden>
+        <div class="segmentation-panel">
+          <label class="segment-toggle" for="useSegments"><input id="useSegments" type="checkbox"> <span><strong>Découpage gratuit en petits blocs</strong><small>Découpe les textes longs en parties faciles à apprendre. Aucun abonnement requis.</small></span></label>
+          <div class="segment-settings" id="segmentSettings">
+            <label class="field-label" for="segmentMode">Organisation des blocs</label>
+            <select class="text-field" id="segmentMode">
+              <option value="individual">Individuel — une partie par carte</option>
+              <option value="range">Plage — regrouper plusieurs parties</option>
+            </select>
+            <label class="field-label" for="segmentSize">Parties par carte en mode Plage</label>
+            <select class="text-field" id="segmentSize">
+              <option value="2">2 parties</option><option value="3">3 parties</option><option value="4">4 parties</option><option value="5">5 parties</option>
+            </select>
+            <p class="segment-help">Le mode Individuel crée une carte par partie. Le mode Plage rassemble les parties suivantes par groupes ; tout le contenu reste modifiable avant l’enregistrement.</p>
+          </div>
+        </div>
         <label class="field-label" for="memoryText">Cours ou questions-réponses</label>
         <textarea class="text-area bulk-text" id="memoryText" name="content" rows="9" placeholder="Qu’est-ce qu’une cellule ? :: L’unité de base du vivant.&#10;Où se trouve l’ADN ? :: Principalement dans le noyau.&#10;&#10;Tu peux aussi coller un cours complet : Aurore préparera des cartes à trous à partir des phrases."></textarea>
         <div class="form-help"><strong>Formats acceptés :</strong> une carte par ligne avec <code>question :: réponse</code>, deux colonnes séparées par une tabulation, ou un cours rédigé. Les phrases d’un cours seront transformées en questions à trous que tu pourras vérifier avant d’enregistrer.</div>
