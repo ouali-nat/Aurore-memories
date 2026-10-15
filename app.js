@@ -12,8 +12,9 @@ function showView(name){document.querySelectorAll(".view").forEach(function(v){v
 document.addEventListener("click",function(e){const view=e.target.closest("[data-view]");if(view){showView(view.dataset.view);return}const method=e.target.closest("[data-method]");if(method){toast("Méthode « "+method.dataset.method+" » — prête pour la prochaine étape.");return}});
 document.querySelector("#themeToggle").addEventListener("click",function(){const html=document.documentElement,light=html.dataset.theme==="light";html.dataset.theme=light?"dark":"light";document.querySelector("#themeToggle").textContent=light?"☼":"☾";localStorage.setItem("aurore-memory-theme",html.dataset.theme)});
 const saved=localStorage.getItem("aurore-memory-theme");if(saved){document.documentElement.dataset.theme=saved;document.querySelector("#themeToggle").textContent=saved==="light"?"☾":"☼"}
-document.querySelector("#searchBtn").addEventListener("click",function(){const q=document.querySelector("#searchInput").value.trim();toast(q?"Recherche : "+q:"Choisis une notion à mémoriser.")});
-document.querySelector("#searchInput").addEventListener("keydown",function(e){if(e.key==="Enter")document.querySelector("#searchBtn").click()});
+function runMemorySearch(){const q=document.querySelector("#searchInput").value.trim();if(!q){toast("Écris un mot, une formule ou un titre à retrouver.");return}window.auroreMemorySearch=q;showView("library");if(typeof window.auroreMemoryRender==="function")window.auroreMemoryRender();const status=document.querySelector("#libraryView .mm-search-status");if(status){status.setAttribute("tabindex","-1");status.focus({preventScroll:true})}}
+document.querySelector("#searchBtn").addEventListener("click",runMemorySearch);
+document.querySelector("#searchInput").addEventListener("keydown",function(e){if(e.key==="Enter")runMemorySearch()});
 
 /* Palette Aurore — même logique de mémorisation locale que le mode clair/sombre. */
 const colorThemeNames=[
