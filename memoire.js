@@ -4,7 +4,7 @@
   var STORAGE_KEY = "aurore-memory-cards-v1";
   var SELECTED_DECK_KEY = "aurore-memory-selected-deck";
   var DAY_MS = 86400000;
-  var MODES = ["Rappel actif", "Texte à trous", "Premières lettres", "QCM", "Association", "Palais mental"];
+  var MODES = ["Toucher pour révéler", "Curseur", "Écouter", "Première lettre", "Trous", "Réordonner", "Taper", "Choix multiple", "Parler"];
   var $ = function (selector, scope) { return (scope || document).querySelector(selector); };
   var today = function () { return Math.floor(Date.now() / DAY_MS); };
 
@@ -24,7 +24,9 @@
   if (!state.log || typeof state.log !== "object") state.log = {};
   if (!Array.isArray(state.performance)) state.performance = [];
   if (["courbe", "diagramme", "batonnets"].indexOf(state.chartType) < 0) state.chartType = "courbe";
-  if (MODES.indexOf(state.mode) < 0) state.mode = "Rappel actif";
+  var legacyModes = { "Rappel actif": "Toucher pour révéler", "Texte à trous": "Trous", "Premières lettres": "Première lettre", "QCM": "Choix multiple", "Association": "Toucher pour révéler", "Palais mental": "Toucher pour révéler" };
+  if (legacyModes[state.mode]) state.mode = legacyModes[state.mode];
+  if (MODES.indexOf(state.mode) < 0) state.mode = "Toucher pour révéler";
   state.cards = state.cards.map(function (card, index) {
     card = card && typeof card === "object" ? card : {};
     if (card.id == null) card.id = Date.now() + index;
@@ -531,7 +533,12 @@
     session.shown = false;
     session.picked = -1;
     session.qcmGraded = false;
-    session.options = session.current && state.mode === "QCM" ? prepareOptions(session.current) : null;
+    session.options = session.current && state.mode === "Choix multiple" ? prepareOptions(session.current) : null;
+    session.typedValue = "";
+    session.typedCorrect = false;
+    session.confidence = 50;
+    session.shuffledWords = session.current ? session.current.back.trim().split(/\s+/).filter(Boolean).sort(function () { return Math.random() - 0.5; }) : [];
+    session.reorderUsed = [];
     renderReview();
   }
 
@@ -578,6 +585,21 @@
       '<div class="chart-footer"><span><strong>' + remembered + '</strong> réponses bien retrouvées</span><span><strong>' + missed + '</strong> à revoir</span></div></section>';
   }
 
+  function normalizeAnswer(value) {
+    return String(value || "").toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ");
+  }
+
+  function gradeTypedAnswer(value) {
+    if (!session.current || session.shown) return;
+    session.typedValue = String(value || "").trim();
+    session.typedCorrect = normalizeAnswer(session.typedValue) === normalizeAnswer(session.current.back);
+    session.shown = true;
+    registerReview(session.current, session.typedCorrect ? 2 : 0);
+    session.reviewed += 1;
+    if (!session.typedCorrect) session.queue.push(session.current);
+    renderReview();
+  }
+
   function renderReview() {
     var root = $("#reviewApp");
     if (!root) return;
@@ -585,9 +607,16 @@
     var progress = session.initialCount ? Math.min(100, Math.round(session.reviewed / session.initialCount * 100)) : 0;
     var html = '<div class="review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir au total</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
     html += renderProgressChart();
-    html += '<div class="mode-area"><p class="mode-label">Méthode de révision</p><div class="mode-list">' + MODES.map(function (mode) {
-      return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
-    }).join("") + '</div></div>';
+    html += '<div class="mode-area"><p class="mode-label">Choisis librement ta méthode</p>' +
+      '<div class="method-group"><strong>Se familiariser</strong><div class="mode-list">' + ["Toucher pour révéler", "Curseur", "Écouter"].map(function (mode) {
+        return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
+      }).join("") + '</div></div>' +
+      '<div class="method-group"><strong>Consolider</strong><div class="mode-list">' + ["Première lettre", "Trous", "Réordonner"].map(function (mode) {
+        return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
+      }).join("") + '</div></div>' +
+      '<div class="method-group"><strong>Évaluer</strong><div class="mode-list">' + ["Taper", "Choix multiple", "Parler"].map(function (mode) {
+        return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
+      }).join("") + '</div></div></div>';
     html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
 
     if (!state.cards.length) {
@@ -601,13 +630,29 @@
       html += '<article class="study-card">';
       if (session.requestedDeck) html += '<p class="study-deck">' + escapeHtml(session.requestedDeck) + '</p>';
       html += '<p class="study-prompt">RETROUVE LA RÉPONSE DE MÉMOIRE</p><h2 class="study-question">' + escapeHtml(card.front).replace(/\n/g, "<br>") + '</h2>';
-      if (state.mode === "Texte à trous") html += '<p class="study-tip">Essaie de compléter mentalement la phrase avant d’afficher la réponse.</p>';
+      if (state.mode === "Trous") html += '<p class="study-tip">Essaie de compléter mentalement la phrase avant d’afficher la réponse.</p>';
       if (state.mode === "Association") html += '<p class="study-tip">Cherche un lien, une image ou une histoire qui relie la question à la réponse.</p>';
       if (state.mode === "Palais mental") html += '<p class="study-tip">Associe cette notion à un lieu familier ou à un objet précis dans ton imagination.</p>';
-      if (state.mode === "Premières lettres" && !session.shown) {
+      if (state.mode === "Première lettre" && !session.shown) {
         html += '<p class="letter-hint">' + escapeHtml(card.back.split(/\s+/).map(function (word) { return word ? word.charAt(0) + "…" : ""; }).join(" ")) + '</p>';
       }
-      if (session.options && state.mode === "QCM") {
+      if (state.mode === "Écouter") html += '<button type="button" class="secondary-btn listen-question-btn" data-act="speak-question">▶ Écouter la question</button>';
+      if (state.mode === "Curseur" && !session.shown) html += '<div class="confidence-control"><label for="confidenceSlider">À quel point penses-tu connaître la réponse ? <strong id="confidenceValue">' + session.confidence + '%</strong></label><input id="confidenceSlider" type="range" min="0" max="100" step="5" value="' + session.confidence + '"><div class="confidence-labels"><span>Pas du tout</span><span>Très bien</span></div></div>';
+      if (state.mode === "Réordonner" && !session.shown) {
+        html += '<p class="study-tip">Touchez les mots dans le bon ordre pour reconstituer la réponse.</p><div class="reorder-bank">' + session.shuffledWords.map(function (word, index) {
+          return '<button type="button" class="answer-option reorder-word' + (session.reorderUsed.indexOf(index) >= 0 ? ' is-used' : '') + '" data-act="append-word" data-word-index="' + index + '"' + (session.reorderUsed.indexOf(index) >= 0 ? ' disabled' : '') + '>' + escapeHtml(word) + '</button>';
+        }).join("") + '</div><div class="study-answer reorder-answer">' + escapeHtml(session.reorderUsed.map(function (index) { return session.shuffledWords[index]; }).join(" ")) + '</div><div class="reorder-actions"><button class="secondary-btn" type="button" data-act="reset-reorder">Effacer</button><button class="primary-btn" type="button" data-act="check-reorder">Vérifier l’ordre</button></div>';
+      } else if (state.mode === "Réordonner" && session.shown) {
+        html += '<p class="answer-feedback ' + (session.typedCorrect ? 'feedback-good' : 'feedback-bad') + '">' + (session.typedCorrect ? 'Bonne réponse, les mots sont dans le bon ordre.' : 'L’ordre ne correspond pas encore à la réponse attendue.') + '</p><div class="study-answer">' + escapeHtml(card.back) + '</div><button class="primary-btn next-card-btn" type="button" data-act="next-card">Continuer</button>';
+      } else if (state.mode === "Taper" && !session.shown) {
+        html += '<label class="field-label" for="typedAnswer">Ta réponse</label><textarea class="text-area typed-answer" id="typedAnswer" rows="3" placeholder="Écris ce dont tu te souviens…">' + escapeHtml(session.typedValue) + '</textarea><button class="primary-btn next-card-btn" type="button" data-act="check-typed">Vérifier ma réponse</button>';
+      } else if (state.mode === "Taper" && session.shown) {
+        html += '<p class="answer-feedback ' + (session.typedCorrect ? 'feedback-good' : 'feedback-bad') + '">' + (session.typedCorrect ? 'Bonne réponse !' : 'Compare ta réponse avec la réponse attendue.') + '</p><div class="study-answer">' + escapeHtml(card.back) + '</div><button class="primary-btn next-card-btn" type="button" data-act="next-card">Continuer</button>';
+      } else if (state.mode === "Parler" && !session.shown) {
+        html += '<p class="study-tip">Prononce ta réponse à voix haute. La reconnaissance vocale dépend du navigateur et de la langue disponible.</p><button class="primary-btn next-card-btn" type="button" data-act="start-speaking">🎙 Répondre à voix haute</button><label class="field-label" for="spokenFallback">Ou écris ta réponse</label><textarea class="text-area typed-answer" id="spokenFallback" rows="2" placeholder="Réponse de secours si la voix n’est pas disponible…">' + escapeHtml(session.typedValue) + '</textarea><button class="secondary-btn next-card-btn" type="button" data-act="check-spoken">Vérifier le texte</button>';
+      } else if (state.mode === "Parler" && session.shown) {
+        html += '<p class="answer-feedback ' + (session.typedCorrect ? 'feedback-good' : 'feedback-bad') + '">' + (session.typedCorrect ? 'Réponse reconnue comme correcte.' : 'La réponse reconnue diffère de la réponse attendue.') + '</p><div class="study-answer">' + escapeHtml(card.back) + '</div><button class="primary-btn next-card-btn" type="button" data-act="next-card">Continuer</button>';
+      } else if (session.options && state.mode === "Choix multiple") {
         html += '<div class="answer-options">' + session.options.map(function (option, index) {
           var classes = "answer-option";
           if (session.shown && option === card.back) classes += " is-correct";
@@ -655,6 +700,14 @@
     if (event.target && event.target.id === "memorySearch") renderMemoryList();
   });
 
+  document.addEventListener("input", function (event) {
+    if (event.target && event.target.id === "confidenceSlider") {
+      session.confidence = Number(event.target.value) || 0;
+      var value = $("#confidenceValue");
+      if (value) value.textContent = session.confidence + "%";
+    }
+  });
+
   document.addEventListener("change", function (event) {
     if (event.target && event.target.id === "progressChartType") {
       state.chartType = ["courbe", "diagramme", "batonnets"].indexOf(event.target.value) >= 0 ? event.target.value : "courbe";
@@ -689,9 +742,53 @@
         session.shown = false;
         session.picked = -1;
         session.qcmGraded = false;
-        session.options = state.mode === "QCM" ? prepareOptions(session.current) : null;
+        session.options = state.mode === "Choix multiple" ? prepareOptions(session.current) : null;
+        session.typedValue = "";
+        session.reorderUsed = [];
+        session.shuffledWords = session.current.back.trim().split(/\s+/).filter(Boolean).sort(function () { return Math.random() - 0.5; });
       }
       renderReview();
+    } else if (action === "speak-question") {
+      if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+        notify("La lecture vocale n’est pas disponible dans ce navigateur.");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      var utterance = new SpeechSynthesisUtterance(session.current ? session.current.front : "");
+      utterance.lang = "fr-FR";
+      window.speechSynthesis.speak(utterance);
+    } else if (action === "append-word") {
+      if (!session.current || session.shown) return;
+      var wordIndex = Number(button.dataset.wordIndex);
+      if (session.shuffledWords && wordIndex >= 0 && wordIndex < session.shuffledWords.length && session.reorderUsed.indexOf(wordIndex) < 0) {
+        session.reorderUsed.push(wordIndex);
+        renderReview();
+      }
+    } else if (action === "reset-reorder") {
+      session.reorderUsed = [];
+      renderReview();
+    } else if (action === "check-reorder") {
+      gradeTypedAnswer((session.reorderUsed || []).map(function (index) { return session.shuffledWords[index]; }).join(" "));
+    } else if (action === "check-typed") {
+      gradeTypedAnswer($("#typedAnswer") ? $("#typedAnswer").value : "");
+    } else if (action === "check-spoken") {
+      gradeTypedAnswer($("#spokenFallback") ? $("#spokenFallback").value : "");
+    } else if (action === "start-speaking") {
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        notify("La reconnaissance vocale n’est pas disponible ici. Utilise le champ de réponse écrite.");
+        return;
+      }
+      var recognition = new SpeechRecognition();
+      recognition.lang = "fr-FR";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = function (resultEvent) {
+        var spoken = resultEvent.results && resultEvent.results[0] && resultEvent.results[0][0] ? resultEvent.results[0][0].transcript : "";
+        gradeTypedAnswer(spoken);
+      };
+      recognition.onerror = function () { notify("La reconnaissance vocale a échoué. Tu peux écrire ta réponse à la place."); };
+      try { recognition.start(); } catch (error) { notify("Impossible de démarrer le microphone. Vérifie l’autorisation du navigateur."); }
     } else if (action === "show-answer") {
       session.shown = true;
       renderReview();
