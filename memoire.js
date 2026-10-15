@@ -102,7 +102,7 @@
     };
   }
 
-  function parseSegments(text, deck, mode, size) {
+  function parseSegments(text, deck, mode, size, start, end) {
     var input = String(text || "").replace(/\r/g, "").trim();
     if (!input) return [];
     var units = input.split(/\n\s*\n+/).map(function (part) { return part.trim(); }).filter(Boolean);
@@ -111,17 +111,21 @@
     } else {
       units = units.map(function (part) { return part.replace(/\s+/g, " ").trim(); });
     }
-    var groupSize = mode === "range" ? Math.max(2, Math.min(5, Number(size) || 2)) : 1;
-    var cards = [];
+    var groupSize = Math.max(1, Math.min(5, Number(size) || 2));
+    var segments = [];
     for (var i = 0; i < units.length; i += groupSize) {
       var chunk = units.slice(i, i + groupSize).join("\n\n").trim();
       if (!chunk) continue;
       var excerpt = chunk.replace(/\s+/g, " ");
       if (excerpt.length > 95) excerpt = excerpt.slice(0, 92) + "…";
-      var label = mode === "range" ? "Plage " + (Math.floor(i / groupSize) + 1) : "Partie " + (i + 1);
-      cards.push(makeCard(label + " — restitue le passage : " + excerpt, chunk, deck, cards.length));
+      segments.push({ number: segments.length + 1, excerpt: excerpt, text: chunk });
     }
-    return cards;
+    var from = mode === "range" ? Math.max(1, Number(start) || 1) : 1;
+    var to = mode === "range" ? Math.min(segments.length, Number(end) || segments.length) : segments.length;
+    if (to < from) return [];
+    return segments.slice(from - 1, to).map(function (segment, index) {
+      return makeCard("Partie " + segment.number + " — restitue le passage : " + segment.excerpt, segment.text, deck, index);
+    });
   }
 
   function parseContent(text, deck) {
@@ -381,7 +385,7 @@
       var content = ($("#memoryText").value || "").trim();
       var segmentToggle = $("#useSegments");
       var cards = segmentToggle && segmentToggle.checked
-        ? parseSegments(content, title, ($("#segmentMode") || {}).value || "individual", ($("#segmentSize") || {}).value || "2")
+        ? parseSegments(content, title, ($("#segmentMode") || {}).value || "individual", ($("#segmentSize") || {}).value || "2", ($("#segmentStart") || {}).value || "1", ($("#segmentEnd") || {}).value || "3")
         : parseContent(content, title);
       if (!bulkPreview) return cards;
       if (!content) {
@@ -431,16 +435,22 @@
     });
     var segmentToggle = $("#useSegments");
     var segmentSettings = $("#segmentSettings");
+    var segmentRange = $("#segmentRange");
     function refreshSegmentPreview() {
       if (segmentSettings) segmentSettings.hidden = !(segmentToggle && segmentToggle.checked);
+      if (segmentRange) segmentRange.hidden = !(segmentToggle && segmentToggle.checked && $("#segmentMode") && $("#segmentMode").value === "range");
       var memoryText = $("#memoryText");
       if (memoryText && memoryText.value.trim()) previewBulk();
     }
     if (segmentToggle) segmentToggle.addEventListener("change", refreshSegmentPreview);
     var segmentMode = $("#segmentMode");
     var segmentSize = $("#segmentSize");
+    var segmentStart = $("#segmentStart");
+    var segmentEnd = $("#segmentEnd");
     if (segmentMode) segmentMode.addEventListener("change", refreshSegmentPreview);
     if (segmentSize) segmentSize.addEventListener("change", refreshSegmentPreview);
+    if (segmentStart) segmentStart.addEventListener("change", refreshSegmentPreview);
+    if (segmentEnd) segmentEnd.addEventListener("change", refreshSegmentPreview);
     refreshSegmentPreview();
 
     var prepareButton = $("#prepareBulkCards");
