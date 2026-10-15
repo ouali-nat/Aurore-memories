@@ -648,6 +648,91 @@
     root.innerHTML = html;
   }
 
+  function renderProgress() {
+    var root = $("#progressApp");
+    if (!root) return;
+    var rangeNode = $("#progressRange");
+    var chartNode = $("#chartKind");
+    var daysCount = Math.max(7, Math.min(90, Number(rangeNode && rangeNode.value) || 30));
+    var chartKind = chartNode && chartNode.value || "line";
+    var currentDay = today();
+    var startDay = currentDay - daysCount + 1;
+    var daily = [];
+    for (var dayIndex = startDay; dayIndex <= currentDay; dayIndex += 1) {
+      daily.push({
+        day: dayIndex,
+        count: Math.max(0, Number(state.log[String(dayIndex)]) || 0),
+        label: new Date(dayIndex * DAY_MS).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })
+      });
+    }
+    var reviewTotal = Object.keys(state.log).reduce(function (sum, key) {
+      return sum + Math.max(0, Number(state.log[key]) || 0);
+    }, 0);
+    var periodEvents = state.history.filter(function (entry) {
+      var entryDay = Number(entry && entry.date);
+      return isFinite(entryDay) && entryDay >= startDay && entryDay <= currentDay && typeof entry.grade === "number";
+    });
+    var successes = periodEvents.filter(function (entry) { return entry.grade >= 2; }).length;
+    var toRetry = periodEvents.filter(function (entry) { return entry.grade < 2; }).length;
+    var uniqueReviewed = Object.create(null);
+    periodEvents.forEach(function (entry) { uniqueReviewed[String(entry.cardId)] = true; });
+    var reviewedCards = Object.keys(uniqueReviewed).length || state.cards.filter(function (card) { return card.reps > 0; }).length;
+    var mastered = state.cards.filter(function (card) { return card.reps >= 3 || card.interval >= 7; }).length;
+    var successRate = periodEvents.length ? Math.round(successes / periodEvents.length * 100) : null;
+    var maxCount = Math.max(1, daily.reduce(function (max, item) { return Math.max(max, item.count); }, 0));
+    var svg = "";
+    var chartSubtitle = "Nombre de révisions par jour";
+    if (chartKind === "diagram") {
+      var totalRated = successes + toRetry;
+      var successPct = totalRated ? Math.round(successes / totalRated * 100) : 0;
+      var degrees = successPct * 3.6;
+      svg = '<div class="progress-donut-wrap"><div class="progress-donut" style="background:conic-gradient(var(--accent-light) 0deg ' + degrees + 'deg,var(--border) ' + degrees + 'deg 360deg)"><div class="progress-donut-hole"><strong>' + (totalRated ? successPct + "%" : "—") + '</strong><small>réussites</small></div></div><div class="progress-legend-list"><span><i></i>' + successes + ' réponse(s) réussie(s)</span><span><i class="neutral"></i>' + toRetry + ' réponse(s) à retravailler</span><small>' + (totalRated ? "Données détaillées recueillies depuis l’activation du suivi." : "La répartition apparaîtra après tes prochaines révisions notées.") + '</small></div></div>';
+      chartSubtitle = "Réussites par rapport aux réponses à retravailler";
+    } else {
+      var width = 640, height = 250, left = 40, right = 14, top = 18, bottom = 38;
+      var plotWidth = width - left - right, plotHeight = height - top - bottom;
+      var grid = "";
+      for (var lineIndex = 0; lineIndex <= 4; lineIndex += 1) {
+        var gy = top + plotHeight * lineIndex / 4;
+        var tick = Math.round(maxCount * (4 - lineIndex) / 4);
+        grid += '<line class="chart-grid" x1="' + left + '" y1="' + gy + '" x2="' + (width - right) + '" y2="' + gy + '"></line><text x="' + (left - 8) + '" y="' + (gy + 4) + '" text-anchor="end">' + tick + '</text>';
+      }
+      var coords = daily.map(function (item, index) {
+        var x = left + (daily.length <= 1 ? plotWidth / 2 : plotWidth * index / (daily.length - 1));
+        var y = top + plotHeight - (item.count / maxCount) * plotHeight;
+        return { x: x, y: y, item: item, index: index };
+      });
+      var xLabels = coords.filter(function (point) {
+        var interval = Math.max(1, Math.ceil(coords.length / 6));
+        return point.index % interval === 0 || point.index === coords.length - 1;
+      }).map(function (point) {
+        return '<text x="' + point.x + '" y="' + (height - 12) + '" text-anchor="middle">' + point.item.label + '</text>';
+      }).join("");
+      if (chartKind === "bar") {
+        var slot = plotWidth / daily.length;
+        svg = '<svg class="progress-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Histogramme des révisions quotidiennes">' + grid + daily.map(function (item, index) {
+          var barHeight = item.count / maxCount * plotHeight;
+          var x = left + slot * index + slot * .18;
+          var y = top + plotHeight - barHeight;
+          return '<rect class="chart-bar" x="' + x + '" y="' + y + '" width="' + Math.max(1, slot * .64) + '" height="' + Math.max(0, barHeight) + '" rx="3"><title>' + item.label + ' : ' + item.count + ' révision(s)</title></rect>';
+        }).join("") + xLabels + '</svg>';
+        chartSubtitle = "Chaque bâtonnet représente les révisions d’une journée";
+      } else {
+        svg = '<svg class="progress-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Courbe des révisions quotidiennes">' + grid + '<polyline class="chart-line" points="' + coords.map(function (point) { return point.x + "," + point.y; }).join(" ") + '"></polyline>' + coords.filter(function (point) { return point.item.count > 0; }).map(function (point) {
+          return '<circle class="chart-point" cx="' + point.x + '" cy="' + point.y + '" r="4"><title>' + point.item.label + ' : ' + point.item.count + ' révision(s)</title></circle>';
+        }).join("") + xLabels + '</svg>';
+      }
+    }
+    var recentRows = daily.slice(-10).reverse().map(function (item) {
+      return '<tr><td>' + item.label + '</td><td>' + item.count + '</td></tr>';
+    }).join("");
+    root.innerHTML = '<div class="progress-summary"><div class="progress-stat"><strong>' + reviewTotal + '</strong><span>révisions enregistrées au total</span></div><div class="progress-stat"><strong>' + (successRate == null ? "—" : successRate + "%") + '</strong><span>réussite sur la période</span></div><div class="progress-stat"><strong>' + reviewedCards + '</strong><span>cartes travaillées</span></div><div class="progress-stat"><strong>' + mastered + '</strong><span>cartes consolidées</span></div></div>' +
+      '<section class="progress-chart-panel"><div class="progress-chart-head"><div><h2>' + (chartKind === "line" ? "Courbe de progression" : chartKind === "bar" ? "Révisions en bâtonnets" : "Répartition des réponses") + '</h2><p>' + chartSubtitle + '</p></div></div>' + svg +
+      (chartKind !== "diagram" ? '<div class="progress-legend"><span><i></i>Révisions par jour</span></div>' : '') +
+      '<table class="progress-data-table"><thead><tr><th>Jour</th><th>Révisions</th></tr></thead><tbody>' + recentRows + '</tbody></table></section>' +
+      '<p class="progress-note">' + (periodEvents.length ? "Le taux de réussite se base sur les réponses notées pendant cette période. Les réponses « À revoir » et « Difficile » sont comptées à part des réponses « Bien » et « Facile »." : "Le nombre de révisions inclut l’historique disponible sur cet appareil. L’ancienne version ne conservait pas le détail des bonnes réponses ; le taux de réussite sera calculé à partir des séances notées avec cette version.") + '</p>';
+  }
+
   function exportCards() {
     if (!state.cards.length) {
       notify("Il n’y a aucune carte à exporter.");
@@ -675,6 +760,10 @@
       var value = $("#confidenceValue");
       if (value) value.textContent = String(session.confidence) + " %";
     }
+  });
+
+  document.addEventListener("change", function (event) {
+    if (event.target && (event.target.id === "progressRange" || event.target.id === "chartKind")) renderProgress();
   });
 
   document.addEventListener("click", function (event) {
@@ -795,10 +884,13 @@
       localStorage.removeItem(SELECTED_DECK_KEY);
     } catch (error) {}
     startSession(requested);
+  } else if (document.body.dataset.page === "progress") {
+    renderProgress();
   }
   window.auroreMemoryRender = function () {
     renderLibrary();
     renderReview();
+    renderProgress();
     updateHome();
   };
 })();
