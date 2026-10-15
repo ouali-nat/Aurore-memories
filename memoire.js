@@ -501,6 +501,9 @@
     newCard.sourcePublicKey = card.sourcePublicKey;
     newCard.sourcePublicSeriesId = card.seriesId;
     newCard.sourceAuthor = card.authorName;
+    if (/^#[0-9a-f]{6}$/i.test(card.backgroundColor || "")) newCard.backgroundColor = card.backgroundColor;
+    if (typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage)) newCard.backgroundImage = card.backgroundImage;
+    else if (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage)) newCard.backgroundImage = card.seriesBackgroundImage;
     state.cards.push(newCard);
     save();
     notify("Carte ajoutée dans « Partagé · " + card.seriesName + " ».");
