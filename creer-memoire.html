@@ -73,13 +73,17 @@
             <label class="field-label" for="segmentMode">Organisation des blocs</label>
             <select class="text-field" id="segmentMode">
               <option value="individual">Individuel — une partie par carte</option>
-              <option value="range">Plage — regrouper plusieurs parties</option>
+              <option value="range">Plage — choisir un début et une fin</option>
             </select>
-            <label class="field-label" for="segmentSize">Parties par carte en mode Plage</label>
+            <label class="field-label" for="segmentSize">Phrases ou paragraphes par segment</label>
             <select class="text-field" id="segmentSize">
-              <option value="2">2 parties</option><option value="3">3 parties</option><option value="4">4 parties</option><option value="5">5 parties</option>
+              <option value="1">1 unité</option><option value="2" selected>2 unités</option><option value="3">3 unités</option><option value="4">4 unités</option><option value="5">5 unités</option>
             </select>
-            <p class="segment-help">Le mode Individuel crée une carte par partie. Le mode Plage rassemble les parties suivantes par groupes ; tout le contenu reste modifiable avant l’enregistrement.</p>
+            <div class="segment-range" id="segmentRange" hidden>
+              <label class="field-label" for="segmentStart">Début du segment</label><input class="text-field" id="segmentStart" type="number" min="1" value="1" inputmode="numeric">
+              <label class="field-label" for="segmentEnd">Fin du segment</label><input class="text-field" id="segmentEnd" type="number" min="1" value="3" inputmode="numeric">
+            </div>
+            <p class="segment-help">Individuel prépare une carte par segment. Plage te laisse choisir gratuitement le premier et le dernier segment à travailler. Tu peux modifier le cours et vérifier chaque carte avant de l’enregistrer.</p>
           </div>
         </div>
         <label class="field-label" for="memoryText">Cours ou questions-réponses</label>
