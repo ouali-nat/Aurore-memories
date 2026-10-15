@@ -26,6 +26,85 @@
   }
   window.auroreToast = toast;
 
+  function formalizeText(value) {
+    var text = String(value == null ? "" : value);
+    [
+      [/\bque souhaites-tu\b/gi, "quel espace souhaitez-vous"],
+      [/\bpar où veux-tu\b/gi, "par où souhaitez-vous"],
+      [/\btu peux\b/gi, "vous pouvez"],
+      [/\btes\b/gi, "vos"], [/\bton\b/gi, "votre"], [/\bta\b/gi, "votre"],
+      [/\btoi\b/gi, "vous"], [/\btu\b/gi, "vous"]
+    ].forEach(function (entry) { text = text.replace(entry[0], entry[1]); });
+    var verbs = {
+      "Apprends":"Apprenez","apprends":"apprenez","Retiens":"Retenez","retiens":"retenez",
+      "Retrouve":"Retrouvez","retrouve":"retrouvez","Organise":"Organisez","organise":"organisez",
+      "Accède":"Accédez","accède":"accédez","Révise":"Révisez","révise":"révisez",
+      "Ajoute":"Ajoutez","ajoute":"ajoutez","Découvre":"Découvrez","découvre":"découvrez",
+      "Indique":"Indiquez","indique":"indiquez","Écoute":"Écoutez","écoute":"écoutez",
+      "Utilise":"Utilisez","utilise":"utilisez","Récupère":"Récupérez","récupère":"récupérez",
+      "Reconstruis":"Reconstruisez","reconstruis":"reconstruisez","Écris":"Écrivez","écris":"écrivez",
+      "Distingue":"Distinguez","distingue":"distinguez","Prononce":"Prononcez","prononce":"prononcez",
+      "Entraîne":"Entraînez","entraîne":"entraînez","Rassemble":"Rassemblez","rassemble":"rassemblez",
+      "Prépare":"Préparez","prépare":"préparez","Consulte":"Consultez","consulte":"consultez",
+      "Choisis":"Choisissez","choisis":"choisissez","Sélectionne":"Sélectionnez","sélectionne":"sélectionnez",
+      "Clique":"Cliquez","clique":"cliquez","Valide":"Validez","valide":"validez",
+      "Annule":"Annulez","annule":"annulez","Supprime":"Supprimez","supprime":"supprimez",
+      "Modifie":"Modifiez","modifie":"modifiez","Ouvre":"Ouvrez","ouvre":"ouvrez",
+      "Ferme":"Fermez","ferme":"fermez","Recommence":"Recommencez","recommence":"recommencez",
+      "Essaie":"Essayez","essaie":"essayez","Vérifie":"Vérifiez","vérifie":"vérifiez",
+      "Regarde":"Regardez","regarde":"regardez","Réponds":"Répondez","réponds":"répondez",
+      "Tape":"Tapez","tape":"tapez","Déplace":"Déplacez","déplace":"déplacez",
+      "Exporte":"Exportez","exporte":"exportez","Importe":"Importez","importe":"importez",
+      "Télécharge":"Téléchargez","télécharge":"téléchargez","Parle":"Parlez","parle":"parlez",
+      "Active":"Activez","active":"activez","Désactive":"Désactivez","désactive":"désactivez",
+      "Laisse":"Laissez","laisse":"laissez","Donne":"Donnez","donne":"donnez",
+      "Fais":"Faites","fais":"faites","Souhaites":"Souhaitez","souhaites":"souhaitez",
+      "Crée":"Créez","crée":"créez"
+    };
+    Object.keys(verbs).sort(function (a,b) { return b.length-a.length; }).forEach(function (word) {
+      text = text.replace(new RegExp("\\b" + word + "\\b", "g"), verbs[word]);
+    });
+    return text;
+  }
+  function formalizeInterface(rootNode) {
+    if (!rootNode) return;
+    var protectedSelector = "script,style,textarea,input,select,option,code,pre,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block";
+    if (rootNode.nodeType === 3) {
+      if (!rootNode.parentElement || rootNode.parentElement.closest(protectedSelector)) return;
+      var nextText = formalizeText(rootNode.nodeValue);
+      if (nextText !== rootNode.nodeValue) rootNode.nodeValue = nextText;
+      return;
+    }
+    if (rootNode.nodeType !== 1 && rootNode.nodeType !== 9) return;
+    if (rootNode.nodeType === 1 && rootNode.matches(protectedSelector)) return;
+    var walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (node) {
+      if (!node.parentElement || node.parentElement.closest(protectedSelector)) return;
+      var nextText = formalizeText(node.nodeValue);
+      if (nextText !== node.nodeValue) node.nodeValue = nextText;
+    });
+    if (rootNode.querySelectorAll) {
+      rootNode.querySelectorAll("[title],[aria-label],[placeholder]").forEach(function (element) {
+        ["title","aria-label","placeholder"].forEach(function (attr) {
+          if (!element.hasAttribute(attr) || element.matches("input,textarea,select")) return;
+          var oldValue = element.getAttribute(attr), nextValue = formalizeText(oldValue);
+          if (nextValue !== oldValue) element.setAttribute(attr,nextValue);
+        });
+      });
+    }
+  }
+  formalizeInterface(document.body);
+  if (window.MutationObserver && document.body) {
+    var interfaceObserver = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) { formalizeInterface(node); });
+      });
+    });
+    interfaceObserver.observe(document.body, {childList:true,subtree:true});
+  }
+
   function setTheme(mode, persist) {
     appearancePreference = ["system", "light", "dark"].indexOf(mode) !== -1 ? mode : "system";
     var value = appearancePreference === "system"
