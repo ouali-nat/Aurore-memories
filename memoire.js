@@ -102,6 +102,28 @@
     };
   }
 
+  function parseSegments(text, deck, mode, size) {
+    var input = String(text || "").replace(/\r/g, "").trim();
+    if (!input) return [];
+    var units = input.split(/\n\s*\n+/).map(function (part) { return part.trim(); }).filter(Boolean);
+    if (units.length === 1) {
+      units = units[0].split(/(?<=[.!?。！？])\s+/).map(function (part) { return part.trim(); }).filter(Boolean);
+    } else {
+      units = units.map(function (part) { return part.replace(/\s+/g, " ").trim(); });
+    }
+    var groupSize = mode === "range" ? Math.max(2, Math.min(5, Number(size) || 2)) : 1;
+    var cards = [];
+    for (var i = 0; i < units.length; i += groupSize) {
+      var chunk = units.slice(i, i + groupSize).join("\n\n").trim();
+      if (!chunk) continue;
+      var excerpt = chunk.replace(/\s+/g, " ");
+      if (excerpt.length > 95) excerpt = excerpt.slice(0, 92) + "…";
+      var label = mode === "range" ? "Plage " + (Math.floor(i / groupSize) + 1) : "Partie " + (i + 1);
+      cards.push(makeCard(label + " — restitue le passage : " + excerpt, chunk, deck, cards.length));
+    }
+    return cards;
+  }
+
   function parseContent(text, deck) {
     var pairs = [];
     var input = String(text || "").replace(/\r/g, "").trim();
@@ -357,7 +379,10 @@
     function previewBulk() {
       var title = ($("#memoryTitle").value || "").trim() || "Nouvelle mémoire";
       var content = ($("#memoryText").value || "").trim();
-      var cards = parseContent(content, title);
+      var segmentToggle = $("#useSegments");
+      var cards = segmentToggle && segmentToggle.checked
+        ? parseSegments(content, title, ($("#segmentMode") || {}).value || "individual", ($("#segmentSize") || {}).value || "2")
+        : parseContent(content, title);
       if (!bulkPreview) return cards;
       if (!content) {
         bulkPreview.innerHTML = '<p class="preview-empty">Colle un cours ou une liste de questions-réponses pour préparer les cartes.</p>';
@@ -404,6 +429,20 @@
     Array.prototype.forEach.call(form.querySelectorAll("[data-create-mode]"), function (button) {
       button.addEventListener("click", function () { chooseMode(button.dataset.createMode); });
     });
+    var segmentToggle = $("#useSegments");
+    var segmentSettings = $("#segmentSettings");
+    function refreshSegmentPreview() {
+      if (segmentSettings) segmentSettings.hidden = !(segmentToggle && segmentToggle.checked);
+      var memoryText = $("#memoryText");
+      if (memoryText && memoryText.value.trim()) previewBulk();
+    }
+    if (segmentToggle) segmentToggle.addEventListener("change", refreshSegmentPreview);
+    var segmentMode = $("#segmentMode");
+    var segmentSize = $("#segmentSize");
+    if (segmentMode) segmentMode.addEventListener("change", refreshSegmentPreview);
+    if (segmentSize) segmentSize.addEventListener("change", refreshSegmentPreview);
+    refreshSegmentPreview();
+
     var prepareButton = $("#prepareBulkCards");
     if (prepareButton) prepareButton.addEventListener("click", function () {
       var cards = previewBulk();
