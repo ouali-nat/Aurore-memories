@@ -362,13 +362,36 @@
       setFeedback(cards.length ? "Aperçu prêt : " + cards.length + " carte(s) détectée(s)." : "Aucune carte prête pour le moment.", !cards.length);
     });
 
+    function csvCells(line) {
+      var cells = [], value = "", quoted = false;
+      for (var i = 0; i < line.length; i += 1) {
+        var ch = line.charAt(i);
+        if (ch === '"' && quoted && line.charAt(i + 1) === '"') { value += '"'; i += 1; }
+        else if (ch === '"') { quoted = !quoted; }
+        else if (ch === "," && !quoted) { cells.push(value.trim()); value = ""; }
+        else { value += ch; }
+      }
+      cells.push(value.trim());
+      return cells;
+    }
+
     if (input) {
       input.addEventListener("change", function () {
         var file = input.files && input.files[0];
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function () {
-          $("#memoryText").value = String(reader.result || "");
+          var loadedText = String(reader.result || "");
+          if (/\.csv$/i.test(file.name)) {
+            loadedText = loadedText.split(/\r?\n/).map(function (line) {
+              if (!line.trim()) return "";
+              var cells = csvCells(line);
+              if (cells.length < 2) return line;
+              if (/^(question|front|recto|terme)$/i.test(cells[0]) && /^(réponse|reponse|answer|back|verso|définition|definition)$/i.test(cells[1])) return "";
+              return cells[0] + " :: " + cells.slice(1).join(", ");
+            }).join("\n");
+          }
+          $("#memoryText").value = loadedText;
           chooseMode("bulk");
           var cards = previewBulk();
           setFeedback(file.name + " chargé : " + cards.length + " carte(s) préparée(s). Vérifie l’aperçu puis enregistre.", !cards.length);
