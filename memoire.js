@@ -231,13 +231,11 @@
     var params = new URLSearchParams(window.location.search);
     var view = params.get("view") || "all";
     if (["all", "memories", "cards"].indexOf(view) === -1) view = "all";
-    var search = ($("#memorySearch") && $("#memorySearch").value.trim().toLocaleLowerCase()) || "";
+    var search = normalizeSearch($("#memorySearch") && $("#memorySearch").value);
     var searched = state.cards.filter(function (card) {
       if (view === "memories" && !isMemoryCard(card)) return false;
       if (view === "cards" && !isFlashcard(card)) return false;
-      return !search || [card.deck, card.front, card.back].some(function (value) {
-        return String(value == null ? "" : value).toLocaleLowerCase().indexOf(search) !== -1;
-      });
+      return !search || search.split(" ").filter(Boolean).every(function (term) { return [card.deck, card.front, card.back].some(function (value) { return normalizeSearch(value).indexOf(term) !== -1; }); });
     });
     var memoryGroupsByDeck = memoryGroups(searched.filter(isMemoryCard));
     var flashGroupsByDeck = memoryGroups(searched.filter(isFlashcard));
@@ -247,7 +245,7 @@
     function rows(names, groups, kind) {
       if (!names.length) {
         var title = search ? "Aucun résultat" : (kind === "memory" ? "Aucune mémoire enregistrée" : "Aucune série de cartes enregistrée");
-        var description = search ? "Aucun contenu ne correspond à cette recherche." : (kind === "memory" ? "Crée un texte, puis organise-le en passages à apprendre." : "Crée une série de cartes avec des questions et leurs réponses.");
+        var description = search ? "Aucun contenu ne correspond à cette recherche." : (kind === "memory" ? "Créez un texte, puis organisez-le en passages à mémoriser." : "Créez une série de cartes avec des questions et leurs réponses.");
         return '<div class="empty-state compact-empty"><h3>' + title + '</h3><p>' + description + '</p></div>';
       }
       return '<div class="memory-list">' + names.map(function (name) {
@@ -261,10 +259,10 @@
       }).join("") + '</div>';
     }
 
-    var memoryAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=memories">Voir toutes les mémoires <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a>';
-    var cardsAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=cards">Voir toutes les séries <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a>';
-    var memorySection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À MÉMORISER</p><h2>' + (view === "memories" ? "Tous les textes" : "Mes mémoires") + '</h2><p>Des textes organisés en passages, avec un suivi individuel.</p></div>' + memoryAction + '</div>' + rows(memoryNames,memoryGroupsByDeck,"memory") + '</section>';
-    var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Des séries de questions-réponses pour réviser les notions essentielles.</p></div>' + cardsAction + '</div>' + rows(flashNames,flashGroupsByDeck,"flashcard") + '</section>';
+    var memoryAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=memories">Toutes les mémoires <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a>';
+    var cardsAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=cards">Toutes les séries <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a>';
+    var memorySection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À MÉMORISER</p><h2>' + (view === "memories" ? "Tous les textes" : "Mes mémoires") + '</h2><p>Des textes organisés en passages avec un suivi individuel.</p></div>' + memoryAction + '</div>' + rows(memoryNames,memoryGroupsByDeck,"memory") + '</section>';
+    var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Des séries de questions-réponses pour consolider les notions essentielles.</p></div>' + cardsAction + '</div>' + rows(flashNames,flashGroupsByDeck,"flashcard") + '</section>';
     target.innerHTML = (view === "cards" ? "" : memorySection) + (view === "memories" ? "" : cardSection);
   }
 
@@ -285,13 +283,13 @@
       summary = '<div><strong>' + memoryCount + '</strong><span>mémoires</span></div><div><strong>' + cardSeriesCount + '</strong><span>séries de cartes</span></div><div><strong>' + state.cards.length + '</strong><span>éléments enregistrés</span></div>';
     }
     var shortcuts = view === "all" ? '<nav class="library-shortcuts" aria-label="Actions principales">' +
-      '<a class="library-shortcut" href="editer-memoire.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▤</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une mémoire</strong><small>Préparer un texte à apprendre.</small></span></a>' +
-      '<a class="library-shortcut" href="creer-cartes.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▧</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une série</strong><small>Associer questions et réponses.</small></span></a>' +
-      '<a class="library-shortcut" href="progression.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">↗</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Progression</strong><small>Consulter les résultats.</small></span></a></nav>' : "";
+      '<a class="library-shortcut" href="editer-memoire.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▤</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une mémoire</strong><small>Préparer un texte à mémoriser.</small></span></a>' +
+      '<a class="library-shortcut" href="creer-cartes.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▧</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une série</strong><small>Créer des cartes question-réponse.</small></span></a>' +
+      '<a class="library-shortcut" href="progression.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">↗</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Progression</strong><small>Consulter les résultats d’apprentissage.</small></span></a></nav>' : "";
     var placeholder = view === "memories" ? "Rechercher une mémoire ou un passage…" : (view === "cards" ? "Rechercher une série, une question ou une réponse…" : "Rechercher dans les mémoires et les cartes…");
     var kicker = view === "memories" ? "BIBLIOTHÈQUE DE TEXTES" : (view === "cards" ? "SÉRIES DE CARTES" : "BIBLIOTHÈQUE PERSONNELLE");
     var heading = view === "memories" ? "Mes mémoires" : (view === "cards" ? "Mes cartes" : "Ma bibliothèque");
-    var description = view === "memories" ? "Retrouve tes textes enregistrés et consulte leurs passages." : (view === "cards" ? "Retrouve tes séries de cartes et recherche une question ou une réponse." : "Organise tes textes, tes cartes et tes révisions depuis un espace unique.");
+    var description = view === "memories" ? "Consultez les textes enregistrés et leurs passages." : (view === "cards" ? "Consultez vos séries et recherchez une question ou une réponse." : "Organisez vos textes, vos cartes et vos révisions depuis un espace unique.");
     var kickerNode = document.querySelector(".page-heading .section-kicker"), headingNode = document.querySelector(".page-heading h1"), descriptionNode = document.querySelector(".page-heading > p:last-child");
     if (kickerNode) kickerNode.textContent = kicker;
     if (headingNode) headingNode.textContent = heading;
@@ -299,6 +297,8 @@
     document.title = heading + " — Aurore Mémoire";
     root.innerHTML = '<div class="library-summary">' + summary + '</div>' + shortcuts + '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="' + placeholder + '" aria-label="' + placeholder.replace("…","") + '"></label><button class="secondary-btn" type="button" data-act="export">Exporter les données</button></div><div id="memoryList" aria-live="polite"></div>';
     renderMemoryList();
+    var searchInput = $("#memorySearch");
+    if (searchInput) searchInput.addEventListener("input", renderMemoryList);
   }
 
   function handleCreateForm() {

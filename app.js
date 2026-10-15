@@ -39,6 +39,7 @@
       themeToggle.title = "Apparence : " + label + " — cliquer pour modifier";
       themeToggle.dataset.appearanceMode = appearancePreference;
     }
+    document.querySelectorAll("[data-theme-choice]").forEach(function (button) { button.setAttribute("aria-pressed", button.dataset.themeChoice === appearancePreference ? "true" : "false"); });
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", value === "light" ? "#F7F7FA" : "#111019");
     if (persist) {
@@ -56,6 +57,19 @@
       try { localStorage.setItem("aurore-memory-color-theme", value); } catch (e) {}
     }
   }
+
+  if (themeToggle && themeToggle.parentElement && !document.querySelector(".theme-mode-choices")) {
+    var themeChoices = document.createElement("div");
+    themeChoices.className = "theme-mode-choices";
+    themeChoices.setAttribute("role", "group");
+    themeChoices.setAttribute("aria-label", "Choisir le thème d’affichage");
+    themeChoices.innerHTML = '<button type="button" data-theme-choice="light" aria-pressed="false">Clair</button><button type="button" data-theme-choice="dark" aria-pressed="false">Sombre</button><button type="button" data-theme-choice="system" aria-pressed="false">Auto</button>';
+    themeToggle.parentElement.insertBefore(themeChoices, themeToggle);
+    themeToggle.hidden = true;
+    themeChoices.addEventListener("click", function (event) { var choice = event.target.closest("[data-theme-choice]"); if (choice) setTheme(choice.dataset.themeChoice, true); });
+  }
+
+  document.querySelectorAll(".top-actions a[href=\"mes-memoires.html\"]").forEach(function (link) { link.href = "choisir.html"; link.textContent = "Bibliothèque"; });
 
   try {
     setTheme(localStorage.getItem("aurore-memory-theme") || "system", false);

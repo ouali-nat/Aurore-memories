@@ -232,3 +232,4 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible 
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; }
 }
+.theme-btn[hidden]{display:none!important}
