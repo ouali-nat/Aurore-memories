@@ -61,7 +61,8 @@
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      try { localStorage.removeItem("aurore-memory-home-stats-v1"); } catch (cacheError) {}
+      if (typeof window.auroreUpdateMemoryHomeStats === "function") window.auroreUpdateMemoryHomeStats(state.cards);
+      else try { localStorage.removeItem("aurore-memory-home-stats-v1"); } catch (cacheError) {}
       return true;
     } catch (error) {
       notify("Le stockage de cet appareil est plein. Exporte tes mémorisations avant d’ajouter d’autres cartes.");
