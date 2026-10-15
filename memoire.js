@@ -5,6 +5,7 @@
   var SELECTED_DECK_KEY = "aurore-memory-selected-deck";
   var DAY_MS = 86400000;
   var MODES = ["Toucher pour révéler", "Curseur", "Écouter", "Première lettre", "Trous", "Réordonner", "Taper", "Choix multiple", "Parler"];
+  var MODE_PAGES = {"Toucher pour révéler":{"url":"mode-revelation.html","title":"Révélation","description":"Découvre la réponse après avoir essayé de la retrouver mentalement. La qualité de ton rappel nourrit la progression de chaque tranche."},"Curseur":{"url":"mode-curseur.html","title":"Curseur de confiance","description":"Indique ton niveau de confiance avant de révéler la réponse, puis note honnêtement la facilité du rappel."},"Écouter":{"url":"mode-ecouter.html","title":"Écoute active","description":"Écoute la question et la réponse avec la synthèse vocale du navigateur pour renforcer la familiarité avec les notions."},"Première lettre":{"url":"mode-premiere-lettre.html","title":"Première lettre","description":"Utilise les initiales comme indices graduels, puis restitue la réponse entière sans regarder."},"Trous":{"url":"mode-trous.html","title":"Texte à trous","description":"Récupère les mots importants à partir de la question et compare ta réponse avec le contenu attendu."},"Réordonner":{"url":"mode-reordonner.html","title":"Réordonner","description":"Reconstruis la réponse mot par mot. Cette méthode est utile pour les définitions, les étapes et les formulations précises."},"Taper":{"url":"mode-taper.html","title":"Réponse écrite","description":"Écris la réponse de mémoire. La vérification compare la réponse normalisée et enregistre le résultat de la tranche."},"Choix multiple":{"url":"mode-choix-multiple.html","title":"Choix multiple","description":"Distingue la bonne réponse parmi plusieurs propositions. Les distracteurs proviennent des autres cartes disponibles."},"Parler":{"url":"mode-parler.html","title":"Réponse vocale","description":"Prononce la réponse quand la reconnaissance vocale est disponible, ou utilise le champ écrit de secours."}};
   var $ = function (selector, scope) { return (scope || document).querySelector(selector); };
   var today = function () { return Math.floor(Date.now() / DAY_MS); };
 
@@ -23,6 +24,7 @@
   if (!Array.isArray(state.cards)) state.cards = [];
   if (!state.log || typeof state.log !== "object") state.log = {};
   if (!Array.isArray(state.performance)) state.performance = [];
+  if (!Array.isArray(state.cardPerformance)) state.cardPerformance = [];
   if (["courbe", "diagramme", "batonnets"].indexOf(state.chartType) < 0) state.chartType = "courbe";
   var legacyModes = { "Rappel actif": "Toucher pour révéler", "Texte à trous": "Trous", "Premières lettres": "Première lettre", "QCM": "Choix multiple", "Association": "Toucher pour révéler", "Palais mental": "Toucher pour révéler" };
   if (legacyModes[state.mode]) state.mode = legacyModes[state.mode];
@@ -174,6 +176,15 @@
     else if (grade === 1) daily.difficult += 1;
     else daily.missed += 1;
     if (state.performance.length > 120) state.performance = state.performance.slice(-120);
+    state.cardPerformance.push({
+      day: dateKey,
+      timestamp: Date.now(),
+      cardId: String(card.id),
+      deck: card.deck,
+      mode: state.mode,
+      grade: grade
+    });
+    if (state.cardPerformance.length > 5000) state.cardPerformance = state.cardPerformance.slice(-5000);
     save();
   }
 
@@ -568,9 +579,10 @@
     return possible.slice(0, 3).concat(card.back).sort(function () { return Math.random() - 0.5; });
   }
 
-  function startSession(deck) {
+  function startSession(deck, includeAllCards) {
     session.requestedDeck = deck || "";
-    session.queue = dueCards().filter(function (card) { return !session.requestedDeck || card.deck === session.requestedDeck; });
+    var availableCards = includeAllCards ? state.cards.slice() : dueCards();
+    session.queue = availableCards.filter(function (card) { return !session.requestedDeck || card.deck === session.requestedDeck; });
     session.queue.sort(function () { return Math.random() - 0.5; });
     session.hadDueCards = session.queue.length > 0;
     session.initialCount = session.queue.length;
@@ -650,6 +662,68 @@
     renderReview();
   }
 
+  function renderModeNavigation(dedicated) {
+    var groups = [
+      { title: "Se familiariser", modes: ["Toucher pour révéler", "Curseur", "Écouter"] },
+      { title: "Consolider", modes: ["Première lettre", "Trous", "Réordonner"] },
+      { title: "Évaluer", modes: ["Taper", "Choix multiple", "Parler"] }
+    ];
+    var html = '<section class="mode-area mode-navigation"><div class="mode-navigation-head"><div><p class="mode-label">' + (dedicated ? "Changer de méthode" : "Choisis librement ta méthode") + '</p><p class="mode-subtitle">' + (dedicated ? "Chaque méthode a sa propre page et conserve le suivi des tranches." : "Neuf méthodes gratuites, chacune avec sa page de travail et ses statistiques.") + '</p></div></div>';
+    groups.forEach(function (group) {
+      html += '<div class="method-group"><strong>' + group.title + '</strong><div class="mode-list">';
+      group.modes.forEach(function (mode) {
+        var info = MODE_PAGES[mode];
+        var deckParam = session.requestedDeck ? "?deck=" + encodeURIComponent(session.requestedDeck) : "";
+        html += '<a class="mode-chip mode-link' + (state.mode === mode ? ' is-active' : '') + '" href="' + info.url + deckParam + '"><strong>' + escapeHtml(mode) + '</strong><small>' + escapeHtml(info.title) + '</small></a>';
+      });
+      html += '</div></div>';
+    });
+    html += '</section>';
+    return html;
+  }
+
+  function renderChunkProgress(mode) {
+    var cards = state.cards.filter(function (card) { return !session.requestedDeck || card.deck === session.requestedDeck; });
+    var events = state.cardPerformance || [];
+    var perCard = cards.map(function (card, index) {
+      var all = events.filter(function (entry) { return entry && entry.cardId === String(card.id); });
+      var specific = all.filter(function (entry) { return entry.mode === mode; });
+      function score(items) {
+        return items.length ? Math.round(items.reduce(function (sum, item) { return sum + Math.max(0, Math.min(3, Number(item.grade) || 0)); }, 0) / (items.length * 3) * 100) : 0;
+      }
+      return { card: card, index: index + 1, all: all, specific: specific, allScore: score(all), modeScore: score(specific), last: all.length ? all[all.length - 1] : null };
+    });
+    var reviewed = perCard.filter(function (item) { return item.all.length > 0; });
+    var practiced = perCard.filter(function (item) { return item.specific.length > 0; });
+    var mastered = perCard.filter(function (item) { return item.all.length >= 2 && item.allScore >= 75; });
+    var average = reviewed.length ? Math.round(reviewed.reduce(function (sum, item) { return sum + item.allScore; }, 0) / reviewed.length) : 0;
+    var maxLabel = Math.max(1, perCard.length);
+    var chartWidth = Math.max(620, perCard.length * 62);
+    var chartHeight = 252, left = 42, right = 20, top = 18, bottom = 54;
+    var plotWidth = chartWidth - left - right, plotHeight = chartHeight - top - bottom;
+    var slot = plotWidth / maxLabel;
+    var grid = "";
+    for (var g = 0; g <= 4; g += 1) {
+      var gy = top + plotHeight * g / 4;
+      grid += '<line class="chunk-grid" x1="' + left + '" y1="' + gy + '" x2="' + (chartWidth - right) + '" y2="' + gy + '"></line><text x="' + (left - 8) + '" y="' + (gy + 4) + '" text-anchor="end">' + (100 - g * 25) + '%</text>';
+    }
+    var bars = perCard.map(function (item, i) {
+      var x = left + i * slot + slot * .12;
+      var w = Math.max(5, slot * .32);
+      var allH = item.allScore / 100 * plotHeight;
+      var modeH = item.modeScore / 100 * plotHeight;
+      var label = "Tranche " + item.index + " — " + item.card.front;
+      return '<rect class="chunk-bar-all" x="' + x + '" y="' + (top + plotHeight - allH) + '" width="' + w + '" height="' + Math.max(2, allH) + '" rx="3"><title>' + escapeHtml(label) + ' · toutes méthodes : ' + item.allScore + '%</title></rect><rect class="chunk-bar-mode" x="' + (x + w + 2) + '" y="' + (top + plotHeight - modeH) + '" width="' + w + '" height="' + Math.max(2, modeH) + '" rx="3"><title>' + escapeHtml(label) + ' · ' + escapeHtml(mode) + ' : ' + item.modeScore + '%</title></rect><text x="' + (x + w + 1) + '" y="' + (chartHeight - 31) + '" text-anchor="middle">' + item.index + '</text>';
+    }).join("");
+    var rows = perCard.map(function (item) {
+      var status = !item.all.length ? "À découvrir" : item.all.length >= 2 && item.allScore >= 75 ? "Consolidée" : item.allScore >= 55 ? "En progrès" : "À retravailler";
+      var latest = item.last ? new Date(item.last.timestamp).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) : "Pas encore";
+      return '<article class="chunk-progress-row"><div class="chunk-progress-copy"><span class="chunk-index">TRANCHE ' + item.index + '</span><strong>' + escapeHtml(item.card.front) + '</strong><small>' + item.all.length + ' révision(s) · ' + item.specific.length + ' avec cette méthode · dernière : ' + latest + '</small></div><div class="chunk-progress-scores"><div class="chunk-score-line"><span>Global</span><div class="chunk-score-track"><i style="width:' + item.allScore + '%"></i></div><b>' + item.allScore + '%</b></div><div class="chunk-score-line"><span>' + escapeHtml(mode) + '</span><div class="chunk-score-track method-score"><i style="width:' + item.modeScore + '%"></i></div><b>' + item.modeScore + '%</b></div><small class="chunk-status">' + status + '</small></div></article>';
+    }).join("");
+    if (!cards.length) return '<section class="chunk-dashboard"><div class="empty-state compact-empty"><h2>Aucune tranche à suivre pour le moment</h2><p>Crée une mémoire ou découpe un cours en petits segments. Chaque segment disposera de son propre suivi.</p><a class="primary-btn" href="creer-memoire.html">Créer ou découper un cours</a></div></section>';
+    return '<section class="chunk-dashboard"><div class="chunk-dashboard-head"><div><p class="section-kicker">SUIVI PAR TRANCHE</p><h2>La progression de chaque information</h2><p>Chaque carte ou segment garde son propre historique. Le score global combine les méthodes ; le second score isole la méthode actuelle.</p></div><span class="chunk-total-pill">' + cards.length + ' tranche(s)</span></div><div class="chunk-kpis"><div><span>Tranches travaillées</span><strong>' + reviewed.length + '/' + cards.length + '</strong></div><div><span>Maîtrise moyenne</span><strong>' + average + '%</strong></div><div><span>Consolidées</span><strong>' + mastered.length + '</strong></div><div><span>Avec cette méthode</span><strong>' + practiced.length + '</strong></div></div><div class="chunk-chart-card"><div class="chunk-chart-title"><div><h3>Carte de maîtrise par tranche</h3><p>Survole une barre pour voir le détail. Fais défiler horizontalement si le cours est long.</p></div></div><div class="chunk-chart-scroll"><svg class="chunk-chart-svg" viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" role="img" aria-label="Comparaison de la maîtrise de chaque tranche pour toutes les méthodes et pour la méthode actuelle">' + grid + bars + '<text x="' + left + '" y="' + (chartHeight - 9) + '">Numéro de tranche</text></svg></div><div class="chunk-chart-legend"><span><i class="all-key"></i>Maîtrise globale</span><span><i class="mode-key"></i>' + escapeHtml(mode) + '</span></div></div><div class="chunk-list-head"><h3>Détail de chaque tranche</h3><span>Actualisé après chaque réponse notée</span></div><div class="chunk-progress-list">' + rows + '</div><p class="chunk-disclaimer">Les pourcentages représentent la moyenne des réponses notées (de 0 à 3), et non une mesure scientifique absolue de la mémoire. Les anciennes révisions sans détail par carte restent dans les statistiques générales mais ne sont pas inventées dans ce tableau.</p></section>';
+  }
+
   function renderReview() {
     var root = $("#reviewApp");
     if (!root) return;
@@ -657,16 +731,9 @@
     var progress = session.initialCount ? Math.min(100, Math.round(session.reviewed / session.initialCount * 100)) : 0;
     var html = '<div class="review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir au total</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
     html += renderProgressChart();
-    html += '<div class="mode-area"><p class="mode-label">Choisis librement ta méthode</p>' +
-      '<div class="method-group"><strong>Se familiariser</strong><div class="mode-list">' + ["Toucher pour révéler", "Curseur", "Écouter"].map(function (mode) {
-        return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
-      }).join("") + '</div></div>' +
-      '<div class="method-group"><strong>Consolider</strong><div class="mode-list">' + ["Première lettre", "Trous", "Réordonner"].map(function (mode) {
-        return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
-      }).join("") + '</div></div>' +
-      '<div class="method-group"><strong>Évaluer</strong><div class="mode-list">' + ["Taper", "Choix multiple", "Parler"].map(function (mode) {
-        return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
-      }).join("") + '</div></div></div>';
+    var dedicatedMode = document.body.dataset.modePage || "";
+    html += renderModeNavigation(Boolean(dedicatedMode));
+    if (dedicatedMode) html += renderChunkProgress(dedicatedMode);
     html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
 
     if (!state.cards.length) {
@@ -886,7 +953,16 @@
       requested = localStorage.getItem(SELECTED_DECK_KEY) || "";
       localStorage.removeItem(SELECTED_DECK_KEY);
     } catch (error) {}
-    startSession(requested);
+    var query = new URLSearchParams(window.location.search);
+    requested = query.get("deck") || requested;
+    var dedicatedMode = document.body.dataset.modePage || "";
+    if (MODE_PAGES[dedicatedMode]) {
+      state.mode = dedicatedMode;
+      save();
+      startSession(requested, true);
+    } else {
+      startSession(requested, false);
+    }
   }
   window.auroreMemoryRender = function () {
     renderLibrary();
