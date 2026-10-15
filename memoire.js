@@ -17,6 +17,13 @@
   function notify(message) {
     if (typeof window.auroreToast === "function") window.auroreToast(message);
   }
+  function cardKind(card) {
+    if (card && card.kind === "memory") return "memory";
+    if (card && card.kind === "flashcard") return "flashcard";
+    return card && /(?:·|—|-)\s*Morceau\s+\d+\s*$/i.test(String(card.front || "")) ? "memory" : "flashcard";
+  }
+  function isMemoryCard(card) { return cardKind(card) === "memory"; }
+  function isFlashcard(card) { return cardKind(card) === "flashcard"; }
 
   var state = null;
   try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (error) {}
@@ -35,6 +42,7 @@
     if (typeof card.deck !== "string" || !card.deck.trim()) card.deck = "Ma mémoire";
     if (typeof card.front !== "string") card.front = String(card.front || "");
     if (typeof card.back !== "string") card.back = String(card.back || "");
+    if (card.kind !== "memory" && card.kind !== "flashcard") card.kind = /(?:·|—|-)\s*Morceau\s+\d+\s*$/i.test(card.front) ? "memory" : "flashcard";
     if (typeof card.due !== "number" || !isFinite(card.due)) card.due = today();
     if (typeof card.ease !== "number" || !isFinite(card.ease)) card.ease = 2.5;
     if (typeof card.interval !== "number" || !isFinite(card.interval)) card.interval = 0;
@@ -78,6 +86,7 @@
     return {
       id: Date.now() + Math.random() + (index || 0) / 1000,
       deck: deck,
+      kind: "flashcard",
       front: String(front || "").trim(),
       back: String(back || "").trim(),
       ease: 2.5,
@@ -191,10 +200,10 @@
 
   function updateHome() {
     if (document.body.dataset.page !== "home") return;
-    var decks = deckNames(state.cards);
+    var memoryItems = state.cards.filter(isMemoryCard), flashItems = state.cards.filter(isFlashcard);
     var values = {
-      "#homeMemoryCount": decks.length,
-      "#homeCardCount": state.cards.length,
+      "#homeMemoryCount": Object.keys(memoryGroups(memoryItems)).length,
+      "#homeCardCount": flashItems.length,
       "#homeDueCount": dueCards().length
     };
     Object.keys(values).forEach(function (selector) {
@@ -216,34 +225,37 @@
     var target = $("#memoryList");
     if (!target) return;
     var search = ($("#memorySearch") && $("#memorySearch").value.trim().toLocaleLowerCase()) || "";
-    var filtered = state.cards.filter(function (card) {
+    var searched = state.cards.filter(function (card) {
       return !search || [card.deck, card.front, card.back].some(function (value) {
         return String(value).toLocaleLowerCase().indexOf(search) !== -1;
       });
     });
-    var groups = memoryGroups(filtered);
-    var names = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, "fr"); });
-    if (!state.cards.length) {
-      target.innerHTML = '<div class="empty-state"><span class="empty-icon" aria-hidden="true">▤</span><h2>Aucune mémoire pour le moment</h2><p>Crée ta première mémoire à partir d’un cours ou de questions-réponses.</p><a class="primary-btn" href="creer-memoire.html">Créer une mémoire</a></div>';
-      return;
+    var memoryGroupsByDeck = memoryGroups(searched.filter(isMemoryCard));
+    var flashGroupsByDeck = memoryGroups(searched.filter(isFlashcard));
+    var memoryNames = Object.keys(memoryGroupsByDeck).sort(function (a, b) { return a.localeCompare(b, "fr"); });
+    var flashNames = Object.keys(flashGroupsByDeck).sort(function (a, b) { return a.localeCompare(b, "fr"); });
+
+    function rows(names, groups, kind) {
+      if (!names.length) return '<div class="empty-state compact-empty"><h3>' + (kind === "memory" ? "Aucune mémoire enregistrée" : "Aucune série de cartes enregistrée") + '</h3><p>' + (kind === "memory" ? "Crée un texte puis découpe-le en petits blocs à apprendre." : "Crée une série avec un titre, des questions et leurs réponses.") + '</p></div>';
+      return '<div class="memory-list">' + names.map(function (name) {
+        var items = groups[name], due = dueCards(items).length;
+        var preview = items[0] ? (kind === "memory" ? items[0].back : items[0].front) : "";
+        var main = '<div class="memory-row-main"><h3>' + escapeHtml(name) + '</h3><p>' + items.length + (kind === "memory" ? ' bloc(s) · ' : ' carte(s) · ') + due + ' à réviser</p><small>' + escapeHtml(preview) + '</small></div>';
+        if (kind === "memory") return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div>' + main + '<div class="memory-row-actions"><a class="secondary-btn" href="memoire-blocs.html?deck=' + encodeURIComponent(name) + '">Voir les blocs</a><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Éditer</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="memory" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
+        return '<article class="memory-row"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div>' + main + '<div class="memory-row-actions"><a class="primary-btn" href="reviser-cartes.html?deck=' + encodeURIComponent(name) + '">Réviser</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="flashcard" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
+      }).join("") + '</div>';
     }
-    if (!names.length) {
-      target.innerHTML = '<div class="empty-state compact-empty"><h2>Aucun résultat</h2><p>Essaie un autre mot ou efface la recherche.</p></div>';
-      return;
-    }
-    target.innerHTML = '<div class="memory-list">' + names.map(function (name) {
-      var cards = groups[name];
-      var due = dueCards(cards).length;
-      var preview = cards[0] ? cards[0].front : "";
-      return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div><div class="memory-row-main"><h2>' + escapeHtml(name) + '</h2><p>' + cards.length + ' morceau(x) · ' + due + ' à réviser</p><small>' + escapeHtml(preview) + '</small></div><div class="memory-row-actions"><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Éditer / découper</a><button class="secondary-btn" type="button" data-act="review-deck" data-deck="' + escapeHtml(name) + '">Réviser</button><button class="subtle-danger" type="button" data-act="delete-deck" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
-    }).join("") + '</div>';
+
+    target.innerHTML = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À APPRENDRE</p><h2>Mes mémoires</h2><p>Des passages de cours découpés en petits blocs, avec une méthode pour chacun.</p></div><a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a></div>' + rows(memoryNames, memoryGroupsByDeck, "memory") + '</section>' +
+      '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS / RÉPONSES</p><h2>Mes cartes</h2><p>Des cartes recto-verso à retourner, classées en séries nommées.</p></div><a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a></div>' + rows(flashNames, flashGroupsByDeck, "flashcard") + '</section>';
   }
 
   function renderLibrary() {
     var root = $("#memoryLibrary");
     if (!root) return;
-    root.innerHTML = '<div class="library-summary"><div><strong>' + deckNames(state.cards).length + '</strong><span>mémorisation(s)</span></div><div><strong>' + state.cards.length + '</strong><span>carte(s)</span></div><div><strong>' + dueCards().length + '</strong><span>à réviser</span></div></div>' +
-      '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="Rechercher un titre, une question…" aria-label="Rechercher dans mes mémorisations"></label><div class="toolbar-actions"><a class="primary-btn" href="editer-memoire.html">＋ Créer / découper une mémoire</a><a class="secondary-btn" href="progression.html">Ma progression</a><button class="secondary-btn" type="button" data-act="export">Exporter mes cartes</button></div></div>' +
+    var memories = state.cards.filter(isMemoryCard), flashcards = state.cards.filter(isFlashcard);
+    root.innerHTML = '<div class="library-summary"><div><strong>' + Object.keys(memoryGroups(memories)).length + '</strong><span>mémoire(s)</span></div><div><strong>' + Object.keys(memoryGroups(flashcards)).length + '</strong><span>série(s) de cartes</span></div><div><strong>' + state.cards.length + '</strong><span>élément(s) enregistrés</span></div></div>' +
+      '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="Rechercher un titre, un passage ou une question…" aria-label="Rechercher dans mes mémorisations"></label><div class="toolbar-actions"><a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a><a class="secondary-btn" href="creer-cartes.html">＋ Créer des cartes</a><a class="secondary-btn" href="progression.html">Ma progression</a><button class="secondary-btn" type="button" data-act="export">Exporter</button></div></div>' +
       '<div id="memoryList" aria-live="polite"></div>';
     renderMemoryList();
   }
@@ -586,9 +598,9 @@
     session.requestedDeck = deck || "";
     var params = new URLSearchParams(window.location.search);
     var requestedCard = params.get("card") || "";
-    var availableCards = includeAllCards ? state.cards.slice() : dueCards();
+    var availableCards = (includeAllCards || requestedCard) ? state.cards.filter(isMemoryCard) : dueCards(state.cards.filter(isMemoryCard));
     session.queue = availableCards.filter(function (card) {
-      return (!session.requestedDeck || card.deck === session.requestedDeck) && (!requestedCard || String(card.id) === requestedCard);
+      return isMemoryCard(card) && (!session.requestedDeck || card.deck === session.requestedDeck) && (!requestedCard || String(card.id) === requestedCard);
     });
     session.queue.sort(function () { return Math.random() - 0.5; });
     session.hadDueCards = session.queue.length > 0;
@@ -703,7 +715,7 @@
   }
 
   function renderChunkProgress(mode) {
-    var cards = state.cards.filter(function (card) { return !session.requestedDeck || card.deck === session.requestedDeck; });
+    var cards = state.cards.filter(function (card) { return isMemoryCard(card) && (!session.requestedDeck || card.deck === session.requestedDeck); });
     var events = state.cardPerformance || [];
     var perCard = cards.map(function (card, index) {
       var all = events.filter(function (entry) { return entry && entry.cardId === String(card.id); });
@@ -760,8 +772,8 @@
       return;
     }
 
-    if (!state.cards.length) {
-      html += '<div class="empty-state"><span class="empty-icon" aria-hidden="true">↻</span><h2>Il te faut une première mémoire</h2><p>Crée quelques cartes avant de commencer tes révisions.</p><a class="primary-btn" href="creer-memoire.html">Créer une mémoire</a></div>';
+    if (!state.cards.some(isMemoryCard)) {
+      html += '<div class="empty-state"><span class="empty-icon" aria-hidden="true">↻</span><h2>Il te faut une première mémoire</h2><p>Crée un texte puis découpe-le en petits blocs pour commencer avec les méthodes de mémorisation.</p><a class="primary-btn" href="editer-memoire.html">Créer une mémoire</a></div>';
     } else if (!session.current && !session.hadDueCards) {
       html += '<div class="empty-state"><span class="empty-icon" aria-hidden="true">✓</span><h2>Rien à revoir pour le moment</h2><p>' + (session.requestedDeck ? 'Aucune carte de « ' + escapeHtml(session.requestedDeck) + ' » n’est due aujourd’hui.' : 'Tes prochaines révisions apparaîtront ici lorsqu’elles arriveront à échéance.') + '</p><div class="empty-actions"><button class="primary-btn" type="button" data-act="reload-session">Actualiser les révisions</button><a class="secondary-btn" href="mes-memoires.html">Mes mémorisations</a></div></div>';
     } else if (!session.current) {
@@ -878,16 +890,17 @@
     if (action === "export") {
       exportCards();
     } else if (action === "review-deck") {
-      try { localStorage.setItem(SELECTED_DECK_KEY, button.dataset.deck || ""); } catch (error) {}
-      window.location.href = "revisions.html";
+      var reviewDeck = button.dataset.deck || "";
+      if (button.dataset.kind === "flashcard") window.location.href = "reviser-cartes.html?deck=" + encodeURIComponent(reviewDeck);
+      else window.location.href = "memoire-blocs.html?deck=" + encodeURIComponent(reviewDeck);
     } else if (action === "delete-deck") {
       var deck = button.dataset.deck || "";
-      if (window.confirm('Supprimer la mémoire « ' + deck + ' » et toutes ses cartes ? Cette action est irréversible.')) {
-        state.cards = state.cards.filter(function (card) { return card.deck !== deck; });
-        save();
-        renderLibrary();
-        updateHome();
-        notify("Mémoire supprimée.");
+      var kind = button.dataset.kind === "memory" ? "memory" : "flashcard";
+      if (window.confirm('Supprimer la ' + (kind === "memory" ? "mémoire" : "série de cartes") + ' « ' + deck + ' » et tous ses éléments ? Cette action est irréversible.')) {
+        state.cards = state.cards.filter(function (card) { return !(card.deck === deck && cardKind(card) === kind); });
+        if (kind === "flashcard" && state.deckStyles) delete state.deckStyles["flashcard:" + deck];
+        save(); renderLibrary(); updateHome();
+        notify(kind === "memory" ? "Mémoire supprimée." : "Série de cartes supprimée.");
       }
     } else if (action === "set-mode") {
       state.mode = MODES.indexOf(button.dataset.mode) >= 0 ? button.dataset.mode : "Rappel actif";
@@ -984,10 +997,10 @@
   } else if (document.body.dataset.page === "library") {
     renderLibrary();
     var params = new URLSearchParams(window.location.search);
-    if (params.get("created") === "1") {
+    if (params.get("created") === "1" || params.get("created") === "cards") {
       var createdName = "";
       try { createdName = localStorage.getItem("aurore-memory-last-created") || ""; } catch (error) {}
-      notify("Mémoire créée : " + createdName);
+      notify(params.get("created") === "cards" ? "Série de cartes créée : " + createdName : "Mémoire créée : " + createdName);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   } else if (document.body.dataset.page === "create") {
