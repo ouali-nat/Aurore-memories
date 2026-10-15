@@ -686,7 +686,7 @@
     var toRetry = periodEvents.filter(function (entry) { return entry.grade < 2; }).length;
     var uniqueReviewed = Object.create(null);
     periodEvents.forEach(function (entry) { uniqueReviewed[String(entry.cardId)] = true; });
-    var reviewedCards = Object.keys(uniqueReviewed).length || state.cards.filter(function (card) { return card.reps > 0; }).length;
+    var reviewedCards = state.history.length ? Object.keys(uniqueReviewed).length : state.cards.filter(function (card) { return card.reps > 0; }).length;
     var mastered = state.cards.filter(function (card) { return card.reps >= 3 || card.interval >= 7; }).length;
     var successRate = periodEvents.length ? Math.round(successes / periodEvents.length * 100) : null;
     var maxCount = Math.max(1, daily.reduce(function (max, item) { return Math.max(max, item.count); }, 0));
