@@ -347,6 +347,7 @@
         front: card.front,
         back: card.back,
         cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
+        backgroundMode: card.backgroundMode === "image" || card.backgroundMode === "color" ? card.backgroundMode : ((/^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage || "") || !!seriesBackgroundImage) ? "image" : "color"),
         backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "",
         backgroundImage: typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage : ""
       };
@@ -500,12 +501,16 @@
     if (existing) { notify("Cette carte est déjà présente dans votre bibliothèque."); return; }
     var newCard = makeCard(card.front, card.back, "Partagé · " + card.seriesName);
     newCard.cardMode = card.cardMode === "scientific" ? "scientific" : "simple";
-    newCard.sourcePublicKey = card.sourcePublicKey;
-    newCard.sourcePublicSeriesId = card.seriesId;
+    newCard.backgroundMode = card.backgroundMode === "image" ? "image" : "color";
+    newCard.sourcePublicId = card.seriesId;
     newCard.sourceAuthor = card.authorName;
     if (/^#[0-9a-f]{6}$/i.test(card.backgroundColor || "")) newCard.backgroundColor = card.backgroundColor;
-    if (typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage)) newCard.backgroundImage = card.backgroundImage;
-    else if (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage)) newCard.backgroundImage = card.seriesBackgroundImage;
+    if (newCard.backgroundMode === "image") {
+      if (typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage)) newCard.backgroundImage = card.backgroundImage;
+      else if (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage)) newCard.backgroundImage = card.seriesBackgroundImage;
+    } else {
+      delete newCard.backgroundImage;
+    }
     state.cards.push(newCard);
     save();
     notify("Carte ajoutée dans « Partagé · " + card.seriesName + " ».");
@@ -536,8 +541,8 @@
       var index = card._feedIndex;
       var answerId = "public-answer-" + index;
       var cardColor = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "#4937a6";
-      var cardImage = typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
-        (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "");
+      var cardImage = card.backgroundMode === "image" ? (typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
+        (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "")) : "";
       var imageMarkup = cardImage
         ? '<div class="public-flashcard-art"><img src="' + escapeHtml(cardImage) + '" alt="" loading="lazy" decoding="async"></div>'
         : '<div class="public-flashcard-art public-flashcard-art-color"><span>AURORE</span><i></i></div>';
@@ -589,6 +594,7 @@
             front: card.front,
             back: card.back,
             cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
+            backgroundMode: card.backgroundMode === "image" || card.backgroundMode === "color" ? card.backgroundMode : ((typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage)) || (typeof series.background_image === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(series.background_image)) ? "image" : "color"),
             backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : (series.background_color || "#4937a6"),
             backgroundImage: typeof card.backgroundImage === "string" ? card.backgroundImage : "",
             seriesBackgroundImage: series.background_image || ""
