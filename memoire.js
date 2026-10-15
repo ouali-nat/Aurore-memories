@@ -543,8 +543,10 @@
     var pending = session.queue.length + (session.current ? 1 : 0);
     var progress = session.initialCount ? Math.min(100, Math.round(session.reviewed / session.initialCount * 100)) : 0;
     var html = '<div class="review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir au total</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
-    html += '<div class="mode-area"><p class="mode-label">Méthode de révision</p><div class="mode-list">' + MODES.map(function (mode) {
-      return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
+    html += '<div class="mode-area"><p class="mode-label">Choisis comment tu veux mémoriser · toutes les méthodes sont gratuites</p><div class="mode-groups">' + MODE_GROUPS.map(function (group) {
+      return '<section class="mode-group"><h3>' + escapeHtml(group.title) + '</h3><div class="mode-list">' + group.modes.map(function (mode) {
+        return '<button type="button" class="mode-chip' + (state.mode === mode.id ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode.id) + '" aria-pressed="' + (state.mode === mode.id ? 'true' : 'false') + '"><strong>' + escapeHtml(mode.label) + '</strong><small>' + escapeHtml(mode.description) + '</small></button>';
+      }).join("") + '</div></section>';
     }).join("") + '</div></div>';
     html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
 
@@ -558,14 +560,31 @@
       var card = session.current;
       html += '<article class="study-card">';
       if (session.requestedDeck) html += '<p class="study-deck">' + escapeHtml(session.requestedDeck) + '</p>';
-      html += '<p class="study-prompt">RETROUVE LA RÉPONSE DE MÉMOIRE</p><h2 class="study-question">' + escapeHtml(card.front).replace(/\n/g, "<br>") + '</h2>';
-      if (state.mode === "Texte à trous") html += '<p class="study-tip">Essaie de compléter mentalement la phrase avant d’afficher la réponse.</p>';
-      if (state.mode === "Association") html += '<p class="study-tip">Cherche un lien, une image ou une histoire qui relie la question à la réponse.</p>';
-      if (state.mode === "Palais mental") html += '<p class="study-tip">Associe cette notion à un lieu familier ou à un objet précis dans ton imagination.</p>';
+      var prompt = state.mode === "Trous" ? holePrompt(card) : card.front;
+      html += '<p class="study-prompt">' + (state.mode === "Trous" ? 'COMPLÈTE MENTALEMENT' : state.mode === "Parler" ? 'RÉPONDS À VOIX HAUTE' : 'RETROUVE LA RÉPONSE DE MÉMOIRE') + '</p><h2 class="study-question">' + escapeHtml(prompt).replace(/\n/g, "<br>") + '</h2>';
+      if (state.mode === "Trous") html += '<p class="study-tip">Complète les blancs ou retrouve la notion avant de révéler la réponse.</p>';
+      if (state.mode === "Réordonner") {
+        var shuffledWords = card.back.split(/\s+/).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+        html += '<p class="study-tip"><strong>À remettre en ordre :</strong> ' + escapeHtml(shuffledWords.join(" · ")) + '</p>';
+      }
+      if (state.mode === "Curseur") {
+        html += '<label class="confidence-label" for="confidenceSlider">À quel point es-tu sûr de ta réponse ? <strong id="confidenceValue">50 %</strong></label><input id="confidenceSlider" class="confidence-slider" type="range" min="0" max="100" step="10" value="' + session.confidence + '">';
+      }
+      if (state.mode === "Écouter") html += '<button class="secondary-btn listen-btn" type="button" data-act="speak-question">🔊 Écouter la question</button>';
+      if (state.mode === "Association") html += '<p class="study-tip">Cherche un lien ou une image mentale reliant la question à la réponse.</p>';
+      if (state.mode === "Palais mental") html += '<p class="study-tip">Associe cette notion à un lieu familier ou un objet précis.</p>';
       if (state.mode === "Premières lettres" && !session.shown) {
         html += '<p class="letter-hint">' + escapeHtml(card.back.split(/\s+/).map(function (word) { return word ? word.charAt(0) + "…" : ""; }).join(" ")) + '</p>';
       }
-      if (session.options && state.mode === "QCM") {
+      if (session.checkResult) {
+        html += '<p class="answer-feedback ' + (session.checkResult.correct ? 'feedback-good' : 'feedback-bad') + '">' + (session.checkResult.correct ? 'Bonne réponse !' : 'À retravailler : ta réponse ne correspond pas tout à fait.') + '</p>';
+        html += '<div class="study-answer-label">RÉPONSE ATTENDUE</div><div class="study-answer">' + escapeHtml(card.back).replace(/\n/g, "<br>") + '</div>';
+        html += '<button class="primary-btn next-card-btn" type="button" data-act="next-card">Continuer</button>';
+      } else if ((state.mode === "Taper" || state.mode === "Réordonner") && !session.shown) {
+        html += '<label class="field-label typed-answer-label" for="typedAnswer">' + (state.mode === "Réordonner" ? 'Reconstitue la réponse dans le bon ordre' : 'Ta réponse') + '</label><textarea class="text-area typed-answer" id="typedAnswer" rows="3" placeholder="Écris ta réponse de mémoire…"></textarea><button class="primary-btn next-card-btn" type="button" data-act="check-typed-answer">Vérifier ma réponse</button>';
+      } else if (state.mode === "Parler" && !session.shown) {
+        html += '<button class="primary-btn reveal-btn" type="button" data-act="start-speaking">🎙️ Répondre à voix haute</button><p class="study-footnote">Le navigateur peut demander l’autorisation du microphone. La reconnaissance vocale dépend de sa prise en charge.</p>';
+      } else if (session.options && state.mode === "Choix multiple") {
         html += '<div class="answer-options">' + session.options.map(function (option, index) {
           var classes = "answer-option";
           if (session.shown && option === card.back) classes += " is-correct";
@@ -580,8 +599,9 @@
           html += '<p class="study-footnote">Choisis la réponse qui correspond à la notion.</p>';
         }
       } else if (!session.shown) {
-        html += '<button class="primary-btn reveal-btn" type="button" data-act="show-answer">Afficher la réponse</button>';
+        html += '<button class="primary-btn reveal-btn" type="button" data-act="show-answer">' + (state.mode === "Écouter" ? 'Afficher la réponse' : 'Toucher pour révéler la réponse') + '</button>';
       } else {
+        if (state.mode === "Écouter") html += '<button class="secondary-btn listen-btn" type="button" data-act="speak-answer">🔊 Écouter la réponse</button>';
         html += '<div class="study-answer-label">RÉPONSE</div><div class="study-answer">' + escapeHtml(card.back).replace(/\n/g, "<br>") + '</div><p class="grade-question">Comment as-tu retrouvé cette réponse&nbsp;?</p><div class="grade-buttons"><button type="button" data-act="grade" data-grade="0"><strong>À revoir</strong><small>Je ne l’ai pas retrouvée</small></button><button type="button" data-act="grade" data-grade="1"><strong>Difficile</strong><small>Avec beaucoup d’effort</small></button><button type="button" data-act="grade" data-grade="2"><strong>Bien</strong><small>Après réflexion</small></button><button type="button" data-act="grade" data-grade="3"><strong>Facile</strong><small>Sans hésiter</small></button></div>';
       }
       html += '</article>';
@@ -611,6 +631,11 @@
 
   document.addEventListener("input", function (event) {
     if (event.target && event.target.id === "memorySearch") renderMemoryList();
+    if (event.target && event.target.id === "confidenceSlider") {
+      session.confidence = Number(event.target.value);
+      var value = $("#confidenceValue");
+      if (value) value.textContent = String(session.confidence) + " %";
+    }
   });
 
   document.addEventListener("click", function (event) {
@@ -633,18 +658,59 @@
         notify("Mémoire supprimée.");
       }
     } else if (action === "set-mode") {
-      state.mode = MODES.indexOf(button.dataset.mode) >= 0 ? button.dataset.mode : "Rappel actif";
+      state.mode = MODES.indexOf(button.dataset.mode) >= 0 ? button.dataset.mode : "Toucher pour révéler";
       save();
       if (session.current) {
         session.shown = false;
         session.picked = -1;
         session.qcmGraded = false;
-        session.options = state.mode === "QCM" ? prepareOptions(session.current) : null;
+        session.checkResult = null;
+        session.options = state.mode === "Choix multiple" ? prepareOptions(session.current) : null;
       }
       renderReview();
     } else if (action === "show-answer") {
       session.shown = true;
       renderReview();
+    } else if (action === "speak-question") {
+      if (session.current) speakLine(session.current.front);
+    } else if (action === "speak-answer") {
+      if (session.current) speakLine(session.current.back);
+    } else if (action === "check-typed-answer") {
+      if (!session.current || session.checkResult) return;
+      var typedNode = $("#typedAnswer");
+      var typedValue = typedNode ? typedNode.value : "";
+      if (!typedValue.trim()) { notify("Écris d’abord une réponse."); if (typedNode) typedNode.focus(); return; }
+      var isCorrect = normalizeAnswer(typedValue) === normalizeAnswer(session.current.back);
+      session.checkResult = { correct: isCorrect, entered: typedValue };
+      session.shown = true;
+      registerReview(session.current, isCorrect ? 2 : 0);
+      session.reviewed += 1;
+      if (!isCorrect) session.queue.push(session.current);
+      renderReview();
+    } else if (action === "start-speaking") {
+      if (!session.current || session.checkResult) return;
+      var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Recognition) { notify("La reconnaissance vocale n’est pas prise en charge ici. Choisis « Taper » ou « Toucher pour révéler »."); return; }
+      var recognition = new Recognition();
+      recognition.lang = "fr-FR";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      button.disabled = true;
+      button.textContent = "Écoute en cours…";
+      recognition.onresult = function (resultEvent) {
+        var spoken = resultEvent.results && resultEvent.results[0] && resultEvent.results[0][0] ? resultEvent.results[0][0].transcript : "";
+        var spokenCorrect = normalizeAnswer(spoken) === normalizeAnswer(session.current.back);
+        session.speechText = spoken;
+        session.checkResult = { correct: spokenCorrect, entered: spoken };
+        session.shown = true;
+        registerReview(session.current, spokenCorrect ? 2 : 0);
+        session.reviewed += 1;
+        if (!spokenCorrect) session.queue.push(session.current);
+        renderReview();
+      };
+      recognition.onerror = function () { notify("Le micro n’a pas pu reconnaître ta réponse. Vérifie l’autorisation du micro ou utilise « Taper »."); if (button.isConnected) { button.disabled = false; button.textContent = "🎙️ Répondre à voix haute"; } };
+      recognition.onend = function () { if (button.isConnected) { button.disabled = false; button.textContent = "🎙️ Répondre à voix haute"; } };
+      try { recognition.start(); } catch (error) { notify("Impossible de démarrer le micro. Essaie « Taper »."); button.disabled = false; }
     } else if (action === "choose-option") {
       if (!session.current || session.shown || !session.options) return;
       session.picked = Number(button.dataset.index);
