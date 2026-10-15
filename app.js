@@ -38,16 +38,15 @@
   }
   window.auroreToast = toast;
 
-  function formalizeText(value) {
-    var text = String(value == null ? "" : value);
-    [
-      [/\bque souhaites-tu\b/gi, "quel espace souhaitez-vous"],
-      [/\bpar où veux-tu\b/gi, "par où souhaitez-vous"],
-      [/\btu peux\b/gi, "vous pouvez"],
-      [/\btes\b/gi, "vos"], [/\bton\b/gi, "votre"], [/\bta\b/gi, "votre"],
-      [/\btoi\b/gi, "vous"], [/\btu\b/gi, "vous"]
-    ].forEach(function (entry) { text = text.replace(entry[0], entry[1]); });
-    var verbs = {
+  // Règles précompilées une seule fois : ne pas trier ni créer des RegExp par mot.
+  var formalizePhraseReplacements = [
+    [/\bque souhaites-tu\b/gi, "quel espace souhaitez-vous"],
+    [/\bpar où veux-tu\b/gi, "par où souhaitez-vous"],
+    [/\btu peux\b/gi, "vous pouvez"],
+    [/\btes\b/gi, "vos"], [/\bton\b/gi, "votre"], [/\bta\b/gi, "votre"],
+    [/\btoi\b/gi, "vous"], [/\btu\b/gi, "vous"]
+  ];
+  var formalizeVerbs = {
       "Apprends":"Apprenez","apprends":"apprenez","Retiens":"Retenez","retiens":"retenez",
       "Retrouve":"Retrouvez","retrouve":"retrouvez","Organise":"Organisez","organise":"organisez",
       "Accède":"Accédez","accède":"accédez","Révise":"Révisez","révise":"révisez",
@@ -73,37 +72,62 @@
       "Fais":"Faites","fais":"faites","Souhaites":"Souhaitez","souhaites":"souhaitez",
       "Crée":"Créez","crée":"créez"
     };
-    Object.keys(verbs).sort(function (a,b) { return b.length-a.length; }).forEach(function (word) {
-      text = text.replace(new RegExp("\\b" + word + "\\b", "g"), verbs[word]);
+  var formalizeVerbPattern = new RegExp(
+    "\\b(" + Object.keys(formalizeVerbs).sort(function (a, b) { return b.length - a.length; }).join("|") + ")\\b",
+    "g"
+  );
+  function formalizeText(value) {
+    var text = String(value == null ? "" : value);
+    for (var i = 0; i < formalizePhraseReplacements.length; i += 1) {
+      text = text.replace(formalizePhraseReplacements[i][0], formalizePhraseReplacements[i][1]);
+    }
+    return text.replace(formalizeVerbPattern, function (word) {
+      return formalizeVerbs[word] || word;
     });
-    return text;
   }
+
+  var protectedInterfaceSelector = "script,style,textarea,input,select,option,code,pre,.katex,.katex-display,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block,.public-flashcard,.public-card-user-content";
   function formalizeInterface(rootNode) {
     if (!rootNode) return;
-    var protectedSelector = "script,style,textarea,input,select,option,code,pre,.katex,.katex-display,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block,.public-flashcard,.public-card-user-content";
     if (rootNode.nodeType === 3) {
-      if (!rootNode.parentElement || rootNode.parentElement.closest(protectedSelector)) return;
+      if (!rootNode.parentElement || rootNode.parentElement.closest(protectedInterfaceSelector)) return;
       var nextText = formalizeText(rootNode.nodeValue);
       if (nextText !== rootNode.nodeValue) rootNode.nodeValue = nextText;
       return;
     }
     if (rootNode.nodeType !== 1 && rootNode.nodeType !== 9) return;
-    if (rootNode.nodeType === 1 && rootNode.matches(protectedSelector)) return;
-    var walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
-    var nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function (node) {
-      if (!node.parentElement || node.parentElement.closest(protectedSelector)) return;
-      var nextText = formalizeText(node.nodeValue);
-      if (nextText !== node.nodeValue) node.nodeValue = nextText;
-    });
-    if (rootNode.querySelectorAll) {
-      rootNode.querySelectorAll("[title],[aria-label],[placeholder]").forEach(function (element) {
-        ["title","aria-label","placeholder"].forEach(function (attr) {
-          if (!element.hasAttribute(attr) || element.matches("input,textarea,select")) return;
-          var oldValue = element.getAttribute(attr), nextValue = formalizeText(oldValue);
-          if (nextValue !== oldValue) element.setAttribute(attr,nextValue);
-        });
+    if (rootNode.nodeType === 1 &&
+        (rootNode.matches(protectedInterfaceSelector) ||
+         (rootNode.parentElement && rootNode.parentElement.closest(protectedInterfaceSelector)))) return;
+
+    // Un parcours en flux évite un grand tableau de nœuds; les sous-arbres
+    // lourds ou générés sont rejetés avant que leurs descendants soient parcourus.
+    var walker = document.createTreeWalker(
+      rootNode,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function (node) {
+          if (node.nodeType === 1) {
+            if (node.matches(protectedInterfaceSelector)) return NodeFilter.FILTER_REJECT;
+            return node.hasAttribute("title") || node.hasAttribute("aria-label") || node.hasAttribute("placeholder")
+              ? NodeFilter.FILTER_ACCEPT
+              : NodeFilter.FILTER_SKIP;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeType === 3) {
+        var nextText = formalizeText(node.nodeValue);
+        if (nextText !== node.nodeValue) node.nodeValue = nextText;
+        continue;
+      }
+      ["title", "aria-label", "placeholder"].forEach(function (attr) {
+        if (!node.hasAttribute(attr) || node.matches("input,textarea,select")) return;
+        var oldValue = node.getAttribute(attr), nextValue = formalizeText(oldValue);
+        if (nextValue !== oldValue) node.setAttribute(attr, nextValue);
       });
     }
   }
@@ -114,7 +138,7 @@
     function queueInterfaceMutation(node) {
       if (!node) return;
       var target = node.nodeType === 3 ? node.parentElement : node;
-      if (!target || (target.closest && target.closest(".katex,.katex-display"))) return;
+      if (!target || (target.closest && target.closest(protectedInterfaceSelector))) return;
       for (var i = interfaceMutationRoots.length - 1; i >= 0; i--) {
         var previous = interfaceMutationRoots[i];
         if (previous === target || (previous.contains && previous.contains(target))) return;
