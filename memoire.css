@@ -305,3 +305,6 @@
   .chunk-progress-row { padding:12px; }
   .chunk-score-line { grid-template-columns:68px minmax(35px,1fr) 34px; }
 }
+
+.cloze-preview { margin:15px 0; padding:clamp(16px,4vw,25px); border:1px solid var(--border); border-radius:15px; background:var(--bg); color:var(--text); font-size:clamp(1rem,2.5vw,1.2rem); line-height:2; overflow-wrap:anywhere; box-shadow:inset 0 1px 0 rgba(255,255,255,.03); }
+.cloze-preview::selection { background:var(--accent-light); color:white; }
