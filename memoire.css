@@ -196,3 +196,25 @@
  .free-segment-panel { grid-template-columns:1fr; }
  .free-segment-panel>div:first-child,.segment-actions,.segment-feedback { grid-column:1; }
 }
+
+/* Méthodes de mémorisation regroupées par intention pédagogique. */
+.method-group { margin-top:11px; }
+.method-group>strong { display:block; margin-bottom:7px; font-size:.72rem; color:var(--text); }
+.method-group .mode-list { gap:6px; }
+.listen-question-btn { margin:0 0 13px; }
+.confidence-control { margin:5px 0 18px; padding:13px; border:1px solid var(--border); border-radius:11px; background:var(--bg); }
+.confidence-control label { display:flex; justify-content:space-between; gap:10px; color:var(--muted); font-size:.75rem; }
+.confidence-control label strong { color:var(--accent-light); white-space:nowrap; }
+.confidence-control input { display:block; width:100%; margin:14px 0 5px; accent-color:var(--accent-light); }
+.confidence-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:.64rem; }
+.reorder-bank { display:flex; flex-wrap:wrap; gap:7px; margin:12px 0; }
+.reorder-word { width:auto; min-height:36px; padding:8px 10px; }
+.reorder-word.is-used { opacity:.35; text-decoration:line-through; }
+.reorder-answer { min-height:52px; margin-top:10px; }
+.reorder-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.typed-answer { min-height:100px; margin-top:8px; }
+@media(max-width:520px) {
+ .method-group .mode-list { gap:5px; }
+ .method-group .mode-chip { flex:1 1 auto; }
+ .confidence-control { padding:10px; }
+}
