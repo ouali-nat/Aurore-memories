@@ -584,8 +584,12 @@
 
   function startSession(deck, includeAllCards) {
     session.requestedDeck = deck || "";
+    var params = new URLSearchParams(window.location.search);
+    var requestedCard = params.get("card") || "";
     var availableCards = includeAllCards ? state.cards.slice() : dueCards();
-    session.queue = availableCards.filter(function (card) { return !session.requestedDeck || card.deck === session.requestedDeck; });
+    session.queue = availableCards.filter(function (card) {
+      return (!session.requestedDeck || card.deck === session.requestedDeck) && (!requestedCard || String(card.id) === requestedCard);
+    });
     session.queue.sort(function () { return Math.random() - 0.5; });
     session.hadDueCards = session.queue.length > 0;
     session.initialCount = session.queue.length;
@@ -747,11 +751,14 @@
     if (!root) return;
     var pending = session.queue.length + (session.current ? 1 : 0);
     var progress = session.initialCount ? Math.min(100, Math.round(session.reviewed / session.initialCount * 100)) : 0;
-    var html = '<div class="review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir au total</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
-    html += renderProgressChart();
     var dedicatedMode = document.body.dataset.modePage || "";
-    if (!dedicatedMode) html += renderModeNavigation(false);
-    html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
+    var html = "";
+    if (!dedicatedMode) {
+      html += '<div class="review-workspace-links"><a class="secondary-btn" href="editer-memoire.html">Éditer et morceler une mémoire</a><a class="secondary-btn" href="progression.html">Ma progression</a></div>';
+      html += renderModeNavigation(false);
+      html += '<div class="review-summary compact-review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
+    }
+    if (!dedicatedMode) html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
 
     if (!state.cards.length) {
       html += '<div class="empty-state"><span class="empty-icon" aria-hidden="true">↻</span><h2>Il te faut une première mémoire</h2><p>Crée quelques cartes avant de commencer tes révisions.</p><a class="primary-btn" href="creer-memoire.html">Créer une mémoire</a></div>';
@@ -769,7 +776,13 @@
       if (state.mode === "Association") html += '<p class="study-tip">Cherche un lien, une image ou une histoire qui relie la question à la réponse.</p>';
       if (state.mode === "Palais mental") html += '<p class="study-tip">Associe cette notion à un lieu familier ou à un objet précis dans ton imagination.</p>';
       if (state.mode === "Première lettre" && !session.shown) {
-        html += '<p class="letter-hint">' + escapeHtml(card.back.split(/\s+/).map(function (word) { return word ? word.charAt(0) + "…" : ""; }).join(" ")) + '</p>';
+        html += '<p class="study-tip">Complète chaque mot à partir de sa première lettre. Aurore vérifiera l’ensemble à la fin.</p><div class="first-letter-words" aria-label="Complète les mots">';
+        html += card.back.split(/\s+/).map(function (word, index) {
+          var first = word ? word.charAt(0) : "";
+          var rest = word ? word.slice(1) : "";
+          var width = Math.min(180, Math.max(34, rest.length * 9 + 18));
+          return '<label class="first-letter-word" style="--word-width:' + width + 'px"><span class="first-letter-initial">' + escapeHtml(first) + '</span><input data-first-rest="' + index + '" aria-label="Mot ' + (index + 1) + '" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:' + width + 'px" value="' + escapeHtml(rest ? "" : "") + '" placeholder="' + (rest ? "…" : "") + '"></label>';
+        }).join("") + '</div><button class="primary-btn next-card-btn" type="button" data-act="check-first-letter">Vérifier mes réponses</button>';
       }
       if (state.mode === "Écouter") html += '<button type="button" class="secondary-btn listen-question-btn" data-act="speak-question">▶ Écouter la question</button>';
       if (state.mode === "Curseur" && !session.shown) html += '<div class="confidence-control"><label for="confidenceSlider">À quel point penses-tu connaître la réponse ? <strong id="confidenceValue">' + session.confidence + '%</strong></label><input id="confidenceSlider" type="range" min="0" max="100" step="5" value="' + session.confidence + '"><div class="confidence-labels"><span>Pas du tout</span><span>Très bien</span></div></div>';
@@ -801,6 +814,8 @@
         } else {
           html += '<p class="study-footnote">Choisis la réponse qui correspond à la notion.</p>';
         }
+      } else if (state.mode === "Première lettre" && session.shown) {
+        html += '<p class="answer-feedback ' + (session.typedCorrect ? 'feedback-good' : 'feedback-bad') + '">' + (session.typedCorrect ? 'Tous les mots correspondent à la réponse attendue.' : 'Certaines réponses diffèrent. Compare avec le texte complet.') + '</p><div class="study-answer-label">RÉPONSE ATTENDUE</div><div class="study-answer">' + escapeHtml(card.back).replace(/\n/g, "<br>") + '</div><button class="primary-btn next-card-btn" type="button" data-act="next-card">Continuer</button>';
       } else if (!session.shown) {
         html += '<button class="primary-btn reveal-btn" type="button" data-act="show-answer">Afficher la réponse</button>';
       } else {
@@ -810,7 +825,6 @@
       }
       html += '</article>';
     }
-    if (dedicatedMode) html += renderChunkProgress(dedicatedMode);
     root.innerHTML = html;
   }
 
@@ -908,6 +922,13 @@
       renderReview();
     } else if (action === "check-reorder") {
       gradeTypedAnswer((session.reorderUsed || []).map(function (index) { return session.shuffledWords[index]; }).join(" "));
+    } else if (action === "check-first-letter") {
+      if (!session.current || session.shown) return;
+      var expectedWords = session.current.back.split(/\s+/);
+      var enteredWords = Array.prototype.map.call(root.querySelectorAll("[data-first-rest]"), function (input, index) {
+        return (expectedWords[index] || "").charAt(0) + input.value;
+      });
+      gradeTypedAnswer(enteredWords.join(" "));
     } else if (action === "check-typed") {
       gradeTypedAnswer($("#typedAnswer") ? $("#typedAnswer").value : "");
     } else if (action === "check-spoken") {
