@@ -502,7 +502,8 @@
     var newCard = makeCard(card.front, card.back, "Partagé · " + card.seriesName);
     newCard.cardMode = card.cardMode === "scientific" ? "scientific" : "simple";
     newCard.backgroundMode = card.backgroundMode === "image" ? "image" : "color";
-    newCard.sourcePublicId = card.seriesId;
+    newCard.sourcePublicKey = card.sourcePublicKey;
+    newCard.sourcePublicSeriesId = card.seriesId;
     newCard.sourceAuthor = card.authorName;
     if (/^#[0-9a-f]{6}$/i.test(card.backgroundColor || "")) newCard.backgroundColor = card.backgroundColor;
     if (newCard.backgroundMode === "image") {
