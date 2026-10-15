@@ -552,6 +552,12 @@
         '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">i</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
         '</div></article>';
     }).join("") + '</div>';
+    // Le flux public est reconstruit dynamiquement avec innerHTML.
+    // Déclencher explicitement le rendu LaTeX évite de dépendre uniquement
+    // du MutationObserver, notamment quand KaTeX finit de charger après les cartes.
+    if (typeof window.renderAuroreMath === "function") {
+      window.renderAuroreMath(root);
+    }
   }
 
   async function loadPublicCards() {
