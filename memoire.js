@@ -4,7 +4,25 @@
   var STORAGE_KEY = "aurore-memory-cards-v1";
   var SELECTED_DECK_KEY = "aurore-memory-selected-deck";
   var DAY_MS = 86400000;
-  var MODES = ["Rappel actif", "Texte à trous", "Premières lettres", "QCM", "Association", "Palais mental"];
+  var MODE_GROUPS = [
+    { title: "Se familiariser", modes: [
+      { id: "Toucher pour révéler", label: "Toucher pour révéler", description: "Affiche la réponse quand tu es prêt." },
+      { id: "Curseur", label: "Curseur", description: "Indique ton niveau de confiance avant de révéler." },
+      { id: "Écouter", label: "Écouter", description: "Écoute la question puis la réponse." }
+    ]},
+    { title: "Consolider", modes: [
+      { id: "Premières lettres", label: "Première lettre", description: "Un indice pour retrouver chaque mot." },
+      { id: "Trous", label: "Trous", description: "Complète mentalement la phrase." },
+      { id: "Réordonner", label: "Réordonner", description: "Reconstitue la réponse dans le bon ordre." }
+    ]},
+    { title: "Évaluer", modes: [
+      { id: "Taper", label: "Taper", description: "Saisis ta réponse avant de vérifier." },
+      { id: "Choix multiple", label: "Choix multiple", description: "Choisis la bonne réponse parmi quatre." },
+      { id: "Parler", label: "Parler", description: "Réponds à voix haute si le navigateur le permet." }
+    ]}
+  ];
+  var MODES = MODE_GROUPS.reduce(function (all, group) { return all.concat(group.modes.map(function (mode) { return mode.id; })); }, []);
+  var LEGACY_MODES = { "Rappel actif": "Toucher pour révéler", "Texte à trous": "Trous", "QCM": "Choix multiple", "Association": "Toucher pour révéler", "Palais mental": "Toucher pour révéler" };
   var $ = function (selector, scope) { return (scope || document).querySelector(selector); };
   var today = function () { return Math.floor(Date.now() / DAY_MS); };
 
@@ -22,7 +40,9 @@
   if (!state || typeof state !== "object") state = { cards: [], log: {}, mode: "Rappel actif" };
   if (!Array.isArray(state.cards)) state.cards = [];
   if (!state.log || typeof state.log !== "object") state.log = {};
-  if (MODES.indexOf(state.mode) < 0) state.mode = "Rappel actif";
+  if (LEGACY_MODES[state.mode]) state.mode = LEGACY_MODES[state.mode];
+  if (MODES.indexOf(state.mode) < 0) state.mode = "Toucher pour révéler";
+  if (!Array.isArray(state.history)) state.history = [];
   state.cards = state.cards.map(function (card, index) {
     card = card && typeof card === "object" ? card : {};
     if (card.id == null) card.id = Date.now() + index;
@@ -138,6 +158,32 @@
     });
   }
 
+  function normalizeAnswer(value) {
+    return String(value || "").toLocaleLowerCase("fr")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+  }
+
+  function speakLine(text) {
+    if (!("speechSynthesis" in window) || typeof window.SpeechSynthesisUtterance === "undefined") {
+      notify("La lecture audio n’est pas disponible dans ce navigateur.");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    var utterance = new window.SpeechSynthesisUtterance(String(text || ""));
+    utterance.lang = "fr-FR";
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function holePrompt(card) {
+    var front = String(card.front || "");
+    var back = String(card.back || "");
+    if (/_{3,}|[…]{2,}/.test(front)) return front;
+    var pos = back ? front.toLocaleLowerCase().indexOf(back.toLocaleLowerCase()) : -1;
+    if (pos >= 0) return front.slice(0, pos) + "________" + front.slice(pos + back.length);
+    return front;
+  }
+
   function registerReview(card, grade) {
     if (grade === 0) {
       card.lapses += 1;
@@ -160,6 +206,8 @@
     }
     var dateKey = String(today());
     state.log[dateKey] = (Number(state.log[dateKey]) || 0) + 1;
+    state.history.push({ date: dateKey, cardId: card.id, deck: card.deck, grade: grade, mode: state.mode });
+    if (state.history.length > 3000) state.history = state.history.slice(-3000);
     save();
   }
 
@@ -445,6 +493,9 @@
     options: null,
     picked: -1,
     qcmGraded: false,
+    checkResult: null,
+    confidence: 50,
+    speechText: "",
     requestedDeck: "",
     hadDueCards: false,
     reviewed: 0,
@@ -479,7 +530,10 @@
     session.shown = false;
     session.picked = -1;
     session.qcmGraded = false;
-    session.options = session.current && state.mode === "QCM" ? prepareOptions(session.current) : null;
+    session.options = session.current && state.mode === "Choix multiple" ? prepareOptions(session.current) : null;
+    session.checkResult = null;
+    session.speechText = "";
+    session.confidence = 50;
     renderReview();
   }
 
