@@ -1,5 +1,5 @@
 (function(){"use strict";
-const KEY="aurore-memory-cards-v1",MODES=["Rappel actif","Premières lettres","QCM"];
+const KEY="aurore-memory-cards-v1",MODES=["Rappel actif","Texte à trous","Premières lettres","QCM","Association","Palais mental"];
 const day=()=>Math.floor(Date.now()/864e5),$=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
@@ -78,5 +78,6 @@ document.addEventListener("click",function(e){
  else if(t==="g"){const g=+a.dataset.g;grade(cur,g);if(g===0)queue.push(cur);next()}
  else if(t==="next")next();
 },true);
+window.auroreMemoryRender=render;
 render();
 })();
