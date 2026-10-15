@@ -38,6 +38,32 @@
   }
   window.auroreToast = toast;
 
+  // Share the three small home counters without parsing the full card store on every return.
+  window.auroreUpdateMemoryHomeStats = function (cards) {
+    try {
+      var today = Math.floor(Date.now() / 86400000);
+      var memoryDecks = Object.create(null), flashcardDecks = Object.create(null), due = 0;
+      (Array.isArray(cards) ? cards : []).forEach(function (card) {
+        card = card && typeof card === "object" ? card : {};
+        var kind = card.kind === "memory" ? "memory" : card.kind === "flashcard" ? "flashcard" :
+          (/(?:·|—|-)\s*Morceau\s+\d+\s*$/i.test(String(card.front || "")) ? "memory" : "flashcard");
+        var deck = typeof card.deck === "string" && card.deck.trim() ? card.deck : "Ma mémoire";
+        (kind === "memory" ? memoryDecks : flashcardDecks)[deck] = true;
+        var dueDate = typeof card.due === "number" && isFinite(card.due) ? card.due : today;
+        if (dueDate <= today) due += 1;
+      });
+      localStorage.setItem("aurore-memory-home-stats-v1", JSON.stringify({
+        memories: Object.keys(memoryDecks).length,
+        series: Object.keys(flashcardDecks).length,
+        due: due
+      }));
+      return true;
+    } catch (error) {
+      try { localStorage.removeItem("aurore-memory-home-stats-v1"); } catch (cacheError) {}
+      return false;
+    }
+  };
+
   // Règles précompilées une seule fois : ne pas trier ni créer des RegExp par mot.
   var formalizePhraseReplacements = [
     [/\bque souhaites-tu\b/gi, "quel espace souhaitez-vous"],
