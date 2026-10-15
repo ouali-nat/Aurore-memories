@@ -542,7 +542,7 @@
         ? '<div class="public-flashcard-art"><img src="' + escapeHtml(cardImage) + '" alt="" loading="lazy" decoding="async"></div>'
         : '<div class="public-flashcard-art public-flashcard-art-color"><span>AURORE</span><i></i></div>';
       var scienceClass = card.cardMode === "scientific" ? " is-scientific" : "";
-      return '<article class="public-flashcard' + scienceClass + '" style="--card-art-color:' + cardColor + '" data-public-card="' + index + '" tabindex="0" role="button" aria-label="Révéler la réponse à : ' + escapeHtml(card.front.slice(0, 120)) + '">' +
+      return '<article class="public-flashcard' + scienceClass + '" style="--card-art-color:' + cardColor + '" data-public-card="' + index + '" tabindex="0" role="group" aria-label="Carte publique : ' + escapeHtml(card.front.slice(0, 120)) + '">' +
         imageMarkup +
         '<div class="public-flashcard-shade" aria-hidden="true"></div>' +
         '<div class="public-flashcard-content"><div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
