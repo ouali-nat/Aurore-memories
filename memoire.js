@@ -523,7 +523,7 @@
       card._feedIndex = index;
       if (selectedSeries && card.seriesId !== selectedSeries) return;
       var haystack = normalizeSearch([card.seriesName, card.authorName, card.domain, card.description, card.front, card.back].join(" "));
-      if (search && !(haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
+      if (search && !(haystack.indexOf(search) !== -1 || search.split(/\\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
       visible.push(card);
     });
     if (!visible.length) {
@@ -536,19 +536,21 @@
       var index = card._feedIndex;
       var answerId = "public-answer-" + index;
       var cardColor = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "#4937a6";
-      var cardImage = typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
-        (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "");
+      var cardImage = typeof card.backgroundImage === "string" && /^data:image\\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
+        (typeof card.seriesBackgroundImage === "string" && /^data:image\\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "");
       var imageMarkup = cardImage
-        ? '<div class="public-flashcard-art" style="--card-art-color:' + cardColor + '"><img src="' + escapeHtml(cardImage) + '" alt="Illustration de la carte : ' + escapeHtml(card.front.slice(0,120)) + '" loading="lazy" decoding="async"></div>'
-        : '<div class="public-flashcard-art public-flashcard-art-color" style="--card-art-color:' + cardColor + '" aria-hidden="true"><span>AURORE</span><i></i></div>';
-      return '<article class="public-flashcard" style="--card-art-color:' + cardColor + '">' +
+        ? '<div class="public-flashcard-art"><img src="' + escapeHtml(cardImage) + '" alt="" loading="lazy" decoding="async"></div>'
+        : '<div class="public-flashcard-art public-flashcard-art-color"><span>AURORE</span><i></i></div>';
+      var scienceClass = card.cardMode === "scientific" ? " is-scientific" : "";
+      return '<article class="public-flashcard' + scienceClass + '" style="--card-art-color:' + cardColor + '" data-public-card="' + index + '" tabindex="0" role="button" aria-label="Révéler la réponse à : ' + escapeHtml(card.front.slice(0, 120)) + '">' +
         imageMarkup +
+        '<div class="public-flashcard-shade" aria-hidden="true"></div>' +
         '<div class="public-flashcard-content"><div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
-        '<p class="public-card-eyebrow">QUESTION</p><h2>' + escapeHtml(card.front) + '</h2>' +
-        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + escapeHtml(card.back) + '</p></div>' +
-        '<button type="button" class="public-reveal-answer" data-act="public-answer" data-target="' + answerId + '" aria-expanded="false">Afficher la réponse</button>' +
-        '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">!</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
-        '</article>';
+        '<p class="public-card-eyebrow">QUESTION</p><h2>' + escapeHtml(card.front).replace(/\\n/g, "<br>") + '</h2>' +
+        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + escapeHtml(card.back).replace(/\\n/g, "<br>") + '</p></div>' +
+        '<div class="public-flashcard-bottom"><span class="public-card-hint" aria-hidden="true">Toucher pour révéler</span>' +
+        '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">i</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
+        '</div></article>';
     }).join("") + '</div>';
   }
 
@@ -580,6 +582,7 @@
             createdAt: series.created_at,
             front: card.front,
             back: card.back,
+            cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
             backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : (series.background_color || "#4937a6"),
             backgroundImage: typeof card.backgroundImage === "string" ? card.backgroundImage : "",
             seriesBackgroundImage: series.background_image || ""
@@ -596,7 +599,37 @@
 
   function initializePublicCardsPage() {
     var search = $("#publicCardSearch");
+    var root = $("#publicCardFeed");
     if (search) search.addEventListener("input", renderPublicCards);
+    if (root) {
+      function revealCard(article) {
+        var answer = article.querySelector(".public-card-answer");
+        var hint = article.querySelector(".public-card-hint");
+        if (!answer) return;
+        answer.hidden = !answer.hidden;
+        article.classList.toggle("is-revealed", !answer.hidden);
+        if (hint) hint.textContent = answer.hidden ? "Toucher pour révéler" : "Toucher pour masquer";
+        article.setAttribute("aria-label", answer.hidden ? "Révéler la réponse à cette carte" : "Masquer la réponse de cette carte");
+      }
+      root.addEventListener("click", function (event) {
+        var article = event.target.closest(".public-flashcard");
+        if (!article || event.target.closest("button, a, input, textarea, select")) return;
+        revealCard(article);
+      });
+      root.addEventListener("keydown", function (event) {
+        if (event.target.closest("button, a, input, textarea, select")) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        var article = event.target.closest(".public-flashcard");
+        if (!article) return;
+        event.preventDefault();
+        var answer = article.querySelector(".public-card-answer");
+        if (!answer) return;
+        answer.hidden = !answer.hidden;
+        article.classList.toggle("is-revealed", !answer.hidden);
+        var hint = article.querySelector(".public-card-hint");
+        if (hint) hint.textContent = answer.hidden ? "Toucher pour révéler" : "Toucher pour masquer";
+      });
+    }
     loadPublicCards();
   }
 
