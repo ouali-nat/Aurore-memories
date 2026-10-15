@@ -756,7 +756,6 @@
     if (!dedicatedMode) {
       html += '<div class="review-workspace-links"><a class="secondary-btn" href="editer-memoire.html">Éditer et morceler une mémoire</a><a class="secondary-btn" href="progression.html">Ma progression</a></div>';
       html += renderModeNavigation(false);
-      html += '<div class="review-summary compact-review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
       root.innerHTML = html;
       return;
     }
