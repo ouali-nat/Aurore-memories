@@ -68,7 +68,7 @@
   }
   function formalizeInterface(rootNode) {
     if (!rootNode) return;
-    var protectedSelector = "script,style,textarea,input,select,option,code,pre,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block,.public-flashcard,.public-card-user-content";
+    var protectedSelector = "script,style,textarea,input,select,option,code,pre,.katex,.katex-display,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block,.public-flashcard,.public-card-user-content";
     if (rootNode.nodeType === 3) {
       if (!rootNode.parentElement || rootNode.parentElement.closest(protectedSelector)) return;
       var nextText = formalizeText(rootNode.nodeValue);
@@ -97,9 +97,31 @@
   }
   formalizeInterface(document.body);
   if (window.MutationObserver && document.body) {
+    var interfaceMutationRoots = [];
+    var interfaceMutationFrame = 0;
+    function queueInterfaceMutation(node) {
+      if (!node) return;
+      var target = node.nodeType === 3 ? node.parentElement : node;
+      if (!target || (target.closest && target.closest(".katex,.katex-display"))) return;
+      for (var i = interfaceMutationRoots.length - 1; i >= 0; i--) {
+        var previous = interfaceMutationRoots[i];
+        if (previous === target || (previous.contains && previous.contains(target))) return;
+        if (target.contains && target.contains(previous)) interfaceMutationRoots.splice(i, 1);
+      }
+      interfaceMutationRoots.push(target);
+      if (interfaceMutationFrame) return;
+      var schedule = window.requestAnimationFrame || function (callback) {
+        return window.setTimeout(callback, 16);
+      };
+      interfaceMutationFrame = schedule(function () {
+        interfaceMutationFrame = 0;
+        var roots = interfaceMutationRoots.splice(0);
+        roots.forEach(function (rootNode) { formalizeInterface(rootNode); });
+      }) || 1;
+    }
     var interfaceObserver = new MutationObserver(function (records) {
       records.forEach(function (record) {
-        record.addedNodes.forEach(function (node) { formalizeInterface(node); });
+        record.addedNodes.forEach(queueInterfaceMutation);
       });
     });
     interfaceObserver.observe(document.body, {childList:true,subtree:true});
