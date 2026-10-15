@@ -22,6 +22,8 @@
   if (!state || typeof state !== "object") state = { cards: [], log: {}, mode: "Rappel actif" };
   if (!Array.isArray(state.cards)) state.cards = [];
   if (!state.log || typeof state.log !== "object") state.log = {};
+  if (!Array.isArray(state.performance)) state.performance = [];
+  if (["courbe", "diagramme", "batonnets"].indexOf(state.chartType) < 0) state.chartType = "courbe";
   if (MODES.indexOf(state.mode) < 0) state.mode = "Rappel actif";
   state.cards = state.cards.map(function (card, index) {
     card = card && typeof card === "object" ? card : {};
@@ -160,6 +162,16 @@
     }
     var dateKey = String(today());
     state.log[dateKey] = (Number(state.log[dateKey]) || 0) + 1;
+    var daily = state.performance.filter(function (entry) { return entry && entry.day === dateKey; })[0];
+    if (!daily) {
+      daily = { day: dateKey, total: 0, remembered: 0, difficult: 0, missed: 0 };
+      state.performance.push(daily);
+    }
+    daily.total += 1;
+    if (grade >= 2) daily.remembered += 1;
+    else if (grade === 1) daily.difficult += 1;
+    else daily.missed += 1;
+    if (state.performance.length > 120) state.performance = state.performance.slice(-120);
     save();
   }
 
@@ -232,6 +244,7 @@
     var draftCards = $("#draftCards");
     var feedback = $("#createFeedback");
     var bulkPreview = $("#bulkPreview");
+    var originalBulkText = null;
 
     function setFeedback(message, isError) {
       if (!feedback) return;
@@ -356,6 +369,45 @@
     Array.prototype.forEach.call(form.querySelectorAll("[data-create-mode]"), function (button) {
       button.addEventListener("click", function () { chooseMode(button.dataset.createMode); });
     });
+
+    var segmentButton = $("#segmentCourseButton");
+    var restoreButton = $("#restoreCourseButton");
+    var segmentFeedback = $("#segmentFeedback");
+    if (segmentButton) segmentButton.addEventListener("click", function () {
+      var source = ($("#memoryText").value || "").trim();
+      if (!source) {
+        if (segmentFeedback) segmentFeedback.textContent = "Colle d’abord le cours à découper.";
+        return;
+      }
+      var size = $("#segmentSize").value;
+      var chunks = [];
+      if (size === "paragraph") {
+        chunks = source.split(/\n\s*\n+/).map(function (part) { return part.replace(/\s+/g, " ").trim(); }).filter(Boolean);
+      } else {
+        var sentences = source.replace(/\r/g, " ").split(/(?<=[.!?。！？])\s+/).map(function (part) { return part.trim(); }).filter(function (part) { return part.length > 0; });
+        var groupSize = Math.max(1, Number(size) || 2);
+        for (var i = 0; i < sentences.length; i += groupSize) chunks.push(sentences.slice(i, i + groupSize).join(" "));
+      }
+      if (!chunks.length) {
+        if (segmentFeedback) segmentFeedback.textContent = "Je n’ai pas trouvé de passage à découper. Vérifie le texte.";
+        return;
+      }
+      if (originalBulkText === null) originalBulkText = source;
+      $("#memoryText").value = chunks.map(function (chunk, index) { return "Récite le segment " + (index + 1) + " du cours :: " + chunk; }).join("\n");
+      if (restoreButton) restoreButton.hidden = false;
+      chooseMode("bulk");
+      var cards = previewBulk();
+      if (segmentFeedback) segmentFeedback.textContent = chunks.length + " segment(s) préparé(s), gratuitement. Tu peux vérifier les réponses dans l’aperçu ou restaurer le texte original.";
+      setFeedback(cards.length + " segment(s) prêts à être enregistrés.", false);
+    });
+    if (restoreButton) restoreButton.addEventListener("click", function () {
+      if (originalBulkText !== null) $("#memoryText").value = originalBulkText;
+      originalBulkText = null;
+      restoreButton.hidden = true;
+      if (segmentFeedback) segmentFeedback.textContent = "Le cours original a été restauré.";
+      previewBulk();
+    });
+
     var prepareButton = $("#prepareBulkCards");
     if (prepareButton) prepareButton.addEventListener("click", function () {
       var cards = previewBulk();
@@ -483,12 +535,56 @@
     renderReview();
   }
 
+
+  function renderProgressChart() {
+    var now = today();
+    var points = [];
+    for (var i = 6; i >= 0; i -= 1) {
+      var day = String(now - i);
+      var entry = state.performance.filter(function (item) { return item && item.day === day; })[0];
+      points.push({ day: day, total: entry ? Number(entry.total) || 0 : 0, remembered: entry ? Number(entry.remembered) || 0 : 0, missed: entry ? Number(entry.missed) || 0 : 0 });
+    }
+    var total = points.reduce(function (sum, point) { return sum + point.total; }, 0);
+    var remembered = points.reduce(function (sum, point) { return sum + point.remembered; }, 0);
+    var missed = points.reduce(function (sum, point) { return sum + point.missed; }, 0);
+    var max = Math.max(1, points.reduce(function (value, point) { return Math.max(value, point.total); }, 0));
+    var labels = points.map(function (point) {
+      var date = new Date(Number(point.day) * DAY_MS);
+      return date.toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", "");
+    });
+    var graphic = "";
+    if (state.chartType === "batonnets") {
+      graphic = '<svg class="progress-chart-svg" viewBox="0 0 330 120" role="img" aria-label="Nombre de révisions par jour en bâtonnets">' +
+        points.map(function (point, i) {
+          var height = point.total / max * 76;
+          var x = 13 + i * 45;
+          return '<rect x="' + x + '" y="' + (91 - height) + '" width="24" height="' + Math.max(2, height) + '" rx="4" fill="var(--accent-light)"><title>' + labels[i] + ' : ' + point.total + ' révision(s)</title></rect><text x="' + (x + 12) + '" y="107" text-anchor="middle">' + labels[i] + '</text>';
+        }).join("") + '</svg>';
+    } else if (state.chartType === "diagramme") {
+      var circumference = 2 * Math.PI * 34;
+      var good = total ? remembered / total * circumference : 0;
+      var bad = total ? missed / total * circumference : 0;
+      graphic = '<div class="progress-donut-wrap"><svg class="progress-donut" viewBox="0 0 100 100" role="img" aria-label="Répartition des réponses mémorisées et à revoir"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--border)" stroke-width="12"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--accent-light)" stroke-width="12" stroke-dasharray="' + good + ' ' + circumference + '" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="34" fill="none" stroke="#e17d87" stroke-width="12" stroke-dasharray="' + bad + ' ' + circumference + '" stroke-dashoffset="-' + good + '" transform="rotate(-90 50 50)"/><text x="50" y="47" text-anchor="middle" class="donut-total">' + total + '</text><text x="50" y="59" text-anchor="middle" class="donut-caption">révisions</text></svg><div class="progress-legend"><span><i class="legend-good"></i>Bien ou facile <strong>' + remembered + '</strong></span><span><i class="legend-bad"></i>À revoir <strong>' + missed + '</strong></span><span><i class="legend-neutral"></i>Difficile <strong>' + (total - remembered - missed) + '</strong></span></div></div>';
+    } else {
+      var coords = points.map(function (point, i) { return (18 + i * 49) + "," + (88 - point.total / max * 67); }).join(" ");
+      graphic = '<svg class="progress-chart-svg" viewBox="0 0 330 120" role="img" aria-label="Courbe du nombre de révisions par jour"><line x1="12" y1="89" x2="320" y2="89" stroke="var(--border)" stroke-width="1"/><polyline points="' + coords + '" fill="none" stroke="var(--accent-light)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
+        points.map(function (point, i) {
+          var x = 18 + i * 49, y = 88 - point.total / max * 67;
+          return '<circle cx="' + x + '" cy="' + y + '" r="4" fill="var(--accent-light)"><title>' + labels[i] + ' : ' + point.total + ' révision(s)</title></circle><text x="' + x + '" y="107" text-anchor="middle">' + labels[i] + '</text>';
+        }).join("") + '</svg>';
+    }
+    return '<section class="progress-panel" aria-label="Progression des révisions"><div class="progress-panel-head"><div><p class="section-kicker">TON ÉVOLUTION</p><h2>Ma progression</h2><p>Activité des 7 derniers jours · ' + total + ' révision(s)</p></div><label class="chart-select-label"><span>Affichage</span><select id="progressChartType" aria-label="Type de graphique"><option value="courbe"' + (state.chartType === "courbe" ? " selected" : "") + '>Courbe</option><option value="diagramme"' + (state.chartType === "diagramme" ? " selected" : "") + '>Diagramme</option><option value="batonnets"' + (state.chartType === "batonnets" ? " selected" : "") + '>Bâtonnets</option></select></label></div>' +
+      (total ? graphic : '<p class="chart-empty">Tes graphiques apparaîtront ici après tes premières révisions. Les anciennes révisions sont conservées, mais leur résultat détaillé n’est pas disponible rétroactivement.</p>') +
+      '<div class="chart-footer"><span><strong>' + remembered + '</strong> réponses bien retrouvées</span><span><strong>' + missed + '</strong> à revoir</span></div></section>';
+  }
+
   function renderReview() {
     var root = $("#reviewApp");
     if (!root) return;
     var pending = session.queue.length + (session.current ? 1 : 0);
     var progress = session.initialCount ? Math.min(100, Math.round(session.reviewed / session.initialCount * 100)) : 0;
     var html = '<div class="review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir au total</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
+    html += renderProgressChart();
     html += '<div class="mode-area"><p class="mode-label">Méthode de révision</p><div class="mode-list">' + MODES.map(function (mode) {
       return '<button type="button" class="mode-chip' + (state.mode === mode ? ' is-active' : '') + '" data-act="set-mode" data-mode="' + escapeHtml(mode) + '">' + escapeHtml(mode) + '</button>';
     }).join("") + '</div></div>';
@@ -557,6 +653,14 @@
 
   document.addEventListener("input", function (event) {
     if (event.target && event.target.id === "memorySearch") renderMemoryList();
+  });
+
+  document.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "progressChartType") {
+      state.chartType = ["courbe", "diagramme", "batonnets"].indexOf(event.target.value) >= 0 ? event.target.value : "courbe";
+      save();
+      renderReview();
+    }
   });
 
   document.addEventListener("click", function (event) {
