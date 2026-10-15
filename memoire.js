@@ -237,7 +237,7 @@
     var searched = state.cards.filter(function (card) {
       if (view === "memories" && !isMemoryCard(card)) return false;
       if (view === "cards" && !isFlashcard(card)) return false;
-      return !search || search.split(" ").filter(Boolean).every(function (term) { return [card.deck, card.front, card.back].some(function (value) { return normalizeSearch(value).indexOf(term) !== -1; }); });
+      if (!search) return true; var haystack = normalizeSearch([card.deck, card.front, card.back].join(" ")); return haystack.indexOf(search) !== -1 || search.split(/\\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; });
     });
     var memoryGroupsByDeck = memoryGroups(searched.filter(isMemoryCard));
     var flashGroupsByDeck = memoryGroups(searched.filter(isFlashcard));
@@ -276,6 +276,15 @@
     if (["all","memories","cards"].indexOf(view) === -1) view = "all";
     var memories = state.cards.filter(isMemoryCard), flashcards = state.cards.filter(isFlashcard);
     var memoryCount = Object.keys(memoryGroups(memories)).length, cardSeriesCount = Object.keys(memoryGroups(flashcards)).length;
+    if (view === "all") {
+      var memoryCountForChoice = Object.keys(memoryGroups(memories)).length;
+      var cardCountForChoice = Object.keys(memoryGroups(flashcards)).length;
+      root.innerHTML = '<section class="library-choice-grid" aria-label="Choisir un espace de bibliothèque">' +
+        '<a class="library-choice-card memory-choice" href="mes-memoires.html?view=memories"><span class="library-choice-top"><span class="library-choice-icon" aria-hidden="true">▤</span><span class="library-choice-arrow" aria-hidden="true">↗</span></span><span class="library-choice-copy"><strong>Mes mémorisations</strong><small>Retrouvez vos textes, passages et suivis individuels.</small><span class="library-choice-count">' + memoryCountForChoice + (memoryCountForChoice === 1 ? ' mémoire' : ' mémoires') + '</span></span></a>' +
+        '<a class="library-choice-card cards-choice" href="mes-memoires.html?view=cards"><span class="library-choice-top"><span class="library-choice-icon" aria-hidden="true">▧</span><span class="library-choice-arrow" aria-hidden="true">↗</span></span><span class="library-choice-copy"><strong>Mes cartes</strong><small>Accédez aux séries de questions-réponses et aux révisions.</small><span class="library-choice-count">' + cardCountForChoice + (cardCountForChoice === 1 ? ' série de cartes' : ' séries de cartes') + '</span></span></a>' +
+        '</section>';
+      return;
+    }
     var summary;
     if (view === "memories") {
       summary = '<div><strong>' + memoryCount + '</strong><span>mémoires</span></div><div><strong>' + memories.length + '</strong><span>passages enregistrés</span></div><div><strong>' + dueCards(memories).length + '</strong><span>à réviser</span></div>';
