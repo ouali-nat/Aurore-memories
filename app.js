@@ -289,4 +289,109 @@
       }
     });
   }
+  // Navigation hiérarchique commune à toutes les pages : chaque lien interne
+  // mémorise son écran parent afin que Retour suive le parcours réellement emprunté.
+  (function installHierarchicalNavigation() {
+    var PARENT_KEY = "aurore-memory-navigation-parents-v1";
+    var currentUrl;
+    try { currentUrl = new URL(window.location.href); } catch (error) { return; }
+    if (currentUrl.origin !== window.location.origin) return;
+
+    function routeKey(url) { return url.pathname + url.search; }
+    function readParents() {
+      try {
+        var value = JSON.parse(sessionStorage.getItem(PARENT_KEY) || "{}");
+        return value && typeof value === "object" ? value : {};
+      } catch (error) { return {}; }
+    }
+    function writeParents(parents) {
+      try {
+        var keys = Object.keys(parents);
+        if (keys.length > 80) keys.slice(0, keys.length - 80).forEach(function (key) { delete parents[key]; });
+        sessionStorage.setItem(PARENT_KEY, JSON.stringify(parents));
+      } catch (error) {}
+    }
+    function sameOriginInternal(url) {
+      return url && url.origin === window.location.origin &&
+        /\.html?$/i.test(url.pathname) && !url.pathname.endsWith("/404.html");
+    }
+    function fallbackParent(url) {
+      var path = url.pathname.split("/").pop() || "index.html";
+      var view = url.searchParams.get("view") || "all";
+      var deck = url.searchParams.get("deck");
+      if (path === "index.html") return null;
+      if (path === "choisir.html") return "index.html";
+      if (path === "mes-memoires.html") {
+        if (view === "memories" || view === "cards") return "choisir.html";
+        return "index.html";
+      }
+      if (path === "cartes-publiques.html") return "choisir.html";
+      if (path === "revisions.html") return "index.html";
+      if (path === "creer.html") return "choisir.html";
+      if (path === "editer-memoire.html") return "mes-memoires.html?view=memories";
+      if (path === "creer-cartes.html") return "mes-memoires.html?view=cards";
+      if (path === "memoire-blocs.html") return "mes-memoires.html?view=memories";
+      if (path === "reviser-cartes.html") return "mes-memoires.html?view=cards";
+      if (path === "progression.html") return "mes-memoires.html";
+      if (/^mode-.+\.html$/i.test(path)) return "reviser-cartes.html" + (deck ? "?deck=" + encodeURIComponent(deck) : "");
+      return "index.html";
+    }
+    function labelForParent(url) {
+      var path = url.pathname.split("/").pop() || "index.html";
+      if (path === "index.html") return "← Accueil";
+      if (path === "choisir.html") return "← Choisir un espace";
+      if (path === "mes-memoires.html") {
+        var view = url.searchParams.get("view") || "all";
+        return view === "memories" ? "← Mes mémoires" : view === "cards" ? "← Mes cartes" : "← Bibliothèque";
+      }
+      if (path === "cartes-publiques.html") return "← Cartes publiques";
+      if (path === "revisions.html") return "← Révisions";
+      if (path === "reviser-cartes.html") return "← Étude des cartes";
+      if (path === "memoire-blocs.html") return "← Passages à mémoriser";
+      if (path === "creer-cartes.html") return "← Mes cartes";
+      if (path === "editer-memoire.html") return "← Mes mémoires";
+      return "← Retour";
+    }
+    function configureBackLink() {
+      var back = document.querySelector(".page-heading .back-link");
+      if (!back) return;
+      var parents = readParents();
+      var parentValue = parents[routeKey(currentUrl)];
+      var parentUrl = null;
+      if (typeof parentValue === "string") {
+        try { parentUrl = new URL(parentValue, window.location.origin); } catch (error) {}
+      }
+      if (!sameOriginInternal(parentUrl) || routeKey(parentUrl) === routeKey(currentUrl)) {
+        var fallback = fallbackParent(currentUrl);
+        if (!fallback) {
+          back.hidden = true;
+          return;
+        }
+        try { parentUrl = new URL(fallback, window.location.origin + currentUrl.pathname.replace(/[^/]*$/, "")); }
+        catch (error) { parentUrl = new URL(fallback, window.location.origin); }
+      }
+      back.hidden = false;
+      back.href = parentUrl.pathname + parentUrl.search + parentUrl.hash;
+      back.textContent = labelForParent(parentUrl);
+      back.setAttribute("aria-label", back.textContent.replace(/^←\\s*/, "Revenir à "));
+    }
+
+    document.addEventListener("click", function (event) {
+      var anchor = event.target && event.target.closest ? event.target.closest("a[href]") : null;
+      if (!anchor || event.defaultPrevented || event.button !== 0 ||
+          event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+          anchor.hasAttribute("download") || (anchor.target && anchor.target !== "_self") ||
+          anchor.matches(".back-link, .brand, .top-actions a, [data-nav-ignore]")) return;
+      var destination;
+      try { destination = new URL(anchor.href, window.location.href); } catch (error) { return; }
+      if (!sameOriginInternal(destination)) return;
+      if (routeKey(destination) === routeKey(currentUrl)) return;
+      var parents = readParents();
+      parents[routeKey(destination)] = currentUrl.pathname + currentUrl.search + currentUrl.hash;
+      writeParents(parents);
+    }, true);
+
+    configureBackLink();
+  })();
+
 })();
