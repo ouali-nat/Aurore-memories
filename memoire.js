@@ -199,12 +199,15 @@
   }
 
   function updateHome() {
-    if (document.body.dataset.page !== "home") return;
-    var memoryItems = state.cards.filter(isMemoryCard), flashItems = state.cards.filter(isFlashcard);
+    var memoryItems = state.cards.filter(isMemoryCard);
+    var flashItems = state.cards.filter(isFlashcard);
+    var memoryCount = Object.keys(memoryGroups(memoryItems)).length;
+    var cardCount = Object.keys(memoryGroups(flashItems)).length;
+    var dueCount = dueCards().length;
     var values = {
-      "#homeMemoryCount": Object.keys(memoryGroups(memoryItems)).length,
-      "#homeCardCount": flashItems.length,
-      "#homeDueCount": dueCards().length
+      "#homeMemoryCount": memoryCount + (memoryCount === 1 ? " mémoire" : " mémoires"),
+      "#homeCardCount": cardCount + (cardCount === 1 ? " carte" : " cartes"),
+      "#homeDueCount": dueCount + (dueCount === 1 ? " carte à réviser aujourd’hui" : " cartes à réviser aujourd’hui")
     };
     Object.keys(values).forEach(function (selector) {
       var node = $(selector);
@@ -224,39 +227,76 @@
   function renderMemoryList() {
     var target = $("#memoryList");
     if (!target) return;
+    var params = new URLSearchParams(window.location.search);
+    var view = params.get("view") || "all";
+    if (["all", "memories", "cards"].indexOf(view) === -1) view = "all";
     var search = ($("#memorySearch") && $("#memorySearch").value.trim().toLocaleLowerCase()) || "";
     var searched = state.cards.filter(function (card) {
+      if (view === "memories" && !isMemoryCard(card)) return false;
+      if (view === "cards" && !isFlashcard(card)) return false;
       return !search || [card.deck, card.front, card.back].some(function (value) {
-        return String(value).toLocaleLowerCase().indexOf(search) !== -1;
+        return String(value == null ? "" : value).toLocaleLowerCase().indexOf(search) !== -1;
       });
     });
     var memoryGroupsByDeck = memoryGroups(searched.filter(isMemoryCard));
     var flashGroupsByDeck = memoryGroups(searched.filter(isFlashcard));
-    var memoryNames = Object.keys(memoryGroupsByDeck).sort(function (a, b) { return a.localeCompare(b, "fr"); });
-    var flashNames = Object.keys(flashGroupsByDeck).sort(function (a, b) { return a.localeCompare(b, "fr"); });
+    var memoryNames = Object.keys(memoryGroupsByDeck).sort(function (a,b) { return a.localeCompare(b,"fr"); });
+    var flashNames = Object.keys(flashGroupsByDeck).sort(function (a,b) { return a.localeCompare(b,"fr"); });
 
     function rows(names, groups, kind) {
-      if (!names.length) return '<div class="empty-state compact-empty"><h3>' + (kind === "memory" ? "Aucune mémoire enregistrée" : "Aucune série de cartes enregistrée") + '</h3><p>' + (kind === "memory" ? "Crée un texte puis découpe-le en petits blocs à apprendre." : "Crée une série avec un titre, des questions et leurs réponses.") + '</p></div>';
+      if (!names.length) {
+        var title = search ? "Aucun résultat" : (kind === "memory" ? "Aucune mémoire enregistrée" : "Aucune série de cartes enregistrée");
+        var description = search ? "Aucun contenu ne correspond à cette recherche." : (kind === "memory" ? "Crée un texte, puis organise-le en passages à apprendre." : "Crée une série de cartes avec des questions et leurs réponses.");
+        return '<div class="empty-state compact-empty"><h3>' + title + '</h3><p>' + description + '</p></div>';
+      }
       return '<div class="memory-list">' + names.map(function (name) {
         var items = groups[name], due = dueCards(items).length;
+        var count = items.length + (kind === "memory" ? (items.length === 1 ? " passage" : " passages") : (items.length === 1 ? " carte" : " cartes"));
+        var detail = count + " · " + (due ? due + " à réviser" : "À jour");
         var preview = items[0] ? (kind === "memory" ? items[0].back : items[0].front) : "";
-        var main = '<div class="memory-row-main"><h3>' + escapeHtml(name) + '</h3><p>' + items.length + (kind === "memory" ? ' bloc(s) · ' : ' carte(s) · ') + due + ' à réviser</p><small>' + escapeHtml(preview) + '</small></div>';
-        if (kind === "memory") return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div>' + main + '<div class="memory-row-actions"><a class="secondary-btn" href="memoire-blocs.html?deck=' + encodeURIComponent(name) + '">Voir les blocs</a><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Éditer</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="memory" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
-        return '<article class="memory-row"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div>' + main + '<div class="memory-row-actions"><a class="primary-btn" href="reviser-cartes.html?deck=' + encodeURIComponent(name) + '">Réviser</a><a class="secondary-btn" href="creer-cartes.html?deck=' + encodeURIComponent(name) + '">Rééditer</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="flashcard" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
+        var main = '<div class="memory-row-main"><h3>' + escapeHtml(name) + '</h3><p>' + detail + '</p><small>' + escapeHtml(preview) + '</small></div>';
+        if (kind === "memory") return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div>' + main + '<div class="memory-row-actions"><a class="secondary-btn" href="memoire-blocs.html?deck=' + encodeURIComponent(name) + '">Consulter les passages</a><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="memory" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
+        return '<article class="memory-row"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div>' + main + '<div class="memory-row-actions"><a class="primary-btn" href="reviser-cartes.html?deck=' + encodeURIComponent(name) + '">Étudier</a><a class="secondary-btn" href="creer-cartes.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="flashcard" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
       }).join("") + '</div>';
     }
 
-    target.innerHTML = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À APPRENDRE</p><h2>Mes mémoires</h2><p>Des passages de cours découpés en petits blocs, avec une méthode pour chacun.</p></div><a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a></div>' + rows(memoryNames, memoryGroupsByDeck, "memory") + '</section>' +
-      '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS / RÉPONSES</p><h2>Mes cartes</h2><p>Des cartes recto-verso à retourner, classées en séries nommées.</p></div><a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a></div>' + rows(flashNames, flashGroupsByDeck, "flashcard") + '</section>';
+    var memoryAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=memories">Voir toutes les mémoires <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a>';
+    var cardsAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=cards">Voir toutes les séries <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a>';
+    var memorySection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À MÉMORISER</p><h2>' + (view === "memories" ? "Tous les textes" : "Mes mémoires") + '</h2><p>Des textes organisés en passages, avec un suivi individuel.</p></div>' + memoryAction + '</div>' + rows(memoryNames,memoryGroupsByDeck,"memory") + '</section>';
+    var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Des séries de questions-réponses pour réviser les notions essentielles.</p></div>' + cardsAction + '</div>' + rows(flashNames,flashGroupsByDeck,"flashcard") + '</section>';
+    target.innerHTML = (view === "cards" ? "" : memorySection) + (view === "memories" ? "" : cardSection);
   }
 
   function renderLibrary() {
     var root = $("#memoryLibrary");
     if (!root) return;
+    var params = new URLSearchParams(window.location.search);
+    var view = params.get("view") || "all";
+    if (["all","memories","cards"].indexOf(view) === -1) view = "all";
     var memories = state.cards.filter(isMemoryCard), flashcards = state.cards.filter(isFlashcard);
-    root.innerHTML = '<div class="library-summary"><div><strong>' + Object.keys(memoryGroups(memories)).length + '</strong><span>mémoire(s)</span></div><div><strong>' + Object.keys(memoryGroups(flashcards)).length + '</strong><span>série(s) de cartes</span></div><div><strong>' + state.cards.length + '</strong><span>élément(s) enregistrés</span></div></div>' +
-      '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="Rechercher un titre, un passage ou une question…" aria-label="Rechercher dans mes mémorisations"></label><div class="toolbar-actions"><a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a><a class="secondary-btn" href="creer-cartes.html">＋ Créer des cartes</a><a class="secondary-btn" href="progression.html">Ma progression</a><button class="secondary-btn" type="button" data-act="export">Exporter</button></div></div>' +
-      '<div id="memoryList" aria-live="polite"></div>';
+    var memoryCount = Object.keys(memoryGroups(memories)).length, cardSeriesCount = Object.keys(memoryGroups(flashcards)).length;
+    var summary;
+    if (view === "memories") {
+      summary = '<div><strong>' + memoryCount + '</strong><span>mémoires</span></div><div><strong>' + memories.length + '</strong><span>passages enregistrés</span></div><div><strong>' + dueCards(memories).length + '</strong><span>à réviser</span></div>';
+    } else if (view === "cards") {
+      summary = '<div><strong>' + cardSeriesCount + '</strong><span>séries</span></div><div><strong>' + flashcards.length + '</strong><span>cartes enregistrées</span></div><div><strong>' + dueCards(flashcards).length + '</strong><span>à réviser</span></div>';
+    } else {
+      summary = '<div><strong>' + memoryCount + '</strong><span>mémoires</span></div><div><strong>' + cardSeriesCount + '</strong><span>séries de cartes</span></div><div><strong>' + state.cards.length + '</strong><span>éléments enregistrés</span></div>';
+    }
+    var shortcuts = view === "all" ? '<nav class="library-shortcuts" aria-label="Actions principales">' +
+      '<a class="library-shortcut" href="editer-memoire.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▤</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une mémoire</strong><small>Préparer un texte à apprendre.</small></span></a>' +
+      '<a class="library-shortcut" href="creer-cartes.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▧</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une série</strong><small>Associer questions et réponses.</small></span></a>' +
+      '<a class="library-shortcut" href="progression.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">↗</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Progression</strong><small>Consulter les résultats.</small></span></a></nav>' : "";
+    var placeholder = view === "memories" ? "Rechercher une mémoire ou un passage…" : (view === "cards" ? "Rechercher une série, une question ou une réponse…" : "Rechercher dans les mémoires et les cartes…");
+    var kicker = view === "memories" ? "BIBLIOTHÈQUE DE TEXTES" : (view === "cards" ? "SÉRIES DE CARTES" : "BIBLIOTHÈQUE PERSONNELLE");
+    var heading = view === "memories" ? "Mes mémoires" : (view === "cards" ? "Mes cartes" : "Ma bibliothèque");
+    var description = view === "memories" ? "Retrouve tes textes enregistrés et consulte leurs passages." : (view === "cards" ? "Retrouve tes séries de cartes et recherche une question ou une réponse." : "Organise tes textes, tes cartes et tes révisions depuis un espace unique.");
+    var kickerNode = document.querySelector(".page-heading .section-kicker"), headingNode = document.querySelector(".page-heading h1"), descriptionNode = document.querySelector(".page-heading > p:last-child");
+    if (kickerNode) kickerNode.textContent = kicker;
+    if (headingNode) headingNode.textContent = heading;
+    if (descriptionNode) descriptionNode.textContent = description;
+    document.title = heading + " — Aurore Mémoire";
+    root.innerHTML = '<div class="library-summary">' + summary + '</div>' + shortcuts + '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="' + placeholder + '" aria-label="' + placeholder.replace("…","") + '"></label><button class="secondary-btn" type="button" data-act="export">Exporter les données</button></div><div id="memoryList" aria-live="polite"></div>';
     renderMemoryList();
   }
 

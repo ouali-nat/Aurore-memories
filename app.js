@@ -11,6 +11,8 @@
   var colorToggle = document.getElementById("colorThemeToggle");
   var colorPanel = document.getElementById("colorThemePanel");
   var toastTimer = null;
+  var systemPreference = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+  var appearancePreference = "system";
 
   function toast(message) {
     var box = document.getElementById("toast");
@@ -25,16 +27,22 @@
   window.auroreToast = toast;
 
   function setTheme(mode, persist) {
-    var value = mode === "light" ? "light" : "dark";
+    appearancePreference = ["system", "light", "dark"].indexOf(mode) !== -1 ? mode : "system";
+    var value = appearancePreference === "system"
+      ? (systemPreference && systemPreference.matches ? "light" : "dark")
+      : appearancePreference;
     root.dataset.theme = value;
     if (themeToggle) {
-      themeToggle.textContent = value === "light" ? "☾" : "☼";
-      themeToggle.setAttribute("aria-label", value === "light" ? "Activer le thème sombre" : "Activer le thème clair");
+      var label = appearancePreference === "system" ? "automatique" : (value === "light" ? "clair" : "sombre");
+      themeToggle.textContent = appearancePreference === "system" ? "◐" : (value === "light" ? "☾" : "☼");
+      themeToggle.setAttribute("aria-label", "Apparence " + label + ". Cliquer pour passer au mode suivant.");
+      themeToggle.title = "Apparence : " + label + " — cliquer pour modifier";
+      themeToggle.dataset.appearanceMode = appearancePreference;
     }
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", value === "light" ? "#F7F7FA" : "#111019");
     if (persist) {
-      try { localStorage.setItem("aurore-memory-theme", value); } catch (e) {}
+      try { localStorage.setItem("aurore-memory-theme", appearancePreference); } catch (e) {}
     }
   }
 
@@ -50,18 +58,29 @@
   }
 
   try {
-    setTheme(localStorage.getItem("aurore-memory-theme") || "dark", false);
+    setTheme(localStorage.getItem("aurore-memory-theme") || "system", false);
     setColor(localStorage.getItem("aurore-memory-color-theme") || "violet", false);
   } catch (e) {
-    setTheme("dark", false);
+    setTheme("system", false);
     setColor("violet", false);
   }
 
   if (themeToggle) {
     themeToggle.addEventListener("click", function () {
-      setTheme(root.dataset.theme === "light" ? "dark" : "light", true);
+      var modes = ["system", "light", "dark"];
+      setTheme(modes[(modes.indexOf(appearancePreference) + 1) % modes.length], true);
     });
   }
+
+  if (systemPreference) {
+    var systemChanged = function () { if (appearancePreference === "system") setTheme("system", false); };
+    if (systemPreference.addEventListener) systemPreference.addEventListener("change", systemChanged);
+    else if (systemPreference.addListener) systemPreference.addListener(systemChanged);
+  }
+
+  document.querySelectorAll(".site-footer .footer-inner small").forEach(function (node) {
+    node.textContent = "Un espace dédié à l’apprentissage et à la mémorisation.";
+  });
 
   if (colorToggle && colorPanel) {
     colorToggle.addEventListener("click", function (event) {
