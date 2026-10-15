@@ -346,6 +346,7 @@
       return {
         front: card.front,
         back: card.back,
+        cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
         backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "",
         backgroundImage: typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage : ""
       };
@@ -498,6 +499,7 @@
     var existing = state.cards.some(function (item) { return item.sourcePublicKey === card.sourcePublicKey; });
     if (existing) { notify("Cette carte est déjà présente dans votre bibliothèque."); return; }
     var newCard = makeCard(card.front, card.back, "Partagé · " + card.seriesName);
+    newCard.cardMode = card.cardMode === "scientific" ? "scientific" : "simple";
     newCard.sourcePublicKey = card.sourcePublicKey;
     newCard.sourcePublicSeriesId = card.seriesId;
     newCard.sourceAuthor = card.authorName;
