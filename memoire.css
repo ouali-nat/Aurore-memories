@@ -230,3 +230,6 @@
   .progress-data-table th,.progress-data-table td { padding:8px 5px; }
   .mode-chip { min-height:72px; }
 }
+
+.segment-range { display:grid; gap:7px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
+.segment-range[hidden] { display:none !important; }
