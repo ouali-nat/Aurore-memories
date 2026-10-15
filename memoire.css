@@ -218,3 +218,12 @@
  .method-group .mode-chip { flex:1 1 auto; }
  .confidence-control { padding:10px; }
 }
+
+.segment-range-fields { grid-column:1/-1; display:grid; grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr) 88px; align-items:end; gap:8px; margin-top:2px; }
+.segment-range-fields[hidden] { display:none !important; }
+.segment-range-fields label { color:var(--muted); font-size:.72rem; font-weight:700; }
+.segment-range-fields .text-field { width:100%; min-width:0; }
+.segment-range-note { grid-column:1/-1; margin:0!important; color:var(--muted); font-size:.72rem; line-height:1.5; }
+@media(max-width:520px) {
+  .segment-range-fields { grid-template-columns:minmax(0,1fr) 82px; gap:8px; }
+}
