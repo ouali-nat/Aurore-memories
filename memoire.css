@@ -424,3 +424,8 @@
 .practice-complete p,.practice-finished p{margin:0;color:var(--muted);font-size:.78rem;line-height:1.5}
 .practice-answer-final{width:100%;padding-top:10px;border-top:1px solid var(--border)}
 @media(max-width:520px){.practice-card-header{flex-direction:column;gap:10px}.practice-method-tag{max-width:100%}.practice-work-area{padding:12px;gap:13px}.practice-tap-stage{min-height:200px;padding:13px}.practice-text-stream{font-size:1rem;line-height:1.85}.practice-input-row button{padding-inline:12px}.practice-order-item{grid-template-columns:auto minmax(0,1fr) auto;gap:7px;padding:9px}.practice-order-controls button{width:32px}.practice-qcm-options{gap:7px}.practice-qcm-option{align-items:flex-start;gap:7px;min-height:58px;padding:9px}.practice-qcm-option>span{flex-basis:23px;width:23px;height:23px}.practice-qcm-option strong{font-size:.78rem}}
+
+
+/* Progression visible du texte et repérage des erreurs de réponse. */
+.practice-future-word{display:inline-block;margin:0 2px;color:var(--muted);letter-spacing:.05em;opacity:.62}
+.practice-wrong-answer{color:#ef5866!important;background:rgba(239,88,102,.13);border-radius:4px;padding:0 2px;text-decoration:underline;text-decoration-color:rgba(239,88,102,.65);text-decoration-thickness:1px;font-weight:800}
