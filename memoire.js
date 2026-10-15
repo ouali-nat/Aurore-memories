@@ -199,6 +199,7 @@
   }
 
   function updateHome() {
+    if (document.body.dataset.page !== "home") return;
     var memoryItems = state.cards.filter(isMemoryCard);
     var flashItems = state.cards.filter(isFlashcard);
     var memoryCount = Object.keys(memoryGroups(memoryItems)).length;
