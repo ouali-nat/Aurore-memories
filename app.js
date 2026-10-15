@@ -68,7 +68,7 @@
   }
   function formalizeInterface(rootNode) {
     if (!rootNode) return;
-    var protectedSelector = "script,style,textarea,input,select,option,code,pre,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block";
+    var protectedSelector = "script,style,textarea,input,select,option,code,pre,.memory-row-main,.workspace-chunk,#reviewApp,.practice-answer-final,.memory-block,.public-flashcard,.public-card-user-content";
     if (rootNode.nodeType === 3) {
       if (!rootNode.parentElement || rootNode.parentElement.closest(protectedSelector)) return;
       var nextText = formalizeText(rootNode.nodeValue);

@@ -3,6 +3,12 @@
 
   var STORAGE_KEY = "aurore-memory-cards-v1";
   var SELECTED_DECK_KEY = "aurore-memory-selected-deck";
+  var SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
+  var SHARE_TOKEN_KEY = "aurore-memory-public-owner-tokens-v1";
+  var shareTokens = {};
+  try { shareTokens = JSON.parse(localStorage.getItem(SHARE_TOKEN_KEY) || "{}"); } catch (error) { shareTokens = {}; }
+  var publicFeedCards = [];
   var DAY_MS = 86400000;
   var MODES = ["Toucher pour révéler", "Curseur", "Écouter", "Première lettre", "Trous", "Réordonner", "Taper", "Choix multiple", "Parler"];
   var MODE_PAGES = {"Toucher pour révéler":{"url":"mode-revelation.html","title":"Révélation","description":"Découvre la réponse après avoir essayé de la retrouver mentalement. La qualité de ton rappel nourrit la progression de chaque tranche."},"Curseur":{"url":"mode-curseur.html","title":"Curseur de confiance","description":"Indique ton niveau de confiance avant de révéler la réponse, puis note honnêtement la facilité du rappel."},"Écouter":{"url":"mode-ecouter.html","title":"Écoute active","description":"Écoute la question et la réponse avec la synthèse vocale du navigateur pour renforcer la familiarité avec les notions."},"Première lettre":{"url":"mode-premiere-lettre.html","title":"Première lettre","description":"Utilise les initiales comme indices graduels, puis restitue la réponse entière sans regarder."},"Trous":{"url":"mode-trous.html","title":"Texte à trous","description":"Récupère les mots importants à partir de la question et compare ta réponse avec le contenu attendu."},"Réordonner":{"url":"mode-reordonner.html","title":"Réordonner","description":"Reconstruis la réponse mot par mot. Cette méthode est utile pour les définitions, les étapes et les formulations précises."},"Taper":{"url":"mode-taper.html","title":"Réponse écrite","description":"Écris la réponse de mémoire. La vérification compare la réponse normalisée et enregistre le résultat de la tranche."},"Choix multiple":{"url":"mode-choix-multiple.html","title":"Choix multiple","description":"Distingue la bonne réponse parmi plusieurs propositions. Les distracteurs proviennent des autres cartes disponibles."},"Parler":{"url":"mode-parler.html","title":"Réponse vocale","description":"Prononce la réponse quand la reconnaissance vocale est disponible, ou utilise le champ écrit de secours."}};
@@ -32,6 +38,7 @@
   if (!state.log || typeof state.log !== "object") state.log = {};
   if (!Array.isArray(state.performance)) state.performance = [];
   if (!Array.isArray(state.cardPerformance)) state.cardPerformance = [];
+  if (!state.deckSettings || typeof state.deckSettings !== "object") state.deckSettings = {};
   if (["courbe", "diagramme", "batonnets"].indexOf(state.chartType) < 0) state.chartType = "courbe";
   var legacyModes = { "Rappel actif": "Toucher pour révéler", "Texte à trous": "Trous", "Premières lettres": "Première lettre", "QCM": "Choix multiple", "Association": "Toucher pour révéler", "Palais mental": "Toucher pour révéler" };
   if (legacyModes[state.mode]) state.mode = legacyModes[state.mode];
@@ -218,6 +225,354 @@
 
   function normalizeSearch(value) { return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim(); }
 
+
+  function deckSettingsFor(deck) {
+    if (!state.deckSettings || typeof state.deckSettings !== "object") state.deckSettings = {};
+    var key = "flashcard:" + String(deck || "");
+    if (!state.deckSettings[key] || typeof state.deckSettings[key] !== "object") state.deckSettings[key] = { visibility: "private" };
+    if (state.deckSettings[key].visibility !== "public") state.deckSettings[key].visibility = "private";
+    return state.deckSettings[key];
+  }
+
+  function randomHex(byteCount) {
+    var values = new Uint8Array(byteCount);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(values);
+    else for (var i = 0; i < values.length; i += 1) values[i] = Math.floor(Math.random() * 256);
+    return Array.prototype.map.call(values, function (value) { return value.toString(16).padStart(2, "0"); }).join("");
+  }
+
+  function randomUuid() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+    var value = randomHex(16).split("");
+    value[12] = "4";
+    value[16] = (parseInt(value[16], 16) & 3 | 8).toString(16);
+    var hex = value.join("");
+    return hex.slice(0,8) + "-" + hex.slice(8,12) + "-" + hex.slice(12,16) + "-" + hex.slice(16,20) + "-" + hex.slice(20);
+  }
+
+  function persistShareTokens() {
+    try { localStorage.setItem(SHARE_TOKEN_KEY, JSON.stringify(shareTokens)); } catch (error) {}
+  }
+
+  async function shareRpc(functionName, payload) {
+    var response = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + functionName, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    var responseText = await response.text();
+    if (!response.ok) {
+      var detail = responseText;
+      try {
+        var parsed = JSON.parse(responseText);
+        detail = parsed.message || parsed.details || parsed.hint || responseText;
+      } catch (error) {}
+      throw new Error(detail || "La demande de partage a échoué.");
+    }
+    return responseText;
+  }
+
+  function closeSharingDialog() {
+    var modal = $("#sharingModal");
+    if (modal) modal.remove();
+  }
+
+  function openSharingDialog(title, content) {
+    closeSharingDialog();
+    var html = '<div class="sharing-modal-backdrop" id="sharingModal">' +
+      '<section class="sharing-modal" role="dialog" aria-modal="true" aria-label="' + escapeHtml(title) + '">' +
+      '<header class="sharing-modal-head"><h2>' + escapeHtml(title) + '</h2><button class="sharing-modal-close" type="button" data-act="close-sharing-modal" aria-label="Fermer">×</button></header>' +
+      '<div class="sharing-modal-content">' + content + '</div></section></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+    var firstInput = $("#sharingModal input");
+    if (firstInput) firstInput.focus();
+  }
+
+  function openVisibilityDialog(deck) {
+    var settings = deckSettingsFor(deck);
+    var safeDeck = escapeHtml(deck);
+    openSharingDialog("Visibilité de la série", 
+      '<p class="sharing-modal-intro">Choisissez qui peut consulter cette série de questions-réponses.</p>' +
+      '<div class="visibility-choice-list">' +
+      '<button type="button" class="visibility-choice" data-act="choose-visibility" data-value="public" data-deck="' + safeDeck + '">' +
+      '<span class="visibility-choice-icon">◎</span><span><strong>Public</strong><small>Chaque carte sera affichée séparément dans l’espace Cartes publiques. Les visiteurs pourront voir l’auteur déclaré et ajouter une carte à leur bibliothèque.</small></span><span class="visibility-choice-status">' + (settings.visibility === "public" ? "Actif" : "Choisir") + '</span></button>' +
+      '<button type="button" class="visibility-choice" data-act="choose-visibility" data-value="private" data-deck="' + safeDeck + '">' +
+      '<span class="visibility-choice-icon">◉</span><span><strong>Privé</strong><small>La série reste dans votre bibliothèque personnelle et n’apparaît plus dans l’exploration publique.</small></span><span class="visibility-choice-status">' + (settings.visibility === "private" ? "Actif" : "Choisir") + '</span></button>' +
+      '</div><p class="sharing-modal-note">Le choix Public publie le contenu de la série. Le choix Privé retire sa publication de l’espace public.</p>');
+  }
+
+  function openPublishDialog(deck) {
+    var settings = deckSettingsFor(deck);
+    var safeDeck = escapeHtml(deck);
+    var author = settings.authorName || "";
+    var domain = settings.domain || "";
+    var description = settings.description || "";
+    openSharingDialog("Publier « " + deck + " »", 
+      '<p class="sharing-modal-intro">Les cartes de cette série apparaîtront individuellement dans l’espace public. Renseignez les informations affichées avec votre publication.</p>' +
+      '<div class="sharing-form">' +
+      '<label for="publishAuthor">Auteur ou autrice <span>*</span><input id="publishAuthor" type="text" maxlength="120" required value="' + escapeHtml(author) + '" placeholder="Nom affiché dans les informations"></label>' +
+      '<label for="publishDomain">Domaine ou matière <span>*</span><input id="publishDomain" type="text" maxlength="100" required value="' + escapeHtml(domain) + '" placeholder="Ex. : Biologie, Histoire, Mathématiques"></label>' +
+      '<label for="publishDescription">Description (facultatif)<textarea id="publishDescription" maxlength="600" rows="3" placeholder="Précisions sur le contenu">' + escapeHtml(description) + '</textarea></label>' +
+      '<p class="sharing-modal-note">Le nom de l’auteur est déclaré par la personne qui publie ; il n’est pas vérifié par Aurore.</p>' +
+      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="close-sharing-modal">Annuler</button><button type="button" class="primary-btn" data-act="confirm-publication" data-deck="' + safeDeck + '">Publier les cartes</button></div>' +
+      '</div>');
+  }
+
+  async function publishDeck(deck, authorName, domain, description) {
+    authorName = String(authorName || "").trim();
+    domain = String(domain || "").trim();
+    description = String(description || "").trim();
+    if (!authorName || !domain) {
+      notify("Renseignez le nom de l’auteur et le domaine avant de publier.");
+      return;
+    }
+    var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
+    if (!cards.length) { notify("Cette série ne contient aucune carte à publier."); return; }
+    if (cards.length > 100) { notify("Une série publique peut contenir au maximum 100 cartes pour le moment."); return; }
+    var settings = deckSettingsFor(deck);
+    if (!settings.publicId) settings.publicId = randomUuid();
+    if (!shareTokens[settings.publicId]) {
+      shareTokens[settings.publicId] = randomHex(32);
+      persistShareTokens();
+    }
+    var payloadCards = cards.map(function (card) { return { front: card.front, back: card.back }; });
+    var modalButton = $("#sharingModal [data-act='confirm-publication']");
+    if (modalButton) { modalButton.disabled = true; modalButton.textContent = "Publication…"; }
+    try {
+      await shareRpc("save_public_card_series", {
+        p_id: settings.publicId,
+        p_owner_token: shareTokens[settings.publicId],
+        p_name: deck,
+        p_author_name: authorName,
+        p_domain: domain,
+        p_description: description,
+        p_cards: payloadCards
+      });
+      settings.visibility = "public";
+      settings.published = true;
+      settings.authorName = authorName;
+      settings.domain = domain;
+      settings.description = description;
+      save();
+      closeSharingDialog();
+      renderLibrary();
+      notify("Série publiée. Ses cartes sont maintenant visibles dans l’espace public.");
+    } catch (error) {
+      if (modalButton) { modalButton.disabled = false; modalButton.textContent = "Réessayer la publication"; }
+      notify("Publication impossible : " + String(error && error.message || "vérifiez votre connexion."));
+    }
+  }
+
+  async function setDeckPrivate(deck) {
+    var settings = deckSettingsFor(deck);
+    if (settings.published && settings.publicId) {
+      var ownerToken = shareTokens[settings.publicId];
+      if (!ownerToken) {
+        notify("Le jeton de gestion local est introuvable. La série reste publique pour éviter de masquer un échec.");
+        return;
+      }
+      try {
+        await shareRpc("delete_public_card_series", { p_id: settings.publicId, p_owner_token: ownerToken });
+        delete shareTokens[settings.publicId];
+        persistShareTokens();
+      } catch (error) {
+        notify("Impossible de retirer la série du public : " + String(error && error.message || "vérifiez votre connexion."));
+        return;
+      }
+    }
+    settings.visibility = "private";
+    settings.published = false;
+    save();
+    closeSharingDialog();
+    renderLibrary();
+    notify("Série conservée dans votre bibliothèque privée.");
+  }
+
+  async function shareDeckLink(deck) {
+    var settings = deckSettingsFor(deck);
+    if (settings.visibility !== "public" || !settings.published || !settings.publicId) {
+      openVisibilityDialog(deck);
+      notify("Publiez d’abord la série pour partager son lien.");
+      return;
+    }
+    var url = window.location.origin + "/cartes-publiques.html?series=" + encodeURIComponent(settings.publicId);
+    var title = "Cartes publiques — " + deck;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: title, text: "Découvrez cette série de cartes sur Aurore.", url: url });
+        return;
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
+    }
+    openSharingDialog("Partager cette série", 
+      '<p class="sharing-modal-intro">Copiez ce lien pour ouvrir directement les cartes de cette série.</p>' +
+      '<label class="share-link-label" for="publicShareUrl">Lien public<input id="publicShareUrl" type="url" readonly value="' + escapeHtml(url) + '"></label>' +
+      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="close-sharing-modal">Fermer</button><button type="button" class="primary-btn" data-act="copy-share-link">Copier le lien</button></div>');
+  }
+
+  async function copyPublicShareLink() {
+    var input = $("#publicShareUrl");
+    if (!input) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(input.value);
+        notify("Lien public copié.");
+      } else {
+        input.focus();
+        input.select();
+        notify("Sélectionnez le lien puis copiez-le.");
+      }
+    } catch (error) {
+      input.focus();
+      input.select();
+      notify("Sélectionnez le lien puis copiez-le.");
+    }
+  }
+
+  function openGroupDialog(deck) {
+    var settings = deckSettingsFor(deck);
+    var group = settings.group || {};
+    openSharingDialog("Créer un groupe", 
+      '<p class="sharing-modal-intro">Préparez les informations du groupe associé à cette série.</p>' +
+      '<div class="sharing-form">' +
+      '<label for="groupName">Nom du groupe <span>*</span><input id="groupName" type="text" maxlength="120" required value="' + escapeHtml(group.name || "") + '" placeholder="Ex. : Groupe de révision L1"></label>' +
+      '<label for="groupDomain">Domaine <span>*</span><input id="groupDomain" type="text" maxlength="100" required value="' + escapeHtml(group.domain || settings.domain || "") + '" placeholder="Ex. : Biologie, Mathématiques"></label>' +
+      '<p class="sharing-modal-note">Cette première étape enregistre le nom et le domaine sur cet appareil. Les invitations et la gestion des membres ne sont pas encore activées.</p>' +
+      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="close-sharing-modal">Annuler</button><button type="button" class="primary-btn" data-act="save-group" data-deck="' + escapeHtml(deck) + '">Enregistrer le groupe</button></div>' +
+      '</div>');
+  }
+
+  function saveGroupFromDialog(deck) {
+    var modal = $("#sharingModal");
+    if (!modal) return;
+    var nameInput = $("#groupName", modal), domainInput = $("#groupDomain", modal);
+    var name = String(nameInput && nameInput.value || "").trim();
+    var domain = String(domainInput && domainInput.value || "").trim();
+    if (!name || !domain) { notify("Renseignez le nom du groupe et son domaine."); return; }
+    var settings = deckSettingsFor(deck);
+    settings.group = { name: name, domain: domain, createdAt: new Date().toISOString() };
+    save();
+    closeSharingDialog();
+    renderLibrary();
+    notify("Informations du groupe enregistrées sur cet appareil.");
+  }
+
+  function formatPublicDate(value) {
+    var date = new Date(value);
+    return isNaN(date.getTime()) ? "Date non disponible" : date.toLocaleDateString("fr-FR");
+  }
+
+  function showPublicCardInfo(index) {
+    var card = publicFeedCards[Number(index)];
+    if (!card) return;
+    openSharingDialog("Informations sur la carte", 
+      '<div class="public-card-user-content">' +
+      '<dl class="public-card-details"><div><dt>Série</dt><dd>' + escapeHtml(card.seriesName) + '</dd></div>' +
+      '<div><dt>Auteur déclaré</dt><dd>' + escapeHtml(card.authorName) + '</dd></div>' +
+      '<div><dt>Domaine</dt><dd>' + escapeHtml(card.domain) + '</dd></div>' +
+      '<div><dt>Date de publication</dt><dd>' + escapeHtml(formatPublicDate(card.createdAt)) + '</dd></div></dl>' +
+      '<h3>À propos</h3><p>' + escapeHtml(card.description || "Aucune description ajoutée.") + '</p>' +
+      '<div class="sharing-modal-actions"><button type="button" class="primary-btn" data-act="close-sharing-modal">Fermer</button></div></div>');
+  }
+
+  function addPublicCard(index) {
+    var card = publicFeedCards[Number(index)];
+    if (!card) return;
+    var existing = state.cards.some(function (item) { return item.sourcePublicKey === card.sourcePublicKey; });
+    if (existing) { notify("Cette carte est déjà présente dans votre bibliothèque."); return; }
+    var newCard = makeCard(card.front, card.back, "Partagé · " + card.seriesName);
+    newCard.sourcePublicKey = card.sourcePublicKey;
+    newCard.sourcePublicSeriesId = card.seriesId;
+    newCard.sourceAuthor = card.authorName;
+    state.cards.push(newCard);
+    save();
+    notify("Carte ajoutée dans « Partagé · " + card.seriesName + " ».");
+    updateHome();
+  }
+
+  function renderPublicCards() {
+    var root = $("#publicCardFeed");
+    if (!root) return;
+    var search = normalizeSearch($("#publicCardSearch") && $("#publicCardSearch").value);
+    var params = new URLSearchParams(window.location.search);
+    var selectedSeries = params.get("series") || "";
+    var visible = [];
+    publicFeedCards.forEach(function (card, index) {
+      card._feedIndex = index;
+      if (selectedSeries && card.seriesId !== selectedSeries) return;
+      var haystack = normalizeSearch([card.seriesName, card.authorName, card.domain, card.description, card.front, card.back].join(" "));
+      if (search && !(haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
+      visible.push(card);
+    });
+    if (!visible.length) {
+      var message = selectedSeries ? "Cette série n’est plus publique ou aucune de ses cartes n’est disponible." :
+        (search ? "Aucune carte ne correspond à cette recherche." : "Aucune carte n’a encore été publiée. Depuis « Mes cartes », choisissez Visibilité puis Public pour publier une série.");
+      root.innerHTML = '<div class="empty-state compact-empty"><h3>Aucune carte à afficher</h3><p>' + message + '</p><a class="secondary-btn" href="mes-memoires.html?view=cards">Accéder à Mes cartes</a></div>';
+      return;
+    }
+    root.innerHTML = '<div class="public-card-feed-grid">' + visible.map(function (card) {
+      var index = card._feedIndex;
+      var answerId = "public-answer-" + index;
+      return '<article class="public-flashcard">' +
+        '<div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
+        '<p class="public-card-eyebrow">QUESTION</p><h2>' + escapeHtml(card.front) + '</h2>' +
+        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + escapeHtml(card.back) + '</p></div>' +
+        '<button type="button" class="public-reveal-answer" data-act="public-answer" data-target="' + answerId + '" aria-expanded="false">Afficher la réponse</button>' +
+        '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">!</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div>' +
+        '</article>';
+    }).join("") + '</div>';
+  }
+
+  async function loadPublicCards() {
+    var root = $("#publicCardFeed");
+    if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Chargement des cartes publiques…</h3><p>Les cartes publiées apparaîtront ici une par une.</p></div>';
+    try {
+      var response = await fetch(SUPABASE_URL + "/rest/v1/public_card_series?select=id,name,author_name,domain,description,cards,created_at,visibility&visibility=eq.public&order=created_at.desc&limit=200", {
+        headers: {
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY
+        },
+        cache: "no-store"
+      });
+      var responseText = await response.text();
+      if (!response.ok) throw new Error(responseText || "La bibliothèque publique est indisponible.");
+      var seriesList = JSON.parse(responseText || "[]");
+      publicFeedCards = [];
+      seriesList.forEach(function (series) {
+        (Array.isArray(series.cards) ? series.cards : []).forEach(function (card, index) {
+          if (!card || typeof card.front !== "string" || typeof card.back !== "string") return;
+          publicFeedCards.push({
+            sourcePublicKey: String(series.id) + ":" + index,
+            seriesId: String(series.id),
+            seriesName: String(series.name || "Série sans titre"),
+            authorName: String(series.author_name || "Auteur non renseigné"),
+            domain: String(series.domain || "Domaine non précisé"),
+            description: String(series.description || ""),
+            createdAt: series.created_at,
+            front: card.front,
+            back: card.back
+          });
+        });
+      });
+      publicFeedCards = publicFeedCards.slice(0, 400);
+      renderPublicCards();
+    } catch (error) {
+      if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Impossible de charger les cartes publiques</h3><p>Vérifiez votre connexion, puis réessayez.</p><button type="button" class="secondary-btn" data-act="refresh-public-cards">Réessayer</button></div>';
+      notify("Chargement public impossible : " + String(error && error.message || "vérifiez votre connexion."));
+    }
+  }
+
+  function initializePublicCardsPage() {
+    var search = $("#publicCardSearch");
+    if (search) search.addEventListener("input", renderPublicCards);
+    loadPublicCards();
+  }
+
   function memoryGroups(cards) {
     var groups = Object.create(null);
     cards.forEach(function (card) {
@@ -257,7 +612,13 @@
         var preview = items[0] ? (kind === "memory" ? items[0].back : items[0].front) : "";
         var main = '<div class="memory-row-main"><h3>' + escapeHtml(name) + '</h3><p>' + detail + '</p><small>' + escapeHtml(preview) + '</small></div>';
         if (kind === "memory") return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div>' + main + '<div class="memory-row-actions"><a class="secondary-btn" href="memoire-blocs.html?deck=' + encodeURIComponent(name) + '">Consulter les passages</a><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="memory" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
-        return '<article class="memory-row"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div>' + main + '<div class="memory-row-actions"><a class="primary-btn" href="reviser-cartes.html?deck=' + encodeURIComponent(name) + '">Étudier</a><a class="secondary-btn" href="creer-cartes.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="flashcard" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
+        var seriesSettings = deckSettingsFor(name);
+        var visibilityLabel = seriesSettings.visibility === "public" ? "Public" : "Privé";
+        var groupTag = seriesSettings.group && seriesSettings.group.name ? '<span class="series-group-tag">Groupe : ' + escapeHtml(seriesSettings.group.name) + '</span>' : '';
+        return '<article class="memory-row"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div>' + main +
+          '<div class="memory-row-actions"><a class="primary-btn" href="reviser-cartes.html?deck=' + encodeURIComponent(name) + '">Étudier</a><a class="secondary-btn" href="creer-cartes.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="flashcard" data-deck="' + escapeHtml(name) + '">Supprimer</button></div>' +
+          '<div class="series-sharing-area"><div class="series-sharing-status"><span class="visibility-pill visibility-' + visibilityLabel.toLowerCase() + '">' + visibilityLabel + '</span>' + groupTag + '</div>' +
+          '<div class="series-sharing-actions"><button type="button" class="secondary-btn" data-act="visibility" data-deck="' + escapeHtml(name) + '">Visibilité</button><button type="button" class="secondary-btn series-share-action" data-act="share-deck" data-deck="' + escapeHtml(name) + '">↗ Partager</button><button type="button" class="secondary-btn series-group-action" data-act="group-deck" data-deck="' + escapeHtml(name) + '">♧ Groupe</button></div></div></article>';
       }).join("") + '</div>';
     }
 
@@ -941,8 +1302,39 @@
     var button = event.target.closest("[data-act]");
     if (!button) return;
     var action = button.dataset.act;
-
-    if (action === "export") {
+    if (event.target && event.target.id === "sharingModal") { closeSharingDialog(); return; }
+    if (action === "close-sharing-modal") {
+      closeSharingDialog();
+    } else if (action === "visibility") {
+      openVisibilityDialog(button.dataset.deck || "");
+    } else if (action === "choose-visibility") {
+      if (button.dataset.value === "public") openPublishDialog(button.dataset.deck || "");
+      else setDeckPrivate(button.dataset.deck || "");
+    } else if (action === "confirm-publication") {
+      var publishModal = $("#sharingModal");
+      publishDeck(button.dataset.deck || "", $("#publishAuthor", publishModal) && $("#publishAuthor", publishModal).value, $("#publishDomain", publishModal) && $("#publishDomain", publishModal).value, $("#publishDescription", publishModal) && $("#publishDescription", publishModal).value);
+    } else if (action === "share-deck") {
+      shareDeckLink(button.dataset.deck || "");
+    } else if (action === "copy-share-link") {
+      copyPublicShareLink();
+    } else if (action === "group-deck") {
+      openGroupDialog(button.dataset.deck || "");
+    } else if (action === "save-group") {
+      saveGroupFromDialog(button.dataset.deck || "");
+    } else if (action === "public-answer") {
+      var answerNode = document.getElementById(button.dataset.target || "");
+      if (answerNode) {
+        answerNode.hidden = !answerNode.hidden;
+        button.setAttribute("aria-expanded", answerNode.hidden ? "false" : "true");
+        button.textContent = answerNode.hidden ? "Afficher la réponse" : "Masquer la réponse";
+      }
+    } else if (action === "public-info") {
+      showPublicCardInfo(button.dataset.index);
+    } else if (action === "public-add") {
+      addPublicCard(button.dataset.index);
+    } else if (action === "refresh-public-cards") {
+      loadPublicCards();
+    } else if (action === "export") {
       exportCards();
     } else if (action === "review-deck") {
       var reviewDeck = button.dataset.deck || "";
@@ -1049,6 +1441,8 @@
 
   if (document.body.dataset.page === "home") {
     updateHome();
+  } else if (document.body.dataset.page === "public-cards") {
+    initializePublicCardsPage();
   } else if (document.body.dataset.page === "library") {
     renderLibrary();
     var params = new URLSearchParams(window.location.search);
