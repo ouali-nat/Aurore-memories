@@ -692,7 +692,10 @@
       html += '<div class="method-group"><strong>' + group.title + '</strong><div class="mode-list">';
       group.modes.forEach(function (mode) {
         var info = MODE_PAGES[mode];
+        var params = new URLSearchParams(window.location.search);
+        var cardParam = params.get("card") || "";
         var deckParam = session.requestedDeck ? "?deck=" + encodeURIComponent(session.requestedDeck) : "";
+        if (cardParam) deckParam += (deckParam ? "&" : "?") + "card=" + encodeURIComponent(cardParam);
         html += '<a class="mode-chip mode-link' + (state.mode === mode ? ' is-active' : '') + '" href="' + info.url + deckParam + '"><strong>' + escapeHtml(mode) + '</strong><small>' + escapeHtml(info.title) + '</small></a>';
       });
       html += '</div></div>';
@@ -1016,9 +1019,16 @@
     var dedicatedMode = document.body.dataset.modePage || "";
     if (MODE_PAGES[dedicatedMode]) {
       state.mode = dedicatedMode;
+      if (query.get("card")) {
+        var selectedMemory = state.cards.filter(isMemoryCard).find(function (card) { return String(card.id) === query.get("card"); });
+        if (selectedMemory) selectedMemory.preferredMode = dedicatedMode;
+      }
       save();
       startSession(requested, true);
     } else {
+      var selectedCardId = query.get("card") || "";
+      var selectedMemoryForMode = selectedCardId ? state.cards.filter(isMemoryCard).find(function (card) { return String(card.id) === selectedCardId; }) : null;
+      if (selectedMemoryForMode && MODE_PAGES[selectedMemoryForMode.preferredMode]) state.mode = selectedMemoryForMode.preferredMode;
       startSession(requested, false);
     }
   }
