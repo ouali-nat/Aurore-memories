@@ -371,9 +371,12 @@
         catch (error) { parentUrl = new URL(fallback, window.location.origin); }
       }
       back.hidden = false;
-      back.href = parentUrl.pathname + parentUrl.search + parentUrl.hash;
-      back.textContent = labelForParent(parentUrl);
-      back.setAttribute("aria-label", back.textContent.replace(/^←\\s*/, "Revenir à "));
+      var parentHref = parentUrl.pathname + parentUrl.search + parentUrl.hash;
+      var parentLabel = labelForParent(parentUrl);
+      if (back.getAttribute("href") !== parentHref) back.setAttribute("href", parentHref);
+      if (back.textContent !== parentLabel) back.textContent = parentLabel;
+      var backLabel = parentLabel.replace(/^←\\s*/, "Revenir à ");
+      if (back.getAttribute("aria-label") !== backLabel) back.setAttribute("aria-label", backLabel);
     }
 
     document.addEventListener("click", function (event) {
@@ -392,6 +395,18 @@
     }, true);
 
     configureBackLink();
+    // Réapplique la règle commune si un ancien script de page tente encore
+    // de remplacer le lien Retour après le chargement de app.js.
+    if (window.MutationObserver) {
+      var backLinkObserver = new MutationObserver(function (records) {
+        if (records.some(function (record) {
+          return record.type === "attributes" && record.attributeName === "href" &&
+            record.target && record.target.matches && record.target.matches(".page-heading .back-link");
+        })) configureBackLink();
+      });
+      var currentBackLink = document.querySelector(".page-heading .back-link");
+      if (currentBackLink) backLinkObserver.observe(currentBackLink, { attributes: true, attributeFilter: ["href"] });
+    }
   })();
 
 })();
