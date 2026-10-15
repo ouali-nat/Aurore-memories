@@ -750,7 +750,7 @@
     var html = '<div class="review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir au total</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
     html += renderProgressChart();
     var dedicatedMode = document.body.dataset.modePage || "";
-    html += renderModeNavigation(Boolean(dedicatedMode));
+    if (!dedicatedMode) html += renderModeNavigation(false);
     html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
 
     if (!state.cards.length) {
