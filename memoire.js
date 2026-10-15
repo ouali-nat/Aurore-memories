@@ -68,38 +68,73 @@
     return days;
   }
 
+  function makeCard(front, back, deck, index) {
+    return {
+      id: Date.now() + Math.random() + (index || 0) / 1000,
+      deck: deck,
+      front: String(front || "").trim(),
+      back: String(back || "").trim(),
+      ease: 2.5,
+      interval: 0,
+      reps: 0,
+      lapses: 0,
+      due: today()
+    };
+  }
+
   function parseContent(text, deck) {
     var pairs = [];
-    String(text || "").split(/\r?\n+/).map(function (line) { return line.trim(); }).filter(Boolean).forEach(function (line) {
-      var parts = line.split(/::|\t|;/);
-      if (parts.length >= 2 && parts[0].trim() && parts.slice(1).join(" ").trim()) {
-        pairs.push([parts[0].trim(), parts.slice(1).join(" ").trim()]);
+    var input = String(text || "").replace(/\r/g, "").trim();
+    if (!input) return [];
+
+    input.split(/\n+/).forEach(function (rawLine) {
+      var line = rawLine.trim();
+      if (!line) return;
+      var front = "";
+      var back = "";
+      var delimiter = line.indexOf("::");
+      if (delimiter >= 0) {
+        front = line.slice(0, delimiter).trim();
+        back = line.slice(delimiter + 2).trim();
+      } else if (line.indexOf("\t") >= 0) {
+        var columns = line.split("\t");
+        front = (columns.shift() || "").trim();
+        back = columns.join(" ").trim();
+      } else {
+        var qa = line.match(/^(?:Q|Question)\s*[:：]\s*(.+?)\s+(?:R|Réponse|Reponse)\s*[:：]\s*(.+)$/i);
+        if (qa) { front = qa[1].trim(); back = qa[2].trim(); }
+      }
+      if (front && back) {
+        pairs.push([front, back]);
         return;
       }
-      line.split(/(?<=[.!?])\s+/).forEach(function (sentence) {
-        sentence = sentence.trim();
-        if (sentence.length < 22) return;
-        var words = sentence.match(/[A-Za-zÀ-ÖØ-öø-ÿ0-9'-]{5,}/g) || [];
+
+      // A line with a separator but only one side filled is not silently converted to a cloze.
+      if (delimiter >= 0 || line.indexOf("\t") >= 0 || /^(?:Q|Question)\s*[:：]/i.test(line)) return;
+
+      // For ordinary course text, make a cloze card from each complete sentence.
+      line.split(/(?<=[.!?。！？])\s+/).forEach(function (sentence) {
+        sentence = sentence.trim().replace(/^[-*•\d.)\s]+/, "");
+        if (sentence.length < 12) return;
+        var words = sentence.match(/[A-Za-zÀ-ÖØ-öø-ÿ0-9'-]{4,}/g) || [];
+        words = words.filter(function (word) { return !/^(alors|ainsi|aussi|cette|celui|celle|dans|donc|elle|elles|entre|être|faire|leurs|mais|même|notre|parce|plus|pour|quand|sans|sont|sous|tout|tous|très|vous|avec|comme|comment|cette|leurs)$/i.test(word); });
+        if (!words.length) return;
         words.sort(function (a, b) { return b.length - a.length; });
         var keyword = words[0];
-        if (!keyword) return;
-        var index = sentence.indexOf(keyword);
+        var index = sentence.toLocaleLowerCase().indexOf(keyword.toLocaleLowerCase());
         if (index < 0) return;
-        pairs.push([sentence.slice(0, index) + "[…]" + sentence.slice(index + keyword.length), keyword]);
+        pairs.push([sentence.slice(0, index) + "_____" + sentence.slice(index + keyword.length), sentence.slice(index, index + keyword.length)]);
       });
     });
-    return pairs.map(function (pair, index) {
-      return {
-        id: Date.now() + Math.random() + index / 1000,
-        deck: deck,
-        front: pair[0],
-        back: pair[1],
-        ease: 2.5,
-        interval: 0,
-        reps: 0,
-        lapses: 0,
-        due: today()
-      };
+
+    var seen = Object.create(null);
+    return pairs.filter(function (pair) {
+      var key = pair[0].toLocaleLowerCase() + "\u0000" + pair[1].toLocaleLowerCase();
+      if (seen[key]) return false;
+      seen[key] = true;
+      return Boolean(pair[0] && pair[1]);
+    }).map(function (pair, index) {
+      return makeCard(pair[0], pair[1], deck, index);
     });
   }
 
@@ -191,37 +226,213 @@
     var form = $("#memoryCreateForm");
     if (!form) return;
     var input = $("#memoryFile");
+    var mode = "manual";
+    var bulkPrepared = false;
+    var cardCounter = 2;
+    var draftCards = $("#draftCards");
+    var feedback = $("#createFeedback");
+    var bulkPreview = $("#bulkPreview");
+
+    function setFeedback(message, isError) {
+      if (!feedback) return;
+      feedback.textContent = message || "";
+      feedback.classList.toggle("is-error", Boolean(isError));
+    }
+
+    function updateDraftLabels() {
+      var rows = draftCards ? Array.prototype.slice.call(draftCards.querySelectorAll("[data-draft-card]")) : [];
+      rows.forEach(function (row, index) {
+        var number = index + 1;
+        var title = row.querySelector(".draft-card-top strong");
+        var q = row.querySelector(".card-question");
+        var a = row.querySelector(".card-answer");
+        var qLabel = row.querySelector(".question-label");
+        var aLabel = row.querySelector(".answer-label");
+        if (title) title.textContent = "Carte " + number;
+        if (q) { q.id = "draft-q-" + number; q.setAttribute("aria-label", "Question de la carte " + number); }
+        if (a) { a.id = "draft-a-" + number; a.setAttribute("aria-label", "Réponse de la carte " + number); }
+        if (qLabel) qLabel.htmlFor = "draft-q-" + number;
+        if (aLabel) aLabel.htmlFor = "draft-a-" + number;
+      });
+      var counter = $("#draftCardCount");
+      if (counter) counter.textContent = rows.length + (rows.length > 1 ? " cartes" : " carte");
+    }
+
+    function addDraftCard(front, back) {
+      if (!draftCards) return;
+      cardCounter += 1;
+      var row = document.createElement("article");
+      row.className = "draft-card";
+      row.setAttribute("data-draft-card", "");
+      row.innerHTML = '<div class="draft-card-top"><strong>Nouvelle carte</strong><button class="remove-draft-card" type="button" data-remove-card aria-label="Supprimer cette carte" title="Supprimer cette carte">×</button></div>' +
+        '<label class="field-label question-label">Question</label><textarea class="text-area card-question" rows="2" placeholder="Écris une question claire…"></textarea>' +
+        '<label class="field-label answer-label">Réponse</label><textarea class="text-area card-answer" rows="2" placeholder="Écris la réponse attendue…"></textarea>';
+      draftCards.appendChild(row);
+      row.querySelector(".card-question").value = front || "";
+      row.querySelector(".card-answer").value = back || "";
+      updateDraftLabels();
+      return row;
+    }
+
+    function chooseMode(nextMode) {
+      mode = nextMode === "bulk" ? "bulk" : "manual";
+      Array.prototype.forEach.call(form.querySelectorAll("[data-create-mode]"), function (button) {
+        var active = button.dataset.createMode === mode;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      Array.prototype.forEach.call(form.querySelectorAll("[data-editor]"), function (panel) {
+        panel.hidden = panel.dataset.editor !== mode;
+      });
+      setFeedback("");
+    }
+
+    function getManualCards(title) {
+      var rows = draftCards ? Array.prototype.slice.call(draftCards.querySelectorAll("[data-draft-card]")) : [];
+      var cards = [];
+      var invalid = false;
+      rows.forEach(function (row) {
+        var front = (row.querySelector(".card-question").value || "").trim();
+        var back = (row.querySelector(".card-answer").value || "").trim();
+        if (!front && !back) return;
+        if (!front || !back) {
+          invalid = true;
+          row.classList.add("has-error");
+          return;
+        }
+        row.classList.remove("has-error");
+        cards.push(makeCard(front, back, title, cards.length));
+      });
+      return { cards: cards, invalid: invalid };
+    }
+
+    function previewBulk() {
+      var title = ($("#memoryTitle").value || "").trim() || "Nouvelle mémoire";
+      var content = ($("#memoryText").value || "").trim();
+      var cards = parseContent(content, title);
+      if (!bulkPreview) return cards;
+      if (!content) {
+        bulkPreview.innerHTML = '<p class="preview-empty">Colle un cours ou une liste de questions-réponses pour préparer les cartes.</p>';
+        bulkPrepared = false;
+        return cards;
+      }
+      if (!cards.length) {
+        bulkPreview.innerHTML = '<p class="preview-error">Aucune carte reconnue. Essaie une carte par ligne : question :: réponse. Vérifie aussi que chaque ligne contient bien une question et une réponse.</p>';
+        bulkPrepared = false;
+        return cards;
+      }
+      bulkPreview.innerHTML = '<div class="preview-head"><strong>' + cards.length + (cards.length > 1 ? " cartes préparées" : " carte préparée") + '</strong><span>Vérifie les exemples avant d’enregistrer.</span></div><div class="preview-list">' +
+        cards.slice(0, 4).map(function (card, index) {
+          return '<article class="preview-card"><span>Carte ' + (index + 1) + '</span><strong>' + escapeHtml(card.front) + '</strong><p>' + escapeHtml(card.back) + '</p></article>';
+        }).join("") + '</div>' + (cards.length > 4 ? '<p class="preview-more">et ' + (cards.length - 4) + ' autre(s) carte(s)…</p>' : "");
+      bulkPrepared = true;
+      return cards;
+    }
+
+    if (draftCards) {
+      draftCards.addEventListener("click", function (event) {
+        var remove = event.target.closest("[data-remove-card]");
+        if (!remove) return;
+        var rows = draftCards.querySelectorAll("[data-draft-card]");
+        if (rows.length <= 1) {
+          var q = rows[0].querySelector(".card-question");
+          var a = rows[0].querySelector(".card-answer");
+          q.value = "";
+          a.value = "";
+          rows[0].classList.remove("has-error");
+        } else {
+          remove.closest("[data-draft-card]").remove();
+        }
+        updateDraftLabels();
+      });
+    }
+    var addButton = $("#addDraftCard");
+    if (addButton) addButton.addEventListener("click", function () {
+      var row = addDraftCard();
+      if (row) row.querySelector(".card-question").focus();
+      setFeedback("");
+    });
+
+    Array.prototype.forEach.call(form.querySelectorAll("[data-create-mode]"), function (button) {
+      button.addEventListener("click", function () { chooseMode(button.dataset.createMode); });
+    });
+    var prepareButton = $("#prepareBulkCards");
+    if (prepareButton) prepareButton.addEventListener("click", function () {
+      var cards = previewBulk();
+      setFeedback(cards.length ? "Aperçu prêt : " + cards.length + " carte(s) détectée(s)." : "Aucune carte prête pour le moment.", !cards.length);
+    });
+
+    function csvCells(line) {
+      var cells = [], value = "", quoted = false;
+      for (var i = 0; i < line.length; i += 1) {
+        var ch = line.charAt(i);
+        if (ch === '"' && quoted && line.charAt(i + 1) === '"') { value += '"'; i += 1; }
+        else if (ch === '"') { quoted = !quoted; }
+        else if (ch === "," && !quoted) { cells.push(value.trim()); value = ""; }
+        else { value += ch; }
+      }
+      cells.push(value.trim());
+      return cells;
+    }
+
     if (input) {
       input.addEventListener("change", function () {
         var file = input.files && input.files[0];
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function () {
-          $("#memoryText").value = String(reader.result || "");
-          var feedback = $("#createFeedback");
-          if (feedback) feedback.textContent = "Fichier chargé. Vérifie le contenu puis crée ta mémoire.";
-          notify("Fichier chargé.");
+          var loadedText = String(reader.result || "");
+          if (/\.csv$/i.test(file.name)) {
+            loadedText = loadedText.split(/\r?\n/).map(function (line) {
+              if (!line.trim()) return "";
+              var cells = csvCells(line);
+              if (cells.length < 2) return line;
+              if (/^(question|front|recto|terme)$/i.test(cells[0]) && /^(réponse|reponse|answer|back|verso|définition|definition)$/i.test(cells[1])) return "";
+              return cells[0] + " :: " + cells.slice(1).join(", ");
+            }).join("\n");
+          }
+          $("#memoryText").value = loadedText;
+          chooseMode("bulk");
+          var cards = previewBulk();
+          setFeedback(file.name + " chargé : " + cards.length + " carte(s) préparée(s). Vérifie l’aperçu puis enregistre.", !cards.length);
         };
-        reader.onerror = function () { notify("Le fichier n’a pas pu être lu."); };
+        reader.onerror = function () { setFeedback("Le fichier n’a pas pu être lu. Essaie un fichier texte, CSV ou TSV.", true); };
         reader.readAsText(file);
       });
     }
+
+    if (bulkPreview) bulkPreview.innerHTML = '<p class="preview-empty">L’aperçu des cartes préparées apparaîtra ici.</p>';
+    updateDraftLabels();
+
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       var title = ($("#memoryTitle").value || "").trim();
-      var content = ($("#memoryText").value || "").trim();
-      var feedback = $("#createFeedback");
-      if (!title || !content) {
-        if (feedback) feedback.textContent = "Indique un nom et un contenu à mémoriser.";
+      if (!title) {
+        setFeedback("Donne un nom à cette mémoire.", true);
+        $("#memoryTitle").focus();
         return;
       }
-      var cards = parseContent(content, title);
-      if (!cards.length) {
-        if (feedback) feedback.textContent = "Aucune carte exploitable. Essaie le format « question :: réponse » ou colle des phrases complètes.";
+      var result;
+      if (mode === "manual") {
+        result = getManualCards(title);
+        if (result.invalid) {
+          setFeedback("Complète la question et la réponse de chaque carte commencée, ou vide entièrement cette carte.", true);
+          return;
+        }
+      } else {
+        result = { cards: previewBulk(), invalid: false };
+      }
+      if (!result.cards.length) {
+        setFeedback(mode === "manual" ? "Ajoute au moins une carte avec une question et une réponse." : "Aucune carte n’a été préparée. Vérifie le texte et utilise « Préparer les cartes ».", true);
         return;
       }
-      state.cards = state.cards.concat(cards);
-      save();
+      var previous = state.cards.slice();
+      state.cards = state.cards.concat(result.cards);
+      if (!save()) {
+        state.cards = previous;
+        setFeedback("L’enregistrement a échoué : le stockage de cet appareil est peut-être plein. Exporte tes mémorisations puis réessaie.", true);
+        return;
+      }
       try { localStorage.setItem("aurore-memory-last-created", title); } catch (error) {}
       window.location.href = "mes-memoires.html?created=1";
     });
