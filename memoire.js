@@ -235,7 +235,7 @@
       var cards = groups[name];
       var due = dueCards(cards).length;
       var preview = cards[0] ? cards[0].front : "";
-      return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div><div class="memory-row-main"><h2>' + escapeHtml(name) + '</h2><p>' + cards.length + ' carte(s) · ' + due + ' à réviser</p><small>' + escapeHtml(preview) + '</small></div><div class="memory-row-actions"><button class="secondary-btn" type="button" data-act="review-deck" data-deck="' + escapeHtml(name) + '">Réviser</button><button class="subtle-danger" type="button" data-act="delete-deck" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
+      return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div><div class="memory-row-main"><h2>' + escapeHtml(name) + '</h2><p>' + cards.length + ' morceau(x) · ' + due + ' à réviser</p><small>' + escapeHtml(preview) + '</small></div><div class="memory-row-actions"><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Éditer / découper</a><button class="secondary-btn" type="button" data-act="review-deck" data-deck="' + escapeHtml(name) + '">Réviser</button><button class="subtle-danger" type="button" data-act="delete-deck" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
     }).join("") + '</div>';
   }
 
@@ -243,7 +243,7 @@
     var root = $("#memoryLibrary");
     if (!root) return;
     root.innerHTML = '<div class="library-summary"><div><strong>' + deckNames(state.cards).length + '</strong><span>mémorisation(s)</span></div><div><strong>' + state.cards.length + '</strong><span>carte(s)</span></div><div><strong>' + dueCards().length + '</strong><span>à réviser</span></div></div>' +
-      '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="Rechercher un titre, une question…" aria-label="Rechercher dans mes mémorisations"></label><div class="toolbar-actions"><a class="primary-btn" href="creer-memoire.html">＋ Créer une mémoire</a><button class="secondary-btn" type="button" data-act="export">Exporter mes cartes</button></div></div>' +
+      '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="Rechercher un titre, une question…" aria-label="Rechercher dans mes mémorisations"></label><div class="toolbar-actions"><a class="primary-btn" href="editer-memoire.html">＋ Créer / découper une mémoire</a><a class="secondary-btn" href="progression.html">Ma progression</a><button class="secondary-btn" type="button" data-act="export">Exporter mes cartes</button></div></div>' +
       '<div id="memoryList" aria-live="polite"></div>';
     renderMemoryList();
   }
