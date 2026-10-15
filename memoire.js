@@ -523,7 +523,7 @@
       card._feedIndex = index;
       if (selectedSeries && card.seriesId !== selectedSeries) return;
       var haystack = normalizeSearch([card.seriesName, card.authorName, card.domain, card.description, card.front, card.back].join(" "));
-      if (search && !(haystack.indexOf(search) !== -1 || search.split(/\\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
+      if (search && !(haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
       visible.push(card);
     });
     if (!visible.length) {
@@ -536,8 +536,8 @@
       var index = card._feedIndex;
       var answerId = "public-answer-" + index;
       var cardColor = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "#4937a6";
-      var cardImage = typeof card.backgroundImage === "string" && /^data:image\\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
-        (typeof card.seriesBackgroundImage === "string" && /^data:image\\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "");
+      var cardImage = typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
+        (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "");
       var imageMarkup = cardImage
         ? '<div class="public-flashcard-art"><img src="' + escapeHtml(cardImage) + '" alt="" loading="lazy" decoding="async"></div>'
         : '<div class="public-flashcard-art public-flashcard-art-color"><span>AURORE</span><i></i></div>';
@@ -652,7 +652,7 @@
     var searched = state.cards.filter(function (card) {
       if (view === "memories" && !isMemoryCard(card)) return false;
       if (view === "cards" && !isFlashcard(card)) return false;
-      if (!search) return true; var haystack = normalizeSearch([card.deck, card.front, card.back].join(" ")); return haystack.indexOf(search) !== -1 || search.split(/\\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; });
+      if (!search) return true; var haystack = normalizeSearch([card.deck, card.front, card.back].join(" ")); return haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; });
     });
     var memoryGroupsByDeck = memoryGroups(searched.filter(isMemoryCard));
     var flashGroupsByDeck = memoryGroups(searched.filter(isFlashcard));
