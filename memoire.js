@@ -928,7 +928,7 @@
     } else if (action === "check-first-letter") {
       if (!session.current || session.shown) return;
       var expectedWords = session.current.back.split(/\s+/);
-      var enteredWords = Array.prototype.map.call(root.querySelectorAll("[data-first-rest]"), function (input, index) {
+      var enteredWords = Array.prototype.map.call($("#reviewApp").querySelectorAll("[data-first-rest]"), function (input, index) {
         return (expectedWords[index] || "").charAt(0) + input.value;
       });
       gradeTypedAnswer(enteredWords.join(" "));
