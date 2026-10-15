@@ -1,5 +1,5 @@
 (function(){"use strict";
-const KEY="aurore-memory-cards-v1",MODES=["Rappel actif","Premières lettres","QCM"];
+const KEY="aurore-memory-cards-v1",MODES=["Rappel actif","Texte à trous","Premières lettres","QCM","Association","Palais mental"];
 const day=()=>Math.floor(Date.now()/864e5),$=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
@@ -35,9 +35,11 @@ function next(){cur=queue.shift()||null;shown=false;picked=-1;opts=null;
 }
 function stats(){return '<div class="mm-stats"><span>🔥 Série : '+streak()+' j</span><span>✓ Aujourd’hui : '+(S.log[day()]||0)+'</span><span>⏰ À réviser : '+S.cards.filter(c=>c.due<=day()).length+'</span></div>'}
 function renderLibrary(){
- const d={};S.cards.forEach(c=>{const x=d[c.deck]=d[c.deck]||{n:0,d:0};x.n++;if(c.due<=day())x.d++});
- const list=Object.keys(d).map(k=>'<div class="mm-deck"><div><strong>'+esc(k)+'</strong><small>'+d[k].n+' cartes · '+d[k].d+' à réviser</small></div><div class="mm-row"><button class="primary-btn" data-act="review" data-deck="'+esc(k)+'">Réviser</button><button class="outline-btn" data-act="del" data-deck="'+esc(k)+'">Supprimer</button></div></div>').join("")||'<p class="mm-muted">Aucune mémoire pour le moment.</p>';
- $("#libraryView").innerHTML='<div class="mm"><div class="page-title"><p class="kicker">PERSONNEL</p><h2>Ma mémoire</h2><p>100 % gratuit. Tes données restent sur ton appareil.</p></div>'+stats()+
+ const term=(window.auroreMemorySearch||"").trim().toLocaleLowerCase();
+ const visibleCards=term?S.cards.filter(c=>[c.deck,c.front,c.back].some(v=>String(v).toLocaleLowerCase().includes(term))):S.cards;
+ const d={};visibleCards.forEach(c=>{const x=d[c.deck]=d[c.deck]||{n:0,d:0};x.n++;if(c.due<=day())x.d++});
+ const list=Object.keys(d).map(k=>'<div class="mm-deck"><div><strong>'+esc(k)+'</strong><small>'+d[k].n+' cartes · '+d[k].d+' à réviser</small></div><div class="mm-row"><button class="primary-btn" data-act="review" data-deck="'+esc(k)+'">Réviser</button><button class="outline-btn" data-act="del" data-deck="'+esc(k)+'">Supprimer</button></div></div>').join("")||(term?'<p class="mm-muted">Aucun résultat pour « '+esc(term)+' ».</p>':'<p class="mm-muted">Aucune mémoire pour le moment.</p>');
+ $("#libraryView").innerHTML='<div class="mm"><div class="page-title"><p class="kicker">PERSONNEL</p><h2>Ma mémoire</h2><p>100 % gratuit. Tes données restent sur ton appareil.</p></div>'+stats()+(term?'<div class="mm-search-status" role="status">Résultats pour <strong>'+esc(term)+'</strong><button class="outline-btn" data-act="clear-search">Effacer la recherche</button></div>':'')+
  '<div class="mm-box"><strong>Nouvelle mémoire</strong><input id="mmTitle" placeholder="Titre (ex : Biologie chap. 3)"><textarea id="mmText" placeholder="Une carte par ligne : question :: réponse\nOu colle un cours : Aurore crée des textes à trous automatiquement."></textarea><div class="mm-row"><button class="primary-btn" data-act="create">Créer les cartes</button><label class="outline-btn" style="cursor:pointer">Importer (Anki .txt/.csv)<input type="file" id="mmFile" accept=".txt,.csv,.tsv" hidden></label></div></div>'+
  '<div class="mm-box"><strong>Mes mémoires</strong>'+list+'<div class="mm-row" style="margin-top:12px"><button class="outline-btn" data-act="export">Exporter (compatible Anki)</button></div></div></div>';
  const f=$("#mmFile");if(f)f.onchange=function(){const r=new FileReader();r.onload=()=>{$("#mmText").value=r.result;toast("Fichier chargé, clique sur Créer.")};if(f.files[0])r.readAsText(f.files[0])};
@@ -49,6 +51,9 @@ function renderSession(){
  else if(!cur)h+='<h3>Séance terminée 🎉</h3><p>Rien à réviser pour le moment. Aurore te rappellera chaque carte au bon moment.</p><button class="outline-btn" data-act="review" data-deck="">Recharger</button>';
  else{
   h+='<div class="mm-q">'+esc(cur.front)+'</div>';
+  if(S.mode==="Association")h+='<p class="mm-method-tip">🧩 Cherche un lien : une image, une comparaison ou une histoire qui relie la question à la réponse.</p>';
+  if(S.mode==="Palais mental")h+='<p class="mm-method-tip">🏛️ Place mentalement cette notion dans un lieu familier : une pièce, un trajet ou un objet précis.</p>';
+  if(S.mode==="Texte à trous")h+='<p class="mm-method-tip">✍️ Complète le passage de mémoire avant de révéler la réponse.</p>';
   if(S.mode==="Premières lettres"&&!shown)h+='<div class="mm-hint">'+esc(cur.back.split(/\s+/).map(w=>w[0]+"…").join(" "))+'</div>';
   if(opts&&S.mode==="QCM"){
    h+=opts.map((o,i)=>'<button class="mm-opt'+(shown?(o===cur.back?' ok':(i===picked?' ko':'')):'')+'" data-act="opt" data-i="'+i+'"'+(shown?' disabled':'')+'>'+esc(o)+'</button>').join("");
@@ -70,6 +75,7 @@ document.addEventListener("click",function(e){
   if(!c.length){toast("Rien à créer : écris « question :: réponse » ou colle un texte.");return}
   S.cards=S.cards.concat(c);save();render();toast(c.length+" cartes créées ✓")}
  else if(t==="review"){showView("session");startSession(a.dataset.deck)}
+ else if(t==="clear-search"){window.auroreMemorySearch="";render()}
  else if(t==="del"){if(confirm("Supprimer « "+a.dataset.deck+" » ?")){S.cards=S.cards.filter(c=>c.deck!==a.dataset.deck);save();render()}}
  else if(t==="export"){const b=new Blob([S.cards.map(c=>c.front.replace(/\t/g," ")+"\t"+c.back.replace(/\t/g," ")).join("\n")],{type:"text/plain"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="aurore-memoire.txt";l.click()}
  else if(t==="mode"){S.mode=a.dataset.m;save();if(cur)queue.unshift(cur);next()}
@@ -78,5 +84,6 @@ document.addEventListener("click",function(e){
  else if(t==="g"){const g=+a.dataset.g;grade(cur,g);if(g===0)queue.push(cur);next()}
  else if(t==="next")next();
 },true);
+window.auroreMemoryRender=render;
 render();
 })();
