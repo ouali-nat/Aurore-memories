@@ -4,7 +4,7 @@ var KEY="aurore-memory-cards-v1",params=new URLSearchParams(location.search),dec
 var modes={"Toucher pour révéler":"mode-revelation.html","Curseur":"mode-curseur.html","Écouter":"mode-ecouter.html","Première lettre":"mode-premiere-lettre.html","Trous":"mode-trous.html","Réordonner":"mode-reordonner.html","Taper":"mode-taper.html","Choix multiple":"mode-choix-multiple.html","Parler":"mode-parler.html"};
 function read(){try{var s=JSON.parse(localStorage.getItem(KEY)||"{}");return Array.isArray(s.cards)?s.cards:[]}catch(e){return []}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-function isMemory(c){return c&&(c.kind==="memory"||/(?:·|—|-)\\s*Morceau\\s+\\d+\\s*$/i.test(String(c.front||"")))}
+function isMemory(c){return c&&(c.kind==="memory"||/(?:·|—|-)\s*Morceau\s+\\d+\s*$/i.test(String(c.front||"")))}
 var cards=read().filter(function(c){return isMemory(c)&&c.deck===deck});
 document.getElementById("memoryBlocksTitle").textContent=deck||"Blocs de mémoire";
 document.getElementById("editMemoryLink").href="editer-memoire.html?deck="+encodeURIComponent(deck);
