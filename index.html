@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0B0912">
 <meta name="description" content="Aurore — Section Mémoire, un espace pour apprendre, mémoriser et réviser efficacement.">
-<title>Aurore — Section Mémoire</title><link rel="stylesheet" href="style.css">
+<title>Aurore — Section Mémoire</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="memoire.css">
 </head>
 <body><div class="aurora-bg" aria-hidden="true"></div>
 <header class="topbar"><div class="wrap topbar-inner">
@@ -54,11 +54,9 @@
 <div class="section-head"><div><p class="kicker">COMMENCER</p><h2>Choisis ta façon de mémoriser</h2></div><span class="section-note">Des méthodes actives, pas une simple fiche de révision.</span></div>
 <div class="method-grid" id="methodGrid"></div>
 <div class="section-head lower"><div><p class="kicker">TON ESPACE</p><h2>Ma mémoire</h2></div><button class="outline-btn" data-view="library">Voir tout</button></div>
-<div class="memory-preview"><div><span class="empty-symbol">✦</span><div><strong>Ton espace de mémorisation est prêt.</strong><p>Ajoute bientôt ton premier cours, paragraphe ou formule depuis Aurore.</p></div><button class="primary-btn" data-view="library">Créer une mémoire</button></div></div>
+<div class="memory-preview"><div><span class="empty-symbol">✦</span><div><strong>Ton espace de mémorisation est prêt.</strong><p>Colle ton cours ou tes cartes : Aurore s'occupe du reste, gratuitement.</p></div><button class="primary-btn" data-view="library">Créer une mémoire</button></div></div>
 </section>
-<section id="libraryView" class="view"><div class="page-title"><p class="kicker">PERSONNEL</p><h2>Ma mémoire</h2><p>Retrouve ici les notions que tu veux apprendre durablement.</p></div>
-<div class="empty-panel"><span>🧠</span><h3>Aucune mémoire pour le moment</h3><p>Cette première interface prépare ton espace. La connexion et l'enregistrement Supabase seront branchés ensuite.</p><button class="primary-btn" data-method="Rappel actif">Commencer une mémoire</button></div></section>
-<section id="sessionView" class="view"><div class="page-title"><p class="kicker">ENTRAÎNEMENT</p><h2>Ma séance de mémorisation</h2><p>Une séance regroupera plusieurs blocs et méthodes sans modifier le document source.</p></div>
-<div class="session-layout"><div class="session-main"><div class="session-card"><span class="session-number">01</span><h3>Ta séance est vide</h3><p>Ajoute des éléments depuis ta mémoire pour commencer un entraînement actif.</p><button class="primary-btn" data-view="library">Ouvrir ma mémoire</button></div></div><aside class="session-side"><strong>Progression</strong><div class="progress"><span></span></div><p>0 élément révisé</p></aside></div></section>
+<section id="libraryView" class="view"></section>
+<section id="sessionView" class="view"></section>
 </main><footer><div class="wrap"><strong>Aurore</strong><span> · Section Mémoire</span><small>Une nouvelle façon de faire vivre les connaissances.</small></div></footer>
-<div class="toast" id="toast" role="status"></div><script src="app.js"></script></body></html>
+<div class="toast" id="toast" role="status"></div><script src="app.js"></script><script src="memoire.js"></script></body></html>

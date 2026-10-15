@@ -1,0 +1,21 @@
+.mm{max-width:760px;margin:0 auto;padding:8px 0 40px}
+.mm-stats{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.mm-stats span,.mm-chip{padding:8px 14px;border-radius:999px;background:rgba(127,127,127,.14);border:1px solid rgba(127,127,127,.3);font-size:14px;color:inherit}
+.mm-chip{cursor:pointer;font-family:inherit}
+.mm-chip.on{background:var(--method-color,#8B5CF6);color:#fff;border-color:transparent}
+.mm-box{background:rgba(127,127,127,.1);border:1px solid rgba(127,127,127,.28);border-radius:18px;padding:18px;margin:14px 0}
+.mm input,.mm textarea{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid rgba(127,127,127,.35);background:rgba(127,127,127,.08);color:inherit;font:inherit;margin:6px 0}
+.mm textarea{min-height:140px;resize:vertical}
+.mm-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mm-deck{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 0;border-bottom:1px solid rgba(127,127,127,.2)}
+.mm-deck small,.mm-muted{display:block;opacity:.7;font-size:13px}
+.mm-q{font-size:22px;line-height:1.4;margin:10px 0}
+.mm-hint{opacity:.7;letter-spacing:1px;margin:8px 0}
+.mm-a{padding:12px;border-radius:12px;background:rgba(127,127,127,.15);margin:10px 0;font-size:18px}
+.mm-opt{display:block;width:100%;text-align:left;margin:6px 0;padding:12px;border-radius:12px;border:1px solid rgba(127,127,127,.35);background:rgba(127,127,127,.08);color:inherit;font:inherit;cursor:pointer}
+.mm-opt.ok{border-color:#2fb36b;background:rgba(47,179,107,.2)}
+.mm-opt.ko{border-color:#e25555;background:rgba(226,85,85,.2)}
+.mm-grades{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.mm-grades button{padding:12px 4px;border-radius:12px;border:1px solid rgba(127,127,127,.35);background:rgba(127,127,127,.1);color:inherit;font:inherit;cursor:pointer;font-size:13px}
+.mm-bar{height:8px;border-radius:8px;background:rgba(127,127,127,.2);overflow:hidden;margin:12px 0}
+.mm-bar i{display:block;height:100%;background:var(--method-color,#8B5CF6)}
