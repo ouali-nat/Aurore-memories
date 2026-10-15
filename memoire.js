@@ -51,6 +51,9 @@ function renderSession(){
  else if(!cur)h+='<h3>Séance terminée 🎉</h3><p>Rien à réviser pour le moment. Aurore te rappellera chaque carte au bon moment.</p><button class="outline-btn" data-act="review" data-deck="">Recharger</button>';
  else{
   h+='<div class="mm-q">'+esc(cur.front)+'</div>';
+  if(S.mode==="Association")h+='<p class="mm-method-tip">🧩 Cherche un lien : une image, une comparaison ou une histoire qui relie la question à la réponse.</p>';
+  if(S.mode==="Palais mental")h+='<p class="mm-method-tip">🏛️ Place mentalement cette notion dans un lieu familier : une pièce, un trajet ou un objet précis.</p>';
+  if(S.mode==="Texte à trous")h+='<p class="mm-method-tip">✍️ Complète le passage de mémoire avant de révéler la réponse.</p>';
   if(S.mode==="Premières lettres"&&!shown)h+='<div class="mm-hint">'+esc(cur.back.split(/\s+/).map(w=>w[0]+"…").join(" "))+'</div>';
   if(opts&&S.mode==="QCM"){
    h+=opts.map((o,i)=>'<button class="mm-opt'+(shown?(o===cur.back?' ok':(i===picked?' ko':'')):'')+'" data-act="opt" data-i="'+i+'"'+(shown?' disabled':'')+'>'+esc(o)+'</button>').join("");
@@ -72,6 +75,7 @@ document.addEventListener("click",function(e){
   if(!c.length){toast("Rien à créer : écris « question :: réponse » ou colle un texte.");return}
   S.cards=S.cards.concat(c);save();render();toast(c.length+" cartes créées ✓")}
  else if(t==="review"){showView("session");startSession(a.dataset.deck)}
+ else if(t==="clear-search"){window.auroreMemorySearch="";render()}
  else if(t==="del"){if(confirm("Supprimer « "+a.dataset.deck+" » ?")){S.cards=S.cards.filter(c=>c.deck!==a.dataset.deck);save();render()}}
  else if(t==="export"){const b=new Blob([S.cards.map(c=>c.front.replace(/\t/g," ")+"\t"+c.back.replace(/\t/g," ")).join("\n")],{type:"text/plain"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="aurore-memoire.txt";l.click()}
  else if(t==="mode"){S.mode=a.dataset.m;save();if(cur)queue.unshift(cur);next()}
