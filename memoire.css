@@ -326,3 +326,15 @@
 .workspace-source-wrap .workspace-source.is-selection-pending::selection{background:transparent;color:transparent}
 .workspace-selected-passage{background:rgba(255,194,55,.72);color:#211700;border-radius:3px;box-shadow:0 0 0 2px rgba(255,194,55,.25);-webkit-box-decoration-break:clone;box-decoration-break:clone}
 @media(max-width:520px){.workspace-source-highlight,.workspace-source-wrap .workspace-source{font-size:16px;line-height:1.6}}
+
+
+/* Palette complète et sélection visible pour l’apparence des cartes. */
+.palette-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.palette-heading>span{color:var(--muted);font-size:.72rem}
+.card-color-palette{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;padding:11px;border:1px solid var(--border);border-radius:13px;background:var(--surface)}
+.card-color-swatch{position:relative;display:block;width:100%;min-width:0;aspect-ratio:1;border:2px solid rgba(255,255,255,.3);border-radius:10px;background:var(--swatch);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s}
+.card-color-swatch:hover{transform:scale(1.06)}
+.card-color-swatch.is-selected{border-color:var(--text);box-shadow:0 0 0 2px var(--accent-light),inset 0 0 0 2px rgba(255,255,255,.45)}
+.card-color-swatch.is-selected:after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:1.05rem;font-weight:900;text-shadow:0 1px 4px rgba(0,0,0,.85)}
+.card-color-swatch:focus-visible{outline:3px solid var(--accent-light);outline-offset:2px}
+@media(max-width:520px){.card-color-palette{grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;padding:9px}.card-color-swatch{border-radius:8px}}
