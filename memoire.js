@@ -182,7 +182,8 @@
       cardId: String(card.id),
       deck: card.deck,
       mode: state.mode,
-      grade: grade
+      grade: grade,
+      confidence: state.mode === "Curseur" ? Number(session.confidence) || 0 : null
     });
     if (state.cardPerformance.length > 5000) state.cardPerformance = state.cardPerformance.slice(-5000);
     save();
@@ -574,8 +575,10 @@
       seen[item.back] = true;
       possible.push(item.back);
     });
+    ["Je ne m’en souviens pas", "Aucune de ces réponses", "Je dois revoir cette notion"].forEach(function (fallback) {
+      if (fallback !== card.back && possible.indexOf(fallback) < 0) possible.push(fallback);
+    });
     possible.sort(function () { return Math.random() - 0.5; });
-    if (possible.length < 3) return null;
     return possible.slice(0, 3).concat(card.back).sort(function () { return Math.random() - 0.5; });
   }
 
@@ -682,16 +685,31 @@
     return html;
   }
 
+  function clozeText(text) {
+    var index = 0;
+    return String(text || "").replace(/[^\\s]+/g, function (word) {
+      var bare = word.replace(/^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$/gu, "");
+      var current = index++;
+      if (bare.length >= 4 && current % 2 === 0) {
+        var punctuation = word.match(/[^\\p{L}\\p{N}]+$/u);
+        return "＿".repeat(Math.min(8, Math.max(3, bare.length))) + (punctuation ? punctuation[0] : "");
+      }
+      return word;
+    });
+  }
+
   function renderChunkProgress(mode) {
     var cards = state.cards.filter(function (card) { return !session.requestedDeck || card.deck === session.requestedDeck; });
     var events = state.cardPerformance || [];
     var perCard = cards.map(function (card, index) {
       var all = events.filter(function (entry) { return entry && entry.cardId === String(card.id); });
       var specific = all.filter(function (entry) { return entry.mode === mode; });
+      var confidenceEvents = all.filter(function (entry) { return entry.mode === "Curseur" && typeof entry.confidence === "number"; });
+      var confidenceAverage = confidenceEvents.length ? Math.round(confidenceEvents.reduce(function (sum, entry) { return sum + entry.confidence; }, 0) / confidenceEvents.length) : null;
       function score(items) {
         return items.length ? Math.round(items.reduce(function (sum, item) { return sum + Math.max(0, Math.min(3, Number(item.grade) || 0)); }, 0) / (items.length * 3) * 100) : 0;
       }
-      return { card: card, index: index + 1, all: all, specific: specific, allScore: score(all), modeScore: score(specific), last: all.length ? all[all.length - 1] : null };
+      return { card: card, index: index + 1, all: all, specific: specific, allScore: score(all), modeScore: score(specific), confidenceAverage: confidenceAverage, last: all.length ? all[all.length - 1] : null };
     });
     var reviewed = perCard.filter(function (item) { return item.all.length > 0; });
     var practiced = perCard.filter(function (item) { return item.specific.length > 0; });
@@ -718,7 +736,7 @@
     var rows = perCard.map(function (item) {
       var status = !item.all.length ? "À découvrir" : item.all.length >= 2 && item.allScore >= 75 ? "Consolidée" : item.allScore >= 55 ? "En progrès" : "À retravailler";
       var latest = item.last ? new Date(item.last.timestamp).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) : "Pas encore";
-      return '<article class="chunk-progress-row"><div class="chunk-progress-copy"><span class="chunk-index">TRANCHE ' + item.index + '</span><strong>' + escapeHtml(item.card.front) + '</strong><small>' + item.all.length + ' révision(s) · ' + item.specific.length + ' avec cette méthode · dernière : ' + latest + '</small></div><div class="chunk-progress-scores"><div class="chunk-score-line"><span>Global</span><div class="chunk-score-track"><i style="width:' + item.allScore + '%"></i></div><b>' + item.allScore + '%</b></div><div class="chunk-score-line"><span>' + escapeHtml(mode) + '</span><div class="chunk-score-track method-score"><i style="width:' + item.modeScore + '%"></i></div><b>' + item.modeScore + '%</b></div><small class="chunk-status">' + status + '</small></div></article>';
+      return '<article class="chunk-progress-row"><div class="chunk-progress-copy"><span class="chunk-index">TRANCHE ' + item.index + '</span><strong>' + escapeHtml(item.card.front) + '</strong><small>' + item.all.length + ' révision(s) · ' + item.specific.length + ' avec cette méthode · dernière : ' + latest + (item.confidenceAverage == null ? "" : " · confiance moyenne : " + item.confidenceAverage + "%") + '</small></div><div class="chunk-progress-scores"><div class="chunk-score-line"><span>Global</span><div class="chunk-score-track"><i style="width:' + item.allScore + '%"></i></div><b>' + item.allScore + '%</b></div><div class="chunk-score-line"><span>' + escapeHtml(mode) + '</span><div class="chunk-score-track method-score"><i style="width:' + item.modeScore + '%"></i></div><b>' + item.modeScore + '%</b></div><small class="chunk-status">' + status + '</small></div></article>';
     }).join("");
     if (!cards.length) return '<section class="chunk-dashboard"><div class="empty-state compact-empty"><h2>Aucune tranche à suivre pour le moment</h2><p>Crée une mémoire ou découpe un cours en petits segments. Chaque segment disposera de son propre suivi.</p><a class="primary-btn" href="creer-memoire.html">Créer ou découper un cours</a></div></section>';
     return '<section class="chunk-dashboard"><div class="chunk-dashboard-head"><div><p class="section-kicker">SUIVI PAR TRANCHE</p><h2>La progression de chaque information</h2><p>Chaque carte ou segment garde son propre historique. Le score global combine les méthodes ; le second score isole la méthode actuelle.</p></div><span class="chunk-total-pill">' + cards.length + ' tranche(s)</span></div><div class="chunk-kpis"><div><span>Tranches travaillées</span><strong>' + reviewed.length + '/' + cards.length + '</strong></div><div><span>Maîtrise moyenne</span><strong>' + average + '%</strong></div><div><span>Consolidées</span><strong>' + mastered.length + '</strong></div><div><span>Avec cette méthode</span><strong>' + practiced.length + '</strong></div></div><div class="chunk-chart-card"><div class="chunk-chart-title"><div><h3>Carte de maîtrise par tranche</h3><p>Survole une barre pour voir le détail. Fais défiler horizontalement si le cours est long.</p></div></div><div class="chunk-chart-scroll"><svg class="chunk-chart-svg" viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" role="img" aria-label="Comparaison de la maîtrise de chaque tranche pour toutes les méthodes et pour la méthode actuelle">' + grid + bars + '<text x="' + left + '" y="' + (chartHeight - 9) + '">Numéro de tranche</text></svg></div><div class="chunk-chart-legend"><span><i class="all-key"></i>Maîtrise globale</span><span><i class="mode-key"></i>' + escapeHtml(mode) + '</span></div></div><div class="chunk-list-head"><h3>Détail de chaque tranche</h3><span>Actualisé après chaque réponse notée</span></div><div class="chunk-progress-list">' + rows + '</div><p class="chunk-disclaimer">Les pourcentages représentent la moyenne des réponses notées (de 0 à 3), et non une mesure scientifique absolue de la mémoire. Les anciennes révisions sans détail par carte restent dans les statistiques générales mais ne sont pas inventées dans ce tableau.</p></section>';
@@ -747,7 +765,8 @@
       html += '<article class="study-card">';
       if (session.requestedDeck) html += '<p class="study-deck">' + escapeHtml(session.requestedDeck) + '</p>';
       html += '<p class="study-prompt">RETROUVE LA RÉPONSE DE MÉMOIRE</p><h2 class="study-question">' + escapeHtml(card.front).replace(/\n/g, "<br>") + '</h2>';
-      if (state.mode === "Trous") html += '<p class="study-tip">Essaie de compléter mentalement la phrase avant d’afficher la réponse.</p>';
+      if (state.mode === "Trous" && !session.shown) html += '<p class="study-tip">Complète les mots manquants mentalement avant de révéler le passage.</p><div class="cloze-preview" aria-label="Texte à trous">' + escapeHtml(clozeText(card.back)) + '</div>';
+      if (state.mode === "Trous" && session.shown) html += '<p class="study-tip">Compare les mots que tu as retrouvés avec la réponse complète.</p>';
       if (state.mode === "Association") html += '<p class="study-tip">Cherche un lien, une image ou une histoire qui relie la question à la réponse.</p>';
       if (state.mode === "Palais mental") html += '<p class="study-tip">Associe cette notion à un lieu familier ou à un objet précis dans ton imagination.</p>';
       if (state.mode === "Première lettre" && !session.shown) {
@@ -786,7 +805,9 @@
       } else if (!session.shown) {
         html += '<button class="primary-btn reveal-btn" type="button" data-act="show-answer">Afficher la réponse</button>';
       } else {
-        html += '<div class="study-answer-label">RÉPONSE</div><div class="study-answer">' + escapeHtml(card.back).replace(/\n/g, "<br>") + '</div><p class="grade-question">Comment as-tu retrouvé cette réponse&nbsp;?</p><div class="grade-buttons"><button type="button" data-act="grade" data-grade="0"><strong>À revoir</strong><small>Je ne l’ai pas retrouvée</small></button><button type="button" data-act="grade" data-grade="1"><strong>Difficile</strong><small>Avec beaucoup d’effort</small></button><button type="button" data-act="grade" data-grade="2"><strong>Bien</strong><small>Après réflexion</small></button><button type="button" data-act="grade" data-grade="3"><strong>Facile</strong><small>Sans hésiter</small></button></div>';
+        html += '<div class="study-answer-label">RÉPONSE</div><div class="study-answer">' + escapeHtml(card.back).replace(/\n/g, "<br>") + '</div>';
+        if (state.mode === "Écouter") html += '<button type="button" class="secondary-btn listen-question-btn" data-act="speak-answer">▶ Écouter la réponse</button>';
+        html += '<p class="grade-question">Comment as-tu retrouvé cette réponse&nbsp;?</p><div class="grade-buttons"><button type="button" data-act="grade" data-grade="0"><strong>À revoir</strong><small>Je ne l’ai pas retrouvée</small></button><button type="button" data-act="grade" data-grade="1"><strong>Difficile</strong><small>Avec beaucoup d’effort</small></button><button type="button" data-act="grade" data-grade="2"><strong>Bien</strong><small>Après réflexion</small></button><button type="button" data-act="grade" data-grade="3"><strong>Facile</strong><small>Sans hésiter</small></button></div>';
       }
       html += '</article>';
     }
@@ -865,13 +886,14 @@
         session.shuffledWords = session.current.back.trim().split(/\s+/).filter(Boolean).sort(function () { return Math.random() - 0.5; });
       }
       renderReview();
-    } else if (action === "speak-question") {
+    } else if (action === "speak-question" || action === "speak-answer") {
       if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
         notify("La lecture vocale n’est pas disponible dans ce navigateur.");
         return;
       }
       window.speechSynthesis.cancel();
-      var utterance = new SpeechSynthesisUtterance(session.current ? session.current.front : "");
+      var spokenText = session.current ? (action === "speak-answer" ? session.current.back : session.current.front) : "";
+      var utterance = new SpeechSynthesisUtterance(spokenText);
       utterance.lang = "fr-FR";
       window.speechSynthesis.speak(utterance);
     } else if (action === "append-word") {
