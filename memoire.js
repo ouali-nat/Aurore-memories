@@ -655,16 +655,17 @@
     if (event.target && event.target.id === "memorySearch") renderMemoryList();
   });
 
+  document.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "progressChartType") {
+      state.chartType = ["courbe", "diagramme", "batonnets"].indexOf(event.target.value) >= 0 ? event.target.value : "courbe";
+      save();
+      renderReview();
+    }
+  });
+
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-act]");
-    if (!button) {
-      if (event.target && event.target.id === "progressChartType") {
-        state.chartType = ["courbe", "diagramme", "batonnets"].indexOf(event.target.value) >= 0 ? event.target.value : "courbe";
-        save();
-        renderReview();
-      }
-      return;
-    }
+    if (!button) return;
     var action = button.dataset.act;
 
     if (action === "export") {
