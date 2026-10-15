@@ -687,11 +687,11 @@
 
   function clozeText(text) {
     var index = 0;
-    return String(text || "").replace(/[^\\s]+/g, function (word) {
-      var bare = word.replace(/^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$/gu, "");
+    return String(text || "").replace(/[^\s]+/g, function (word) {
+      var bare = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
       var current = index++;
       if (bare.length >= 4 && current % 2 === 0) {
-        var punctuation = word.match(/[^\\p{L}\\p{N}]+$/u);
+        var punctuation = word.match(/[^\p{L}\p{N}]+$/u);
         return "＿".repeat(Math.min(8, Math.max(3, bare.length))) + (punctuation ? punctuation[0] : "");
       }
       return word;
