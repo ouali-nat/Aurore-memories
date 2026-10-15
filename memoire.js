@@ -757,8 +757,9 @@
       html += '<div class="review-workspace-links"><a class="secondary-btn" href="editer-memoire.html">Éditer et morceler une mémoire</a><a class="secondary-btn" href="progression.html">Ma progression</a></div>';
       html += renderModeNavigation(false);
       html += '<div class="review-summary compact-review-summary"><span><strong>' + dueCards().length + '</strong> carte(s) à revoir</span><span><strong>' + (Number(state.log[String(today())]) || 0) + '</strong> révision(s) aujourd’hui</span><span><strong>' + streak() + '</strong> jour(s) de suite</span></div>';
+      root.innerHTML = html;
+      return;
     }
-    if (!dedicatedMode) html += '<div class="review-progress"><div class="progress-track"><span style="width:' + progress + '%"></span></div><small>' + (session.current ? (session.reviewed + 1) + ' · ' + Math.max(session.initialCount, session.reviewed + pending) : session.reviewed + ' révision(s) effectuée(s)') + '</small></div>';
 
     if (!state.cards.length) {
       html += '<div class="empty-state"><span class="empty-icon" aria-hidden="true">↻</span><h2>Il te faut une première mémoire</h2><p>Crée quelques cartes avant de commencer tes révisions.</p><a class="primary-btn" href="creer-memoire.html">Créer une mémoire</a></div>';
@@ -814,6 +815,8 @@
         } else {
           html += '<p class="study-footnote">Choisis la réponse qui correspond à la notion.</p>';
         }
+      } else if (state.mode === "Première lettre" && !session.shown) {
+        // Les champs de rappel ont été rendus au-dessus de cette branche.
       } else if (state.mode === "Première lettre" && session.shown) {
         html += '<p class="answer-feedback ' + (session.typedCorrect ? 'feedback-good' : 'feedback-bad') + '">' + (session.typedCorrect ? 'Tous les mots correspondent à la réponse attendue.' : 'Certaines réponses diffèrent. Compare avec le texte complet.') + '</p><div class="study-answer-label">RÉPONSE ATTENDUE</div><div class="study-answer">' + escapeHtml(card.back).replace(/\n/g, "<br>") + '</div><button class="primary-btn next-card-btn" type="button" data-act="next-card">Continuer</button>';
       } else if (!session.shown) {
