@@ -247,6 +247,7 @@
     var feedback = $("#createFeedback");
     var bulkPreview = $("#bulkPreview");
     var originalBulkText = null;
+    var lastSegmentedText = null;
 
     function setFeedback(message, isError) {
       if (!feedback) return;
@@ -375,8 +376,25 @@
     var segmentButton = $("#segmentCourseButton");
     var restoreButton = $("#restoreCourseButton");
     var segmentFeedback = $("#segmentFeedback");
+    var segmentModeSelect = $("#segmentSelectionMode");
+    var segmentRangeFields = $("#segmentRangeFields");
+    var segmentStartInput = $("#segmentStart");
+    var segmentEndInput = $("#segmentEnd");
+    var segmentRangeNote = $("#segmentRangeNote");
+
+    function updateSegmentRangeUI() {
+      var rangeMode = Boolean(segmentModeSelect && segmentModeSelect.value === "range");
+      if (segmentRangeFields) segmentRangeFields.hidden = !rangeMode;
+      if (segmentRangeNote) segmentRangeNote.textContent = rangeMode
+        ? "Le découpage reste gratuit : saisis le numéro du premier et du dernier segment, puis touche « Découper gratuitement »."
+        : "Le mode Individuel prépare tous les segments séparément. Le mode Plage permet de choisir gratuitement le début et la fin.";
+    }
+    if (segmentModeSelect) segmentModeSelect.addEventListener("change", updateSegmentRangeUI);
+    updateSegmentRangeUI();
+
     if (segmentButton) segmentButton.addEventListener("click", function () {
-      var source = ($("#memoryText").value || "").trim();
+      var currentText = ($("#memoryText").value || "").trim();
+      var source = originalBulkText !== null && currentText === lastSegmentedText ? originalBulkText : currentText;
       if (!source) {
         if (segmentFeedback) segmentFeedback.textContent = "Colle d’abord le cours à découper.";
         return;
@@ -385,6 +403,7 @@
       var chunks = [];
       if (size === "paragraph") {
         chunks = source.split(/\n\s*\n+/).map(function (part) { return part.replace(/\s+/g, " ").trim(); }).filter(Boolean);
+        if (chunks.length === 1) chunks = chunks[0].split(/(?<=[.!?。！？])\s+/).map(function (part) { return part.trim(); }).filter(Boolean);
       } else {
         var sentences = source.replace(/\r/g, " ").split(/(?<=[.!?。！？])\s+/).map(function (part) { return part.trim(); }).filter(function (part) { return part.length > 0; });
         var groupSize = Math.max(1, Number(size) || 2);
@@ -394,19 +413,50 @@
         if (segmentFeedback) segmentFeedback.textContent = "Je n’ai pas trouvé de passage à découper. Vérifie le texte.";
         return;
       }
-      if (originalBulkText === null) originalBulkText = source;
-      $("#memoryText").value = chunks.map(function (chunk, index) { return "Récite le segment " + (index + 1) + " du cours :: " + chunk; }).join("\n");
+
+      if (segmentStartInput) segmentStartInput.max = String(chunks.length);
+      if (segmentEndInput) segmentEndInput.max = String(chunks.length);
+      var selectedFrom = 1;
+      var selectedTo = chunks.length;
+      if (segmentModeSelect && segmentModeSelect.value === "range") {
+        var enteredFrom = parseInt(segmentStartInput && segmentStartInput.value || "1", 10);
+        var enteredTo = parseInt(segmentEndInput && segmentEndInput.value || String(chunks.length), 10);
+        if (!isFinite(enteredFrom) || !isFinite(enteredTo) || enteredFrom < 1 || enteredFrom > chunks.length || enteredTo < enteredFrom) {
+          if (segmentFeedback) segmentFeedback.textContent = "Plage invalide. Choisis un début entre 1 et " + chunks.length + " et une fin supérieure ou égale au début.";
+          return;
+        }
+        selectedFrom = enteredFrom;
+        selectedTo = Math.min(chunks.length, enteredTo);
+        if (segmentEndInput) segmentEndInput.value = String(selectedTo);
+      }
+      var selectedChunks = chunks.slice(selectedFrom - 1, selectedTo);
+      if (!selectedChunks.length) {
+        if (segmentFeedback) segmentFeedback.textContent = "Aucun segment dans cette plage. Vérifie les numéros choisis.";
+        return;
+      }
+
+      if (originalBulkText === null || currentText !== lastSegmentedText) originalBulkText = source;
+      var segmentedText = selectedChunks.map(function (chunk, index) {
+        return "Récite le segment " + (selectedFrom + index) + " du cours :: " + chunk;
+      }).join("\n");
+      $("#memoryText").value = segmentedText;
+      lastSegmentedText = segmentedText;
       if (restoreButton) restoreButton.hidden = false;
       chooseMode("bulk");
       var cards = previewBulk();
-      if (segmentFeedback) segmentFeedback.textContent = chunks.length + " segment(s) préparé(s), gratuitement. Tu peux vérifier les réponses dans l’aperçu ou restaurer le texte original.";
+      if (segmentFeedback) segmentFeedback.textContent = segmentModeSelect && segmentModeSelect.value === "range"
+        ? selectedChunks.length + " segment(s) choisi(s) sur " + chunks.length + " ; plage " + selectedFrom + " à " + selectedTo + ". Tout est gratuit. Vérifie l’aperçu avant d’enregistrer."
+        : chunks.length + " segment(s) préparé(s), gratuitement. Tu peux modifier les segments, vérifier l’aperçu ou restaurer le texte original.";
       setFeedback(cards.length + " segment(s) prêts à être enregistrés.", false);
     });
     if (restoreButton) restoreButton.addEventListener("click", function () {
       if (originalBulkText !== null) $("#memoryText").value = originalBulkText;
       originalBulkText = null;
+      lastSegmentedText = null;
       restoreButton.hidden = true;
       if (segmentFeedback) segmentFeedback.textContent = "Le cours original a été restauré.";
+      if (segmentStartInput) segmentStartInput.max = "";
+      if (segmentEndInput) segmentEndInput.max = "";
       previewBulk();
     });
 
