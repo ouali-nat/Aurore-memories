@@ -339,7 +339,17 @@
       shareTokens[settings.publicId] = randomHex(32);
       persistShareTokens();
     }
-    var payloadCards = cards.map(function (card) { return { front: card.front, back: card.back }; });
+    var deckStyle = state.deckStyles && state.deckStyles["flashcard:" + deck] ? state.deckStyles["flashcard:" + deck] : {};
+    var seriesBackgroundColor = /^#[0-9a-f]{6}$/i.test(deckStyle.backgroundColor || "") ? deckStyle.backgroundColor : "#4937a6";
+    var seriesBackgroundImage = typeof deckStyle.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(deckStyle.backgroundImage) ? deckStyle.backgroundImage : "";
+    var payloadCards = cards.map(function (card) {
+      return {
+        front: card.front,
+        back: card.back,
+        backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "",
+        backgroundImage: typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage : ""
+      };
+    });
     var modalButton = $("#sharingModal [data-act='confirm-publication']");
     if (modalButton) { modalButton.disabled = true; modalButton.textContent = "Publication…"; }
     try {
@@ -350,6 +360,8 @@
         p_author_name: authorName,
         p_domain: domain,
         p_description: description,
+        p_background_color: seriesBackgroundColor,
+        p_background_image: seriesBackgroundImage,
         p_cards: payloadCards
       });
       settings.visibility = "public";
@@ -518,12 +530,19 @@
     root.innerHTML = '<div class="public-card-feed-grid">' + visible.map(function (card) {
       var index = card._feedIndex;
       var answerId = "public-answer-" + index;
-      return '<article class="public-flashcard">' +
-        '<div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
+      var cardColor = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "#4937a6";
+      var cardImage = typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage) ? card.backgroundImage :
+        (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage) ? card.seriesBackgroundImage : "");
+      var imageMarkup = cardImage
+        ? '<div class="public-flashcard-art" style="--card-art-color:' + cardColor + '"><img src="' + escapeHtml(cardImage) + '" alt="Illustration de la carte : ' + escapeHtml(card.front.slice(0,120)) + '" loading="lazy" decoding="async"></div>'
+        : '<div class="public-flashcard-art public-flashcard-art-color" style="--card-art-color:' + cardColor + '" aria-hidden="true"><span>AURORE</span><i></i></div>';
+      return '<article class="public-flashcard" style="--card-art-color:' + cardColor + '">' +
+        imageMarkup +
+        '<div class="public-flashcard-content"><div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
         '<p class="public-card-eyebrow">QUESTION</p><h2>' + escapeHtml(card.front) + '</h2>' +
         '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + escapeHtml(card.back) + '</p></div>' +
         '<button type="button" class="public-reveal-answer" data-act="public-answer" data-target="' + answerId + '" aria-expanded="false">Afficher la réponse</button>' +
-        '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">!</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div>' +
+        '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">!</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
         '</article>';
     }).join("") + '</div>';
   }
@@ -532,7 +551,7 @@
     var root = $("#publicCardFeed");
     if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Chargement des cartes publiques…</h3><p>Les cartes publiées apparaîtront ici une par une.</p></div>';
     try {
-      var response = await fetch(SUPABASE_URL + "/rest/v1/public_card_series?select=id,name,author_name,domain,description,cards,created_at,visibility&visibility=eq.public&order=created_at.desc&limit=200", {
+      var response = await fetch(SUPABASE_URL + "/rest/v1/public_card_series?select=id,name,author_name,domain,description,cards,background_color,background_image,created_at,visibility&visibility=eq.public&order=created_at.desc&limit=200", {
         headers: {
           "apikey": SUPABASE_PUBLISHABLE_KEY,
           "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY
@@ -555,7 +574,10 @@
             description: String(series.description || ""),
             createdAt: series.created_at,
             front: card.front,
-            back: card.back
+            back: card.back,
+            backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : (series.background_color || "#4937a6"),
+            backgroundImage: typeof card.backgroundImage === "string" ? card.backgroundImage : "",
+            seriesBackgroundImage: series.background_image || ""
           });
         });
       });
