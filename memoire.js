@@ -413,7 +413,7 @@
       notify("Publiez d’abord la série pour partager son lien.");
       return;
     }
-    var url = window.location.origin + "/cartes-publiques.html?series=" + encodeURIComponent(settings.publicId);
+    var url = "https://aurore-memories-aurore9.vercel.app/cartes-publiques.html?series=" + encodeURIComponent(settings.publicId);
     var title = "Cartes publiques — " + deck;
     if (navigator.share) {
       try {
