@@ -216,6 +216,8 @@
     });
   }
 
+  function normalizeSearch(value) { return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim(); }
+
   function memoryGroups(cards) {
     var groups = Object.create(null);
     cards.forEach(function (card) {
