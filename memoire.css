@@ -691,3 +691,28 @@
 .latex-keyboard button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:39px;min-height:34px;padding:5px 8px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:.78rem;font-weight:750;white-space:nowrap;scroll-snap-align:start;touch-action:manipulation}
 .latex-keyboard button:active,.latex-keyboard button:focus-visible{background:var(--soft);border-color:var(--accent);outline:none}
 .scientific-card-mode .latex-preview{margin:5px 0 9px;padding:9px;border-radius:9px}
+
+
+/* Clavier scientifique intégré : thème clair/sombre hérité du site. */
+.aurore-science-dock{position:fixed;z-index:10050;left:0;right:0;bottom:0;padding:7px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:var(--surface,#191722);color:var(--text,#f5f3ff);border-top:1px solid var(--border,#383344);box-shadow:0 -12px 36px rgba(0,0,0,.22);max-height:min(54dvh,440px);overflow:auto;border-radius:18px 18px 0 0;font:inherit}
+.aurore-science-dock[hidden]{display:none!important}
+.science-dock-grip{width:38px;height:4px;border-radius:99px;background:var(--muted,#858092);opacity:.65;margin:0 auto 8px}
+.science-dock-head{display:flex;align-items:center;gap:8px;margin:0 auto 9px;max-width:760px}
+.science-dock-head strong{font-size:.9rem;flex:1}
+.science-dock-action,.science-dock-close,.science-dock-foot button{border:1px solid var(--border,#383344);border-radius:10px;background:var(--bg,#111019);color:var(--text,#f5f3ff);min-height:36px;padding:6px 10px;font:inherit;font-size:.78rem}
+.science-dock-close{font-size:1.15rem;min-width:38px}
+.science-dock-tabs{display:flex;gap:6px;overflow-x:auto;max-width:760px;margin:0 auto 9px;padding:2px 1px 5px;scrollbar-width:thin}
+.science-dock-tab{flex:0 0 auto;border:1px solid var(--border,#383344);border-radius:999px;background:var(--bg,#111019);color:var(--text,#f5f3ff);padding:7px 12px;min-height:34px;font:inherit;font-size:.78rem}
+.science-dock-tab.is-active{background:var(--accent,#7862dc);border-color:var(--accent,#7862dc);color:#fff}
+.science-dock-keys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;max-width:760px;margin:0 auto}
+.science-dock-keys button{min-width:0;min-height:43px;padding:6px 2px;border:1px solid var(--border,#383344);border-radius:10px;background:var(--bg,#111019);color:var(--text,#f5f3ff);font:inherit;font-size:.88rem;font-weight:650;overflow-wrap:anywhere}
+.science-dock-keys button:active{border-color:var(--accent,#7862dc);background:var(--soft,#28233a)}
+.science-dock-foot{display:flex;align-items:center;gap:6px;max-width:760px;margin:9px auto 0}
+.science-dock-foot span{flex:1;min-width:0;color:var(--muted,#aaa4b8);font-size:.68rem}
+.science-dock-foot button[data-science-done]{background:var(--accent,#7862dc);color:#fff;border-color:var(--accent,#7862dc)}
+body.science-keyboard-open{padding-bottom:0}
+html[data-theme="light"] .aurore-science-dock,body[data-theme="light"] .aurore-science-dock{background:var(--surface,#fff);color:var(--text,#211d2b);border-color:var(--border,#e1dce9);box-shadow:0 -12px 36px rgba(36,25,55,.15)}
+html[data-theme="light"] .science-dock-action,html[data-theme="light"] .science-dock-close,html[data-theme="light"] .science-dock-foot button,html[data-theme="light"] .science-dock-tab,html[data-theme="light"] .science-dock-keys button,body[data-theme="light"] .science-dock-action,body[data-theme="light"] .science-dock-close,body[data-theme="light"] .science-dock-foot button,body[data-theme="light"] .science-dock-tab,body[data-theme="light"] .science-dock-keys button{background:var(--bg,#fff);color:var(--text,#211d2b);border-color:var(--border,#e1dce9)}
+html[data-theme="light"] .science-dock-tab.is-active,body[data-theme="light"] .science-dock-tab.is-active{background:var(--accent,#7862dc);color:#fff;border-color:var(--accent,#7862dc)}
+@media(max-width:420px){.aurore-science-dock{max-height:58dvh;padding-left:8px;padding-right:8px}.science-dock-keys{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.science-dock-keys button{min-height:42px;font-size:.84rem}.science-dock-foot span{font-size:.62rem}.science-dock-action{font-size:.7rem;padding:5px 7px}}
+@media(prefers-reduced-motion:no-preference){.aurore-science-dock{animation:science-dock-in .16s ease-out}@keyframes science-dock-in{from{transform:translateY(8px);opacity:.7}to{transform:translateY(0);opacity:1}}}
