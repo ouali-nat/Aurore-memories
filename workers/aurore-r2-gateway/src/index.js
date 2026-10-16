@@ -83,10 +83,10 @@ async function isPublicProfile(env, ownerId) {
   return (await response.json()).length > 0;
 }
 async function upload(request, env, user) {
+  if (!user) return json({ error: "Connexion Aurore ID requise." }, 401);
   const form = await request.formData();
   const file = form.get("file");
   const service = String(form.get("service") || "");
-  if (!user) return json({ error: "Connexion Aurore ID requise." }, 401);
   if (!["memories", "profiles"].includes(service)) return json({ error: "Service invalide." }, 400);
   if (!(file instanceof File) || file.size < 1) return json({ error: "Fichier manquant ou vide." }, 400);
   const maxBytes = service === "profiles" ? 8 * 1024 * 1024 : 25 * 1024 * 1024;
@@ -151,6 +151,7 @@ async function remove(request, env, id, user) {
 export default {
   async fetch(request, env) {
     const origin = allowedOrigin(request, env);
+    if (origin === null) return json({ error: "Origin non autorisée." }, 403);
     if (request.method === "OPTIONS") {
       if (origin === null) return json({ error: "Origin non autorisée." }, 403);
       return withCors(request, env, new Response(null, { status: 204 }));
