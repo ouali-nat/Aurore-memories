@@ -233,7 +233,9 @@
     var looksMath = /\\(?:lim|int|sqrt|frac|sum|prod|log|ln|sin|cos|tan|alpha|beta|gamma|delta|theta|lambda|pi|infty|to|left|right|mathrm|text|partial|nabla|cdot|times|approx|neq|leq|geq|begin|overline|widehat)\b/.test(input) || /(?:\^|_)\s*\{/.test(input);
     if (trimmed && !wrapped && ((card && card.cardMode === "scientific") || looksMath)) input = "\\[" + input + "\\]";
     return formatMathText(input);
-  }function normalizeSearch(value) { return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim(); }
+  }
+
+  function normalizeSearch(value) { return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim(); }
 
 
   function deckSettingsFor(deck) {
