@@ -654,3 +654,40 @@
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 }
+
+
+/* Brouillons : conservation automatique discrète, avec effacement explicite. */
+.draft-resume-tools{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:20px;margin-top:8px}
+.draft-autosave-status{display:block;min-width:0;color:var(--muted);font-size:.69rem;line-height:1.4}
+.draft-discard{border:0;padding:4px 7px;border-radius:7px;background:transparent;color:var(--muted);font-size:.7rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer;flex:0 0 auto}
+.draft-discard:hover,.draft-discard:focus-visible{color:var(--accent-light);background:var(--soft)}
+.draft-discard[hidden],.draft-autosave-status[hidden]{display:none!important}
+.workspace-draft-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.workspace-footer .workspace-draft-tools{flex:1 1 100%;order:2}
+.workspace-footer #workspaceFeedback{flex:1 1 45%}
+.workspace-footer #saveWorkspace{order:3}
+@media(max-width:520px){.draft-resume-tools{align-items:flex-start}.workspace-draft-tools{width:100%}}
+
+/* La couleur reste compacte ; les nuances apparaissent dans un panneau flottant. */
+.palette-control{position:relative;z-index:8;min-width:0}
+.palette-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.palette-title{color:var(--muted);font-size:.78rem;font-weight:700}
+.palette-trigger{display:inline-flex;align-items:center;gap:9px;min-height:42px;max-width:100%;padding:5px 11px 5px 6px;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);font-size:.78rem;font-weight:750;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.09)}
+.palette-trigger-swatch{display:block;flex:0 0 29px;width:29px;height:29px;border-radius:9px;background:#4937a6;border:1px solid rgba(255,255,255,.36);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.palette-chevron{color:var(--muted);font-size:1rem;transition:transform .15s}
+.palette-trigger[aria-expanded="true"] .palette-chevron{transform:rotate(180deg)}
+.palette-popover{position:absolute;z-index:30;top:calc(100% + 8px);right:0;width:min(350px,calc(100vw - 48px));max-height:min(65vh,370px);overflow:auto;padding:12px;border:1px solid var(--border);border-radius:15px;background:var(--surface-raised);box-shadow:0 18px 46px rgba(0,0,0,.34)}
+.palette-popover[hidden]{display:none!important}
+.palette-popover .appearance-color-label{margin:0 0 10px;padding:0 0 10px;border-bottom:1px solid var(--border)}
+.palette-popover .card-color-palette{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;padding:0;border:0;border-radius:0;background:transparent}
+.palette-popover .card-color-swatch{min-height:35px;border-radius:10px}
+.palette-popover .card-color-swatch.is-selected{outline:2px solid var(--text);outline-offset:2px}
+@media(max-width:520px){.palette-popover{right:-1px;width:min(330px,calc(100vw - 38px));padding:10px}.palette-popover .card-color-palette{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}}
+
+/* Barre scientifique compacte : le clavier standard du téléphone reste le clavier de saisie. */
+.latex-tools[hidden]{display:none!important}
+.latex-tools{margin:5px 0 9px;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.latex-keyboard{display:flex;align-items:center;gap:5px;max-width:100%;overflow-x:auto;overflow-y:hidden;padding:1px 1px 5px;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.latex-keyboard button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:39px;min-height:34px;padding:5px 8px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:.78rem;font-weight:750;white-space:nowrap;scroll-snap-align:start;touch-action:manipulation}
+.latex-keyboard button:active,.latex-keyboard button:focus-visible{background:var(--soft);border-color:var(--accent);outline:none}
+.scientific-card-mode .latex-preview{margin:5px 0 9px;padding:9px;border-radius:9px}
