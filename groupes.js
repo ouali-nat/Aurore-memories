@@ -2,7 +2,7 @@
   "use strict";
   var SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co";
   var SUPABASE_KEY = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
-  var client = null, session = null, activeFilter = "public", groups = [];
+  var client = null, session = null, activeFilter = "public", groups = [], joinedGroupIds = Object.create(null);
   var grid = document.getElementById("groupsGrid");
   var search = document.getElementById("groupSearch");
   var modal = document.getElementById("createGroupModal");
@@ -70,6 +70,12 @@
       var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,created_by,created_at").order("created_at",{ascending:false}).limit(100);
       if (result.error) throw result.error;
       groups = result.data || [];
+      joinedGroupIds = Object.create(null);
+      if (signedIn()) {
+        var memberships = await client.from("study_group_members").select("group_id").eq("user_id", session.user.id);
+        if (memberships.error) throw memberships.error;
+        (memberships.data || []).forEach(function (row) { joinedGroupIds[row.group_id] = true; });
+      }
       renderGroups();
     } catch (error) {
       console.error("Loading study groups:",error);
@@ -96,9 +102,28 @@
       var meta=[];
       if(g.subject)meta.push('<span>'+escapeHtml(g.subject)+'</span>');
       if(g.level)meta.push('<span>'+escapeHtml(g.level)+'</span>');
-      return '<article class="group-card"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">♧</span><span class="group-visibility">'+(g.visibility==="public"?"🌐 Public":"🔒 Privé")+'</span></div><h2>'+escapeHtml(g.name)+'</h2><p>'+escapeHtml(g.description||"Un espace d’étude pour apprendre et partager ses progrès.")+'</p><div class="group-meta">'+meta.join("")+'</div><button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Voir le groupe ↗</button></article>';
+      var isOwner=signedIn()&&g.created_by===session.user.id, isMember=!!joinedGroupIds[g.id]||isOwner;
+      var action=isMember?'<button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Ouvrir le groupe ↗</button>':'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Détails</button><button class="groups-btn primary" type="button" data-join-group="'+escapeHtml(g.id)+'">'+(signedIn()?"Rejoindre":"Connexion")+'</button></div>';
+      return '<article class="group-card"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">♧</span><span class="group-visibility">🌐 Public</span></div><h2>'+escapeHtml(g.name)+'</h2><p>'+escapeHtml(g.description||"Un espace d’étude pour apprendre et partager ses progrès.")+'</p><div class="group-meta">'+meta.join("")+'</div>'+action+'</article>';
     }).join("");
     grid.querySelectorAll("[data-open-group]").forEach(function(button){button.addEventListener("click",function(){window.location.href="groupe.html?id="+encodeURIComponent(button.dataset.openGroup);});});
+    grid.querySelectorAll("[data-join-group]").forEach(function(button){button.addEventListener("click",function(){joinGroup(button.dataset.joinGroup,button);});});
+  }
+  async function joinGroup(groupId, button) {
+    if (!signedIn()) { startGoogleSignIn(); return; }
+    if (joinedGroupIds[groupId]) { window.location.href="groupe.html?id="+encodeURIComponent(groupId); return; }
+    button.disabled=true; button.textContent="…";
+    try {
+      var result=await client.from("study_group_members").insert({group_id:groupId,user_id:session.user.id});
+      if(result.error && result.error.code!=="23505") throw result.error;
+      joinedGroupIds[groupId]=true;
+      toast("Tu as rejoint le groupe.");
+      renderGroups();
+    } catch(error) {
+      console.error("Joining public group:",error);
+      toast("Impossible de rejoindre ce groupe. Réessaie après t’être reconnecté.");
+      button.disabled=false; button.textContent="Rejoindre";
+    }
   }
   async function createGroup(event) {
     event.preventDefault();
