@@ -7,7 +7,7 @@
   <meta name="description" content="Retrouve, organise, exporte et révise tes mémorisations dans Aurore.">
   <title>Mes mémorisations — Aurore</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="memoire.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="memoire.css">
 </head>
 <body data-page="library">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -34,7 +34,7 @@
     <p>Organise tes textes à mémoriser et tes séries de cartes au même endroit.</p>
   </section>
   <section class="page-content" aria-label="Liste de mes mémorisations">
-    <div id="memoryLibrary"></div>
+    <div id="memoryLibrary"><div class="library-loading" role="status" aria-live="polite"><span class="library-loading-spinner" aria-hidden="true"></span><span>Préparation de votre bibliothèque…</span></div></div>
   </section></main>
   <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore <span>· Section Mémoire</span></strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
