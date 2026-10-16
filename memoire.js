@@ -226,7 +226,14 @@
   }
 
   function formatMathText(value){var input=String(value==null?"":value),output="",pattern=/\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$\$[\s\S]*?\$\$|\\begin\{(?:equation|align|alignat|gather|multline|split|CD)\}[\s\S]*?\\end\{(?:equation|align|alignat|gather|multline|split|CD)\}/g,match,last=0;while((match=pattern.exec(input))){output+=escapeHtml(input.slice(last,match.index)).replace(/\r?\n/g,"<br>")+escapeHtml(match[0]);last=pattern.lastIndex;}return output+escapeHtml(input.slice(last)).replace(/\r?\n/g,"<br>");}
-function normalizeSearch(value) { return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim(); }
+
+  function formatCardMathText(value, card) {
+    var input = String(value == null ? "" : value), trimmed = input.trim();
+    var wrapped = /^(?:\\\[[\s\S]*\\\]|\\\([\s\S]*\\\)|\$\$[\s\S]*\$\$|\$[^$\n]+\$)$/.test(trimmed);
+    var looksMath = /\\(?:lim|int|sqrt|frac|sum|prod|log|ln|sin|cos|tan|alpha|beta|gamma|delta|theta|lambda|pi|infty|to|left|right|mathrm|text|partial|nabla|cdot|times|approx|neq|leq|geq|begin|overline|widehat)\b/.test(input) || /(?:\^|_)\s*\{/.test(input);
+    if (trimmed && !wrapped && ((card && card.cardMode === "scientific") || looksMath)) input = "\\[" + input + "\\]";
+    return formatMathText(input);
+  }function normalizeSearch(value) { return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim(); }
 
 
   function deckSettingsFor(deck) {
@@ -555,8 +562,8 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
         imageMarkup +
         '<div class="public-flashcard-shade" aria-hidden="true"></div>' +
         '<div class="public-flashcard-content"><div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
-        '<p class="public-card-eyebrow">QUESTION</p><h2>' + formatMathText(card.front) + '</h2>' +
-        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + formatMathText(card.back) + '</p></div>' +
+        '<p class="public-card-eyebrow">QUESTION</p><h2>' + formatCardMathText(card.front, card) + '</h2>' +
+        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + formatCardMathText(card.back, card) + '</p></div>' +
         '<div class="public-flashcard-bottom"><span class="public-card-hint" aria-hidden="true">Toucher pour révéler</span>' +
         '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">i</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
         '</div></article>';
