@@ -1374,6 +1374,45 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
     }
   });
 
+  // Les vues « Mes cartes » et « Mes mémoires » partagent le même document :
+  // changer de vue dans l'historique évite un rechargement complet et son écran vide.
+  function navigateLibraryView(view, addHistory) {
+    if (document.body.dataset.page !== "library") return;
+    if (["all", "cards", "memories"].indexOf(view) < 0) return;
+    var url = new URL(window.location.href);
+    var currentView = url.searchParams.get("view") || "all";
+    if (currentView === view) return;
+    if (view === "all") url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    if (addHistory) window.history.pushState({ auroreLibraryView: view }, "", url.pathname + url.search + url.hash);
+    renderLibrary();
+  }
+
+  document.addEventListener("click", function (event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey ||
+        event.shiftKey || event.altKey) return;
+    var anchor = event.target && event.target.closest ? event.target.closest("a[href]") : null;
+    if (!anchor || anchor.target && anchor.target !== "_self" || anchor.hasAttribute("download")) return;
+    var destination;
+    try { destination = new URL(anchor.href, window.location.href); } catch (error) { return; }
+    if (destination.origin !== window.location.origin ||
+        destination.pathname !== window.location.pathname ||
+        !Array.from(destination.searchParams.keys()).every(function (key) { return key === "view"; })) return;
+    var view = destination.searchParams.get("view") || "all";
+    if (["all", "cards", "memories"].indexOf(view) < 0) return;
+    var currentView = new URLSearchParams(window.location.search).get("view") || "all";
+    if (view === currentView) return;
+    event.preventDefault();
+    navigateLibraryView(view, true);
+    window.scrollTo(0, 0);
+  });
+
+  window.addEventListener("popstate", function () {
+    if (document.body.dataset.page !== "library") return;
+    var params = new URLSearchParams(window.location.search);
+    navigateLibraryView(params.get("view") || "all", false);
+  });
+
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-act]");
     if (!button) return;
