@@ -745,3 +745,12 @@ html[data-theme="light"] .latex-preview,body[data-theme="light"] .latex-preview{
   .science-dock-foot span{flex-basis:22px}
   .science-dock-foot button{min-width:35px;padding:5px 8px}
 }
+
+
+/* Champs LaTeX à compléter : cases visibles et navigation rapide sur mobile. */
+.science-placeholder-hint{flex:0 0 auto;color:var(--muted);font-size:.7rem;white-space:nowrap}
+.science-dock-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}
+.science-dock-keys button[data-latex="\\frac{\\square}{\\square}"],.science-dock-keys button[data-latex^="\\int_"],.science-dock-keys button[data-latex^="\\sum_"],.science-dock-keys button[data-latex^="\\prod_"]{font-size:1.2rem}
+.science-dock-keys button:focus-visible,.science-dock-tab:focus-visible{outline:2px solid var(--accent-light);outline-offset:2px}
+.science-dock-foot button[data-science-next]{border-color:var(--accent,#7862dc);font-weight:850}
+@media(max-width:480px){.science-dock-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.science-placeholder-hint{font-size:.63rem}}
