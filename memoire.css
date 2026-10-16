@@ -626,3 +626,10 @@
 .card-bg-mode-choice small{color:var(--muted);font-size:.68rem;line-height:1.3}
 .card-bg-color-settings,.card-bg-image-settings{display:grid;gap:9px}
 @media(max-width:520px){.card-bg-mode-choice{padding:9px 7px}}
+
+
+/* État de transition visible pendant l'initialisation des vues mémoire. */
+.library-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:150px;padding:24px;color:var(--muted,#b7b3c8);font-size:.92rem;text-align:center}
+.library-loading-spinner{width:22px;height:22px;flex:0 0 22px;border:2px solid var(--border,rgba(255,255,255,.18));border-top-color:var(--accent,#a78bfa);border-radius:50%;animation:aurore-memory-spin .75s linear infinite}
+@keyframes aurore-memory-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.library-loading-spinner{animation-duration:2s}}
