@@ -19,9 +19,10 @@
     <a class="back-link" href="groupes.html">← Tous les groupes</a>
     <section class="groups-detail-hero"><p class="eyebrow">ESPACE COLLECTIF</p><h1 id="groupTitle">Chargement du groupe…</h1><p id="groupDescription" style="color:var(--muted);line-height:1.6"></p></section>
     <section class="groups-detail-content">
-      <h2>Cartes partagées</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Cartes partagées</h2><button class="groups-btn primary" id="joinCurrentGroup" type="button" hidden>Rejoindre le groupe</button></div>
       <p id="groupStatus" style="color:var(--muted);line-height:1.6">Chargement des informations du groupe…</p>
-      <p class="groups-note">La structure de cet espace est prête. Le partage des séries de cartes et les invitations privées seront ajoutés dans la prochaine étape.</p>
+      <div id="sharedSeriesGrid" class="groups-grid" style="margin-top:14px"></div>
+      <p class="groups-note">Les séries affichées sont des copies partagées dans ce groupe. Les invitations des groupes privés et le partage depuis l’éditeur de cartes seront complétés dans une prochaine étape.</p>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
