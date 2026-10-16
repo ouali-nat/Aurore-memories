@@ -1,0 +1,12 @@
+name = "aurore-memories"
+main = "src/index.js"
+compatibility_date = "2026-10-16"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "AURORE_R2"
+bucket_name = "aurore-memories"
+
+[vars]
+AURORE_ID_SUPABASE_URL = "https://woyzakzpqtzwjiyysuum.supabase.co"
+ALLOWED_ORIGINS = "https://aurore-memories-aurore9.vercel.app,https://aurore.id"
