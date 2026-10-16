@@ -716,3 +716,6 @@ html[data-theme="light"] .science-dock-action,html[data-theme="light"] .science-
 html[data-theme="light"] .science-dock-tab.is-active,body[data-theme="light"] .science-dock-tab.is-active{background:var(--accent,#7862dc);color:#fff;border-color:var(--accent,#7862dc)}
 @media(max-width:420px){.aurore-science-dock{max-height:58dvh;padding-left:8px;padding-right:8px}.science-dock-keys{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.science-dock-keys button{min-height:42px;font-size:.84rem}.science-dock-foot span{font-size:.62rem}.science-dock-action{font-size:.7rem;padding:5px 7px}}
 @media(prefers-reduced-motion:no-preference){.aurore-science-dock{animation:science-dock-in .16s ease-out}@keyframes science-dock-in{from{transform:translateY(8px);opacity:.7}to{transform:translateY(0);opacity:1}}}
+
+.science-return-button{display:block;width:100%;margin:5px 0 10px;padding:9px 12px;border:1px solid var(--accent,#7862dc);border-radius:10px;background:var(--soft,#28233a);color:var(--text,#f5f3ff);font:inherit;font-size:.82rem;font-weight:650;text-align:center}
+html[data-theme="light"] .science-return-button,body[data-theme="light"] .science-return-button{background:var(--surface,#fff);color:var(--text,#211d2b)}
