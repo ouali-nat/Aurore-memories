@@ -39,12 +39,16 @@ async function authenticate(request, env) {
   return user && UUID_RE.test(String(user.id || "")) ? { id: user.id, token } : null;
 }
 function serviceHeaders(env, extra = {}) {
-  return {
-    apikey: env.AURORE_ID_SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: "Bearer " + env.AURORE_ID_SUPABASE_SERVICE_ROLE_KEY,
+  const key = env.AURORE_ID_SUPABASE_SERVICE_ROLE_KEY;
+  const headers = {
+    apikey: key,
     "content-type": "application/json",
     ...extra
   };
+  // Modern sb_secret_ keys are opaque API keys, not JWTs. Only legacy
+  // service_role JWTs belong in Authorization; never send sb_secret_ as a bearer JWT.
+  if (key && !key.startsWith("sb_secret_")) headers.Authorization = "Bearer " + key;
+  return headers;
 }
 async function dbRequest(env, path, options = {}) {
   const base = env.AURORE_ID_SUPABASE_URL.replace(/\/$/, "");
