@@ -27,7 +27,7 @@ var latexCategories={
 "Calcul":[
 ["\\frac{\\square}{\\square}","a⁄b","Fraction : numérateur et dénominateur"],
 ["\\sqrt{\\square}","√□","Racine carrée"],
-["^{\\square}","xⁿ","Exposant"],
+["x^{\\square}","xⁿ","Puissance de x : x exposant n"],
 ["_{\\square}","xₙ","Indice"],
 ["\\left(\\square\\right)","(□)","Parenthèses"],
 ["\\left|\\square\\right|","|□|","Valeur absolue"],
