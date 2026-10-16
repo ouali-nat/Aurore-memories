@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr" data-theme="dark" data-color-theme="violet">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111019">
+  <meta name="description" content="Espace de groupe Aurore Mémoire.">
+  <title>Espace du groupe — Aurore Mémoire</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation">
+</head>
+<body data-page="group-detail">
+  <div class="ambient-bg" aria-hidden="true"></div>
+  <header class="topbar"><div class="wrap topbar-inner">
+    <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Section Mémoire</small></span></a>
+    <div class="header-right"><nav class="top-actions" aria-label="Navigation principale"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link active" href="groupes.html">Groupes</a></nav><div class="appearance"><button class="theme-btn" id="themeToggle" type="button" aria-label="Basculer entre le thème sombre et clair" title="Mode clair / sombre">◐</button></div></div>
+  </div></header>
+  <main class="wrap groups-main">
+    <a class="back-link" href="groupes.html">← Tous les groupes</a>
+    <section class="groups-detail-hero"><p class="eyebrow">ESPACE COLLECTIF</p><h1 id="groupTitle">Chargement du groupe…</h1><p id="groupDescription" style="color:var(--muted);line-height:1.6"></p></section>
+    <section class="groups-detail-content">
+      <h2>Cartes partagées</h2>
+      <p id="groupStatus" style="color:var(--muted);line-height:1.6">Chargement des informations du groupe…</p>
+      <p class="groups-note">La structure de cet espace est prête. Le partage des séries de cartes et les invitations privées seront ajoutés dans la prochaine étape.</p>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
+  <script src="app.js?v=20261015-nav-final"></script>
+  <script src="groupe.js?v=20261016-groups-foundation"></script>
+</body>
+</html>
