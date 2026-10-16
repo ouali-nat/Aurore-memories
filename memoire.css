@@ -719,3 +719,29 @@ html[data-theme="light"] .science-dock-tab.is-active,body[data-theme="light"] .s
 
 .science-return-button{display:block;width:100%;margin:5px 0 10px;padding:9px 12px;border:1px solid var(--accent,#7862dc);border-radius:10px;background:var(--soft,#28233a);color:var(--text,#f5f3ff);font:inherit;font-size:.82rem;font-weight:650;text-align:center}
 html[data-theme="light"] .science-return-button,body[data-theme="light"] .science-return-button{background:var(--surface,#fff);color:var(--text,#211d2b)}
+
+
+/* Clavier scientifique compact : priorité aux symboles, sans sacrifier la lisibilité. */
+.science-dock-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible;max-width:760px}
+.science-dock-tab{display:grid;place-items:center;min-width:0;min-height:37px;padding:5px 3px;font-size:1rem;font-weight:800;line-height:1.1;text-align:center}
+.science-dock-tab span{display:block}
+.science-dock-keys button{min-height:44px;font-size:1.12rem;line-height:1.15;font-variant-numeric:lining-nums}
+.science-dock-keys button span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.science-dock-head strong{font-size:.88rem}
+.science-dock-action{min-width:43px;padding-inline:9px;font-weight:800}
+.science-dock-foot span{flex:0 0 24px;display:grid;place-items:center;font-size:1rem;font-weight:850}
+.science-dock-foot button{min-width:38px;font-weight:800}
+.latex-preview-content{min-height:32px;font-size:1.05rem;line-height:1.7;overflow-wrap:normal}
+.latex-preview-content .katex{font-size:1.12em}
+.latex-preview-content .katex-display{margin:.35em 0;max-width:100%;overflow-x:auto;overflow-y:hidden}
+html[data-theme="light"] .latex-preview,body[data-theme="light"] .latex-preview{background:color-mix(in srgb,var(--accent) 5%,var(--surface));border-color:color-mix(in srgb,var(--accent) 36%,var(--border))}
+@media(max-width:420px){
+  .aurore-science-dock{max-height:60dvh;padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+  .science-dock-tabs{gap:4px;margin-bottom:6px}
+  .science-dock-tab{min-height:35px;padding:4px 2px;font-size:1rem}
+  .science-dock-keys{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+  .science-dock-keys button{min-height:42px;padding:5px 1px;font-size:1.08rem}
+  .science-dock-foot{gap:5px;margin-top:7px}
+  .science-dock-foot span{flex-basis:22px}
+  .science-dock-foot button{min-width:35px;padding:5px 8px}
+}
