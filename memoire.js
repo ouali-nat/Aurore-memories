@@ -1409,8 +1409,7 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
 
   window.addEventListener("popstate", function () {
     if (document.body.dataset.page !== "library") return;
-    var params = new URLSearchParams(window.location.search);
-    navigateLibraryView(params.get("view") || "all", false);
+    renderLibrary();
   });
 
   document.addEventListener("click", function (event) {
