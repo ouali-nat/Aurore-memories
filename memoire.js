@@ -714,6 +714,14 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
     var memories = state.cards.filter(isMemoryCard), flashcards = state.cards.filter(isFlashcard);
     var memoryCount = Object.keys(memoryGroups(memories)).length, cardSeriesCount = Object.keys(memoryGroups(flashcards)).length;
     if (view === "all") {
+      // Remettre l'en-tête initial lorsque Retour revient à la vue générale.
+      var allKicker = document.querySelector(".page-heading .section-kicker");
+      var allHeading = document.querySelector(".page-heading h1");
+      var allDescription = document.querySelector(".page-heading > p:last-child");
+      if (allKicker) allKicker.textContent = "BIBLIOTHÈQUE PERSONNELLE";
+      if (allHeading) allHeading.textContent = "Ma bibliothèque";
+      if (allDescription) allDescription.textContent = "Organisez vos textes à mémoriser et vos séries de cartes au même endroit.";
+      document.title = "Ma bibliothèque — Aurore Mémoire";
       var memoryCountForChoice = Object.keys(memoryGroups(memories)).length;
       var cardCountForChoice = Object.keys(memoryGroups(flashcards)).length;
       root.innerHTML = '<section class="library-choice-grid" aria-label="Choisir un espace de bibliothèque">' +

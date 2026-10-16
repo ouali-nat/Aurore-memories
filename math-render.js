@@ -11,7 +11,7 @@
       auto: "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/contrib/auto-render.min.js",
       css: "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css" }
   ];
-  var pendingRoots = [], queuedRoots = [], observer = null, renderFrame = 0, loadRun = 0;
+  var pendingRoots = [], queuedRoots = [], observer = null, renderFrame = 0, loadRun = 0, katexRequested = false;
   var options = {
     delimiters: [
       { left: "\\[", right: "\\]", display: true },
@@ -26,7 +26,8 @@
   function isInsideMath(root) { return !!(root && root.closest && root.closest(".katex, .katex-display")); }
   function hasMathSource(root) {
     var text = root && (root.nodeType === 3 ? root.nodeValue : root.textContent);
-    return !!text && (text.indexOf("\\[") !== -1 || text.indexOf("\\(") !== -1 || text.indexOf("$$") !== -1 || text.indexOf("$") !== -1);
+    if (!text) return false;
+    return /\\\[|\\\(|\$\$/.test(text) || /(^|[^$])\$[^$\n]+\$(?!\$)/.test(text);
   }
   function addRoot(collection, root) {
     var target = asElement(root);
@@ -44,10 +45,22 @@
     try { window.renderMathInElement(target, options); }
     catch (error) { /* Une formule incomplète ne doit pas bloquer la navigation ou la saisie. */ }
   }
+  function startKatexLoad() {
+    if (window.renderMathInElement) { finishLoading(loadRun); return; }
+    if (katexRequested) return;
+    katexRequested = true;
+    window.auroreMathStatus = "loading";
+    loadRun += 1;
+    loadKatex(0, loadRun);
+  }
   function render(root) {
     var target = asElement(root);
-    if (!target || isInsideMath(target)) return;
-    if (!window.renderMathInElement) { addRoot(pendingRoots, target); return; }
+    if (!target || isInsideMath(target) || !hasMathSource(target)) return;
+    if (!window.renderMathInElement) {
+      addRoot(pendingRoots, target);
+      startKatexLoad();
+      return;
+    }
     renderTarget(target);
   }
   window.renderAuroreMath = render;
@@ -64,7 +77,11 @@
   function queueObserved(root) {
     var target = asElement(root);
     if (!target || isInsideMath(target) || !hasMathSource(target)) return;
-    if (!window.renderMathInElement) { addRoot(pendingRoots, target); return; }
+    if (!window.renderMathInElement) {
+      addRoot(pendingRoots, target);
+      startKatexLoad();
+      return;
+    }
     addRoot(queuedRoots, target);
     if (!renderFrame) {
       var schedule = window.requestAnimationFrame || function (callback) { return window.setTimeout(callback, 16); };
@@ -149,8 +166,15 @@
     }, function () { loadKatex(index + 1, run); }, run);
   }
   window.auroreMathRetry = function () {
-    loadRun++; window.auroreMathStatus = "loading"; loadKatex(0, loadRun);
+    katexRequested = true;
+    loadRun++;
+    window.auroreMathStatus = "loading";
+    loadKatex(0, loadRun);
   };
-  observeDynamicContent(); ensureStyles(0);
-  window.auroreMathStatus = "loading"; loadRun++; loadKatex(0, loadRun);
+  observeDynamicContent();
+  window.auroreMathStatus = "idle";
+  if (document.body && hasMathSource(document.body)) {
+    addRoot(pendingRoots, document.body);
+    startKatexLoad();
+  }
 })();

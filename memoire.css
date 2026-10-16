@@ -633,3 +633,24 @@
 .library-loading-spinner{width:22px;height:22px;flex:0 0 22px;border:2px solid var(--border,rgba(255,255,255,.18));border-top-color:var(--accent,#a78bfa);border-radius:50%;animation:aurore-memory-spin .75s linear infinite}
 @keyframes aurore-memory-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.library-loading-spinner{animation-duration:2s}}
+
+/* Transitions inter-documents rapides sur les navigateurs qui les prennent en charge. */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation: 90ms ease-out both aurore-doc-out;
+}
+::view-transition-new(root) {
+  animation: 140ms ease-out both aurore-doc-in;
+}
+@keyframes aurore-doc-out {
+  to { opacity: 0; }
+}
+@keyframes aurore-doc-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
