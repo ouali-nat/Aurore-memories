@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr" data-theme="dark" data-color-theme="violet">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111019">
+  <meta name="description" content="Découvre les groupes d'étude Aurore Mémoire et partage tes progrès.">
+  <title>Groupes d'étude — Aurore Mémoire</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation">
+</head>
+<body data-page="groups">
+  <div class="ambient-bg" aria-hidden="true"></div>
+  <header class="topbar"><div class="wrap topbar-inner">
+    <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Section Mémoire</small></span></a>
+    <div class="header-right">
+      <nav class="top-actions" aria-label="Navigation principale"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link active" href="groupes.html">Groupes</a><a class="nav-link" href="cartes-publiques.html">Cartes publiques</a></nav>
+      <div class="appearance"><button class="theme-btn" id="themeToggle" type="button" aria-label="Basculer entre le thème sombre et clair" title="Mode clair / sombre">◐</button></div>
+    </div>
+  </div></header>
+  <main class="wrap groups-main">
+    <a class="back-link" href="index.html">← Retour à l'accueil</a>
+    <section class="groups-hero">
+      <p class="eyebrow">APPRENDRE ENSEMBLE</p>
+      <h1>Les groupes d'étude</h1>
+      <p>Découvre des groupes publics pour apprendre à plusieurs, ou crée ton propre espace. Un compte Google sera nécessaire pour créer un groupe, rejoindre un groupe ou partager des cartes.</p>
+    </section>
+    <div class="groups-toolbar">
+      <label class="groups-search"><span aria-hidden="true">⌕</span><input id="groupSearch" type="search" placeholder="Rechercher un groupe, une matière…" aria-label="Rechercher un groupe"></label>
+      <button class="groups-btn primary" id="createGroupButton" type="button">＋ Créer un groupe</button>
+      <button class="groups-btn" id="googleSignInButton" type="button">Continuer avec Google</button>
+    </div>
+    <div class="groups-tabs" role="tablist" aria-label="Filtrer les groupes">
+      <button class="groups-tab" type="button" role="tab" aria-selected="true" data-filter="public">Groupes publics</button>
+      <button class="groups-tab" type="button" role="tab" aria-selected="false" data-filter="mine">Mes groupes</button>
+    </div>
+    <section id="groupsGrid" class="groups-grid" aria-live="polite" aria-busy="true">
+      <div class="groups-loading"><strong>Chargement des groupes…</strong><p>Nous récupérons les groupes accessibles.</p></div>
+    </section>
+    <p class="groups-note">Les groupes publics peuvent être découverts par tous. Les groupes privés sont réservés à leur propriétaire et à leurs membres autorisés. Les invitations privées seront ajoutées dans une prochaine étape.</p>
+  </main>
+  <div class="groups-modal-backdrop" id="createGroupModal" hidden>
+    <section class="groups-modal" role="dialog" aria-modal="true" aria-labelledby="createGroupTitle">
+      <div class="groups-modal-head"><h2 id="createGroupTitle">Créer un groupe</h2><button class="groups-icon-btn" type="button" data-close-modal aria-label="Fermer">×</button></div>
+      <form id="createGroupForm" class="groups-form">
+        <label>Nom du groupe
+          <input name="name" required minlength="3" maxlength="60" placeholder="Ex. Révisions de mathématiques">
+        </label>
+        <label>Description
+          <textarea name="description" maxlength="500" placeholder="Quel est l'objectif de ce groupe ?"></textarea>
+        </label>
+        <label>Matière (facultatif)
+          <input name="subject" maxlength="80" placeholder="Ex. Mathématiques, SVT, Français">
+        </label>
+        <label>Niveau (facultatif)
+          <input name="level" maxlength="80" placeholder="Ex. 3e, Terminale D, Licence 1">
+        </label>
+        <fieldset style="border:0;padding:0;margin:0">
+          <legend style="font-size:.8rem;font-weight:800;margin-bottom:7px">Visibilité du groupe</legend>
+          <div class="groups-visibility-options">
+            <label class="groups-visibility-option"><input type="radio" name="visibility" value="public" checked><span>🌐 Public<small>Visible dans la liste des groupes.</small></span></label>
+            <label class="groups-visibility-option"><input type="radio" name="visibility" value="private"><span>🔒 Privé<small>Réservé aux personnes autorisées. Les invitations arrivent ensuite.</small></span></label>
+          </div>
+        </fieldset>
+        <p class="groups-status" id="createGroupStatus" role="status" aria-live="polite"></p>
+        <div class="groups-modal-actions"><button class="groups-btn" type="button" data-close-modal>Annuler</button><button class="groups-btn primary" id="submitCreateGroup" type="submit">Créer le groupe</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
+  <script src="app.js?v=20261015-nav-final"></script>
+  <script src="groupes.js?v=20261016-google-groups"></script>
+</body>
+</html>
