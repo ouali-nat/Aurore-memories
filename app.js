@@ -289,124 +289,53 @@
       }
     });
   }
-  // Navigation hiérarchique commune à toutes les pages : chaque lien interne
-  // mémorise son écran parent afin que Retour suive le parcours réellement emprunté.
+  // Navigation hiérarchique : toujours utiliser l'URL active, même après une transition SPA.
   (function installHierarchicalNavigation() {
     var PARENT_KEY = "aurore-memory-navigation-parents-v1";
-    var currentUrl;
-    try { currentUrl = new URL(window.location.href); } catch (error) { return; }
-    if (currentUrl.origin !== window.location.origin) return;
-
-    function routeKey(url) { return url.pathname + url.search; }
-    function readParents() {
-      try {
-        var value = JSON.parse(sessionStorage.getItem(PARENT_KEY) || "{}");
-        return value && typeof value === "object" ? value : {};
-      } catch (error) { return {}; }
+    function currentRoute(){try{return new URL(window.location.href)}catch(e){return null}}
+    function routeKey(url){return url.pathname+url.search}
+    function readParents(){try{var v=JSON.parse(sessionStorage.getItem(PARENT_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
+    function writeParents(v){try{var k=Object.keys(v);if(k.length>80)k.slice(0,k.length-80).forEach(function(x){delete v[x]});sessionStorage.setItem(PARENT_KEY,JSON.stringify(v))}catch(e){}}
+    function internal(url){return !!(url&&url.origin===location.origin&&/\.html?$/i.test(url.pathname)&&!url.pathname.endsWith("/404.html"))}
+    function fallbackParent(url){
+      var p=url.pathname.split("/").pop()||"index.html",v=url.searchParams.get("view")||"all",d=url.searchParams.get("deck");
+      if(p==="index.html")return null;if(p==="choisir.html")return "index.html";
+      if(p==="mes-memoires.html")return v==="memories"||v==="cards"?"choisir.html":"index.html";
+      if(p==="cartes-publiques.html")return "choisir.html";if(p==="revisions.html")return "index.html";
+      if(p==="creer.html")return "choisir.html";if(p==="editer-memoire.html")return "mes-memoires.html?view=memories";
+      if(p==="creer-cartes.html")return "mes-memoires.html?view=cards";if(p==="memoire-blocs.html")return "mes-memoires.html?view=memories";
+      if(p==="reviser-cartes.html")return "mes-memoires.html?view=cards";if(p==="progression.html")return "mes-memoires.html";
+      if(/^mode-.+\.html$/i.test(p))return "reviser-cartes.html"+(d?"?deck="+encodeURIComponent(d):"");return "index.html";
     }
-    function writeParents(parents) {
-      try {
-        var keys = Object.keys(parents);
-        if (keys.length > 80) keys.slice(0, keys.length - 80).forEach(function (key) { delete parents[key]; });
-        sessionStorage.setItem(PARENT_KEY, JSON.stringify(parents));
-      } catch (error) {}
+    function label(url){var p=url.pathname.split("/").pop()||"index.html",v=url.searchParams.get("view")||"all";
+      if(p==="index.html")return "← Accueil";if(p==="choisir.html")return "← Choisir un espace";
+      if(p==="mes-memoires.html")return v==="memories"?"← Mes mémoires":v==="cards"?"← Mes cartes":"← Bibliothèque";
+      if(p==="cartes-publiques.html")return "← Cartes publiques";if(p==="revisions.html")return "← Révisions";
+      if(p==="reviser-cartes.html")return "← Étude des cartes";if(p==="memoire-blocs.html")return "← Passages à mémoriser";
+      if(p==="creer-cartes.html")return "← Mes cartes";if(p==="editer-memoire.html")return "← Mes mémoires";return "← Retour";
     }
-    function sameOriginInternal(url) {
-      return url && url.origin === window.location.origin &&
-        /\.html?$/i.test(url.pathname) && !url.pathname.endsWith("/404.html");
-    }
-    function fallbackParent(url) {
-      var path = url.pathname.split("/").pop() || "index.html";
-      var view = url.searchParams.get("view") || "all";
-      var deck = url.searchParams.get("deck");
-      if (path === "index.html") return null;
-      if (path === "choisir.html") return "index.html";
-      if (path === "mes-memoires.html") {
-        if (view === "memories" || view === "cards") return "choisir.html";
-        return "index.html";
+    function configureBackLink(){
+      var current=currentRoute(),back=document.querySelector(".page-heading .back-link");if(!current||!back)return;
+      var parents=readParents(),parent=null,value=parents[routeKey(current)];
+      if(typeof value==="string"){try{parent=new URL(value,location.origin)}catch(e){}}
+      if(!internal(parent)||routeKey(parent)===routeKey(current)){
+        var fb=fallbackParent(current);if(!fb){back.hidden=true;return}
+        try{parent=new URL(fb,location.origin+current.pathname.replace(/[^/]*$/,""))}catch(e){parent=new URL(fb,location.origin)}
       }
-      if (path === "cartes-publiques.html") return "choisir.html";
-      if (path === "revisions.html") return "index.html";
-      if (path === "creer.html") return "choisir.html";
-      if (path === "editer-memoire.html") return "mes-memoires.html?view=memories";
-      if (path === "creer-cartes.html") return "mes-memoires.html?view=cards";
-      if (path === "memoire-blocs.html") return "mes-memoires.html?view=memories";
-      if (path === "reviser-cartes.html") return "mes-memoires.html?view=cards";
-      if (path === "progression.html") return "mes-memoires.html";
-      if (/^mode-.+\.html$/i.test(path)) return "reviser-cartes.html" + (deck ? "?deck=" + encodeURIComponent(deck) : "");
-      return "index.html";
+      back.hidden=false;var href=parent.pathname+parent.search+parent.hash,txt=label(parent);
+      if(back.getAttribute("href")!==href)back.setAttribute("href",href);
+      if(back.textContent!==txt)back.textContent=txt;
+      var aria=txt.replace(/^←\s*/,"Revenir à ");if(back.getAttribute("aria-label")!==aria)back.setAttribute("aria-label",aria);
     }
-    function labelForParent(url) {
-      var path = url.pathname.split("/").pop() || "index.html";
-      if (path === "index.html") return "← Accueil";
-      if (path === "choisir.html") return "← Choisir un espace";
-      if (path === "mes-memoires.html") {
-        var view = url.searchParams.get("view") || "all";
-        return view === "memories" ? "← Mes mémoires" : view === "cards" ? "← Mes cartes" : "← Bibliothèque";
-      }
-      if (path === "cartes-publiques.html") return "← Cartes publiques";
-      if (path === "revisions.html") return "← Révisions";
-      if (path === "reviser-cartes.html") return "← Étude des cartes";
-      if (path === "memoire-blocs.html") return "← Passages à mémoriser";
-      if (path === "creer-cartes.html") return "← Mes cartes";
-      if (path === "editer-memoire.html") return "← Mes mémoires";
-      return "← Retour";
-    }
-    function configureBackLink() {
-      var back = document.querySelector(".page-heading .back-link");
-      if (!back) return;
-      var parents = readParents();
-      var parentValue = parents[routeKey(currentUrl)];
-      var parentUrl = null;
-      if (typeof parentValue === "string") {
-        try { parentUrl = new URL(parentValue, window.location.origin); } catch (error) {}
-      }
-      if (!sameOriginInternal(parentUrl) || routeKey(parentUrl) === routeKey(currentUrl)) {
-        var fallback = fallbackParent(currentUrl);
-        if (!fallback) {
-          back.hidden = true;
-          return;
-        }
-        try { parentUrl = new URL(fallback, window.location.origin + currentUrl.pathname.replace(/[^/]*$/, "")); }
-        catch (error) { parentUrl = new URL(fallback, window.location.origin); }
-      }
-      back.hidden = false;
-      var parentHref = parentUrl.pathname + parentUrl.search + parentUrl.hash;
-      var parentLabel = labelForParent(parentUrl);
-      if (back.getAttribute("href") !== parentHref) back.setAttribute("href", parentHref);
-      if (back.textContent !== parentLabel) back.textContent = parentLabel;
-      var backLabel = parentLabel.replace(/^←\\s*/, "Revenir à ");
-      if (back.getAttribute("aria-label") !== backLabel) back.setAttribute("aria-label", backLabel);
-    }
-
-    document.addEventListener("click", function (event) {
-      var anchor = event.target && event.target.closest ? event.target.closest("a[href]") : null;
-      if (!anchor || event.defaultPrevented || event.button !== 0 ||
-          event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
-          anchor.hasAttribute("download") || (anchor.target && anchor.target !== "_self") ||
-          anchor.matches(".back-link, .brand, .top-actions a, [data-nav-ignore]")) return;
-      var destination;
-      try { destination = new URL(anchor.href, window.location.href); } catch (error) { return; }
-      if (!sameOriginInternal(destination)) return;
-      if (routeKey(destination) === routeKey(currentUrl)) return;
-      var parents = readParents();
-      parents[routeKey(destination)] = currentUrl.pathname + currentUrl.search + currentUrl.hash;
-      writeParents(parents);
-    }, true);
-
+    window.auroreConfigureBackLink=configureBackLink;
+    document.addEventListener("click",function(event){
+      var a=event.target&&event.target.closest?event.target.closest("a[href]"):null,c=currentRoute();
+      if(!c||!a||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||a.hasAttribute("download")||(a.target&&a.target!=="_self")||a.matches(".back-link, .brand, .top-actions a, [data-nav-ignore]"))return;
+      var dest;try{dest=new URL(a.href,c.href)}catch(e){return}if(!internal(dest)||routeKey(dest)===routeKey(c))return;
+      var parents=readParents();parents[routeKey(dest)]=c.pathname+c.search+c.hash;writeParents(parents);
+    },true);
     configureBackLink();
-    // Réapplique la règle commune si un ancien script de page tente encore
-    // de remplacer le lien Retour après le chargement de app.js.
-    if (window.MutationObserver) {
-      var backLinkObserver = new MutationObserver(function (records) {
-        if (records.some(function (record) {
-          return record.type === "attributes" && record.attributeName === "href" &&
-            record.target && record.target.matches && record.target.matches(".page-heading .back-link");
-        })) configureBackLink();
-      });
-      var currentBackLink = document.querySelector(".page-heading .back-link");
-      if (currentBackLink) backLinkObserver.observe(currentBackLink, { attributes: true, attributeFilter: ["href"] });
-    }
+    if(window.MutationObserver&&document.body){var obs=new MutationObserver(function(records){if(records.some(function(r){return r.type==="childList"||(r.type==="attributes"&&r.attributeName==="href")}))configureBackLink()});obs.observe(document.body,{attributes:true,attributeFilter:["href"],childList:true,subtree:true})}
   })();
 
 })();

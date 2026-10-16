@@ -1059,7 +1059,7 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
         return;
       }
       try { localStorage.setItem("aurore-memory-last-created", title); } catch (error) {}
-      window.location.href = "mes-memoires.html?created=1";
+      if (typeof window.auroreNavigate === "function") window.auroreNavigate("mes-memoires.html?created=1"); else window.location.href = "mes-memoires.html?created=1";
     });
   }
 
@@ -1460,8 +1460,8 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
       exportCards();
     } else if (action === "review-deck") {
       var reviewDeck = button.dataset.deck || "";
-      if (button.dataset.kind === "flashcard") window.location.href = "reviser-cartes.html?deck=" + encodeURIComponent(reviewDeck);
-      else window.location.href = "memoire-blocs.html?deck=" + encodeURIComponent(reviewDeck);
+      var reviewHref = button.dataset.kind === "flashcard" ? "reviser-cartes.html?deck=" + encodeURIComponent(reviewDeck) : "memoire-blocs.html?deck=" + encodeURIComponent(reviewDeck);
+      if (typeof window.auroreNavigate === "function") window.auroreNavigate(reviewHref); else window.location.href = reviewHref;
     } else if (action === "delete-deck") {
       var deck = button.dataset.deck || "";
       var kind = button.dataset.kind === "memory" ? "memory" : "flashcard";
@@ -1561,45 +1561,49 @@ function normalizeSearch(value) { return String(value == null ? "" : value).norm
     }
   });
 
-  if (document.body.dataset.page === "home") {
-    updateHome();
-  } else if (document.body.dataset.page === "public-cards") {
-    initializePublicCardsPage();
-  } else if (document.body.dataset.page === "library") {
-    renderLibrary();
-    var params = new URLSearchParams(window.location.search);
-    if (params.get("created") === "1" || params.get("created") === "cards") {
-      var createdName = "";
-      try { createdName = localStorage.getItem("aurore-memory-last-created") || ""; } catch (error) {}
-      notify(params.get("created") === "cards" ? "Série de cartes créée : " + createdName : "Mémoire créée : " + createdName);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  } else if (document.body.dataset.page === "create") {
-    handleCreateForm();
-  } else if (document.body.dataset.page === "reviews") {
-    var requested = "";
-    try {
-      requested = localStorage.getItem(SELECTED_DECK_KEY) || "";
-      localStorage.removeItem(SELECTED_DECK_KEY);
-    } catch (error) {}
-    var query = new URLSearchParams(window.location.search);
-    requested = query.get("deck") || requested;
-    var dedicatedMode = document.body.dataset.modePage || "";
-    if (MODE_PAGES[dedicatedMode]) {
-      state.mode = dedicatedMode;
-      if (query.get("card")) {
-        var selectedMemory = state.cards.filter(isMemoryCard).find(function (card) { return String(card.id) === query.get("card"); });
-        if (selectedMemory) selectedMemory.preferredMode = dedicatedMode;
+  function initializeMemoryPage() {
+    if (document.body.dataset.page === "home") {
+      updateHome();
+    } else if (document.body.dataset.page === "public-cards") {
+      initializePublicCardsPage();
+    } else if (document.body.dataset.page === "library") {
+      renderLibrary();
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("created") === "1" || params.get("created") === "cards") {
+        var createdName = "";
+        try { createdName = localStorage.getItem("aurore-memory-last-created") || ""; } catch (error) {}
+        notify(params.get("created") === "cards" ? "Série de cartes créée : " + createdName : "Mémoire créée : " + createdName);
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
-      save();
-      startSession(requested, true);
-    } else {
-      var selectedCardId = query.get("card") || "";
-      var selectedMemoryForMode = selectedCardId ? state.cards.filter(isMemoryCard).find(function (card) { return String(card.id) === selectedCardId; }) : null;
-      if (selectedMemoryForMode && MODE_PAGES[selectedMemoryForMode.preferredMode]) state.mode = selectedMemoryForMode.preferredMode;
-      startSession(requested, false);
+    } else if (document.body.dataset.page === "create") {
+      handleCreateForm();
+    } else if (document.body.dataset.page === "reviews") {
+      var requested = "";
+      try {
+        requested = localStorage.getItem(SELECTED_DECK_KEY) || "";
+        localStorage.removeItem(SELECTED_DECK_KEY);
+      } catch (error) {}
+      var query = new URLSearchParams(window.location.search);
+      requested = query.get("deck") || requested;
+      var dedicatedMode = document.body.dataset.modePage || "";
+      if (MODE_PAGES[dedicatedMode]) {
+        state.mode = dedicatedMode;
+        if (query.get("card")) {
+          var selectedMemory = state.cards.filter(isMemoryCard).find(function (card) { return String(card.id) === query.get("card"); });
+          if (selectedMemory) selectedMemory.preferredMode = dedicatedMode;
+        }
+        save();
+        startSession(requested, true);
+      } else {
+        var selectedCardId = query.get("card") || "";
+        var selectedMemoryForMode = selectedCardId ? state.cards.filter(isMemoryCard).find(function (card) { return String(card.id) === selectedCardId; }) : null;
+        if (selectedMemoryForMode && MODE_PAGES[selectedMemoryForMode.preferredMode]) state.mode = selectedMemoryForMode.preferredMode;
+        startSession(requested, false);
+      }
     }
   }
+  window.auroreMemoryInitPage = initializeMemoryPage;
+  initializeMemoryPage();
   window.auroreMemoryRender = function () {
     renderLibrary();
     renderReview();
