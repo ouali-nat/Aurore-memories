@@ -86,7 +86,7 @@
   function renderGroups() {
     var term=(search.value||"").trim().toLocaleLowerCase("fr");
     var visible=groups.filter(function(g){
-      if(activeFilter==="mine" && (!signedIn() || g.created_by!==session.user.id)) return false;
+      if(activeFilter==="mine" && (!signedIn() || (g.created_by!==session.user.id && !joinedGroupIds[g.id]))) return false;
       if(activeFilter==="public" && g.visibility!=="public") return false;
       var text=[g.name,g.description,g.subject,g.level].join(" ").toLocaleLowerCase("fr");
       return !term || text.includes(term);
