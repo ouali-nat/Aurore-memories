@@ -14,7 +14,7 @@
           return script.src && script.src.indexOf(src) >= 0;
         });
         if (existing) {
-          if (existing.dataset.loaded === "true") return resolve();
+          if (existing.dataset.loaded === "true" || document.readyState === "complete") return resolve();
           existing.addEventListener("load", resolve, { once: true });
           existing.addEventListener("error", reject, { once: true });
           return;
