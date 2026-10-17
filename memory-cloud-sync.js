@@ -9,6 +9,7 @@
   var LIMIT = 10 * 1024 * 1024;
   var active = false;
   var busy = false;
+  var syncAgain = false;
   var timer = null;
   var conflict = null;
   var lastMessage = "";
@@ -152,7 +153,7 @@
     return window.auroreAuth.getSession();
   }
   async function runSync() {
-    if (busy) return;
+    if (busy) { syncAgain = true; return; }
     var session;
     try { session = await freshSession(); }
     catch (error) { status("Connexion au stockage indisponible. Tes données restent sur cet appareil.", "warn"); return; }
@@ -216,6 +217,10 @@
       else status("Sauvegarde cloud non confirmée : " + (error.message || "erreur inconnue") + ". Les données locales restent intactes.", "warn");
     } finally {
       busy = false;
+      if (syncAgain) {
+        syncAgain = false;
+        window.setTimeout(runSync, 350);
+      }
     }
   }
   async function findConflict(local) {
