@@ -339,3 +339,38 @@
   })();
 
 })();
+
+// Aurore Mémoire: load private cloud backup only on pages that work with personal memorisations.
+(function () {
+  "use strict";
+  var page = (window.location.pathname.split("/").pop() || "index.html").toLowerCase();
+  if (!/^(?:index|choisir|mes-memoires|revisions|memoire-blocs|editer-memoire|reviser-cartes|creer-cartes|creer|cartes-publiques|mode-[a-z-]+)\.html$/.test(page)) return;
+  if (window.__auroreMemoryCloudBootstrap) return;
+  window.__auroreMemoryCloudBootstrap = true;
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = function () { reject(new Error("Impossible de charger " + src)); };
+      document.head.appendChild(script);
+    });
+  }
+
+  (async function () {
+    try {
+      if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
+      }
+      if (!window.auroreAuth) {
+        await loadScript("auth.js?v=20261017-memory-cloud");
+      }
+      if (!window.__auroreMemoryCloudSyncLoaded) {
+        await loadScript("memory-cloud-sync.js?v=20261017-memory-cloud");
+      }
+    } catch (error) {
+      console.warn("Aurore Mémoire : la sauvegarde cloud n’est pas initialisée. Les données locales restent disponibles.", error);
+    }
+  })();
+})();
