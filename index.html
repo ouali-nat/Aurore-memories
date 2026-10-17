@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111019">
   <meta name="description" content="Aurore Mémoire : organisez vos contenus et consolidez vos apprentissages.">
   <title>Accueil — Section Mémoire — Aurore</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css">\n  <link rel="stylesheet" href="memory-access.css?v=20261017-aurore-id-gate">
   <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation">
   <link rel="stylesheet" href="cloud-files.css?v=20261017-r2">
   <link rel="prefetch" href="memoire.js" as="script">
@@ -14,7 +14,45 @@
   <link rel="prefetch" href="reviser-cartes.js?v=20261015-katex-newline-fix" as="script">
 </head>
 <body data-page="home">
-  <div class="ambient-bg" aria-hidden="true"></div>
+  <div class="ambient-bg" aria-hidden="true"></div>\n  <section class="memory-access-lock" id="memoryAccessLock" hidden aria-label="Connexion à Aurore Mémoire">
+    <div class="memory-access-card">
+      <div class="memory-access-card-body">
+        <div class="memory-access-institution">
+          <div class="memory-access-logo" aria-hidden="true">A</div>
+          <div>
+            <div class="memory-access-brand">Aurore — Section Mémoire</div>
+            <div class="memory-access-tagline">Un espace personnel pour apprendre et se souvenir.</div>
+          </div>
+        </div>
+        <div class="memory-access-panels">
+          <section class="memory-access-panel memory-access-panel-main">
+            <div class="memory-access-tabs"><div class="memory-access-tab">Accès à votre espace</div></div>
+            <div class="memory-access-heading">
+              <h1>Bienvenue dans Aurore Mémoire</h1>
+              <p>Retrouvez vos mémorisations et vos cartes dans un espace pensé pour apprendre à votre rythme.</p>
+            </div>
+            <div class="memory-access-actions">
+              <button class="memory-access-provider-btn" id="memoryAccessAuroreId" type="button">
+                <span class="memory-access-provider-mark" aria-hidden="true">ID</span>
+                <span class="memory-access-provider-copy"><strong>Continuer avec Aurore ID</strong><small>Un accès unique pour les services Aurore</small></span>
+              </button>
+            </div>
+            <p class="memory-access-message" id="memoryAccessMessage" role="alert" aria-live="polite"></p>
+            <div class="memory-access-note">Connexion sécurisée · Aurore — Section Mémoire</div>
+          </section>
+          <section class="memory-access-panel memory-access-panel-alt" aria-label="Autres possibilités">
+            <div class="memory-access-alt-head">Autres possibilités</div>
+            <div class="memory-access-alt-scroll">
+              <button class="memory-access-visitor-btn" id="memoryAccessVisitor" type="button">
+                <strong>Continuer sans compte</strong><small>Accéder à Mémoire sur cet appareil. La synchronisation cloud nécessite Aurore ID.</small>
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="memory-access-footer">© 2026 Aurore — Section Mémoire</div>
+    </div>
+  </section>
   <header class="topbar"><div class="wrap topbar-inner">
     <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Section Mémoire</small></span></a>
     <div class="header-right">
