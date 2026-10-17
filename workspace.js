@@ -1,12 +1,19 @@
 (function(){
 "use strict";
 var KEY="aurore-memory-cards-v1";
+(function loadMemoryCloudSync(){
+if(window.__auroreMemoryCloudLoaderStarted)return;
+window.__auroreMemoryCloudLoaderStarted=true;
+function load(src){return new Promise(function(resolve,reject){var existing=Array.prototype.find.call(document.scripts,function(s){return s.src&&s.src.indexOf(src)>=0});if(existing){if(existing.dataset.loaded==="true"||document.readyState==="complete")return resolve();existing.addEventListener("load",resolve,{once:true});existing.addEventListener("error",reject,{once:true});return}var s=document.createElement("script");s.src=src;s.async=false;s.onload=function(){s.dataset.loaded="true";resolve()};s.onerror=reject;document.head.appendChild(s)})}
+var chain=window.auroreAuth?Promise.resolve():(window.supabase&&window.supabase.createClient?Promise.resolve():load("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2")).then(function(){return window.auroreAuth?Promise.resolve():load("auth.js?v=20261017-memory-cloud3")});
+chain.then(function(){return load("cloud-sync.js?v=20261017-memory-cloud3")}).catch(function(e){console.warn("Aurore Mémoire : sauvegarde cloud indisponible ; données locales conservées.",e)});
+})();
 var MODES=[["Toucher pour révéler","mode-revelation.html"],["Curseur","mode-curseur.html"],["Écouter","mode-ecouter.html"],["Première lettre","mode-premiere-lettre.html"],["Trous","mode-trous.html"],["Réordonner","mode-reordonner.html"],["Taper","mode-taper.html"],["Choix multiple","mode-choix-multiple.html"],["Parler","mode-parler.html"]];
 var $=function(s){return document.querySelector(s)};
 var safe=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
 function isMemory(c){return c&&(c.kind==="memory"||/(?:·|—|-)\s*Morceau\s+\d+\s*$/i.test(String(c.front||"")))}
 function read(){try{var s=JSON.parse(localStorage.getItem(KEY)||"{}");if(!Array.isArray(s.cards))s.cards=[];if(!Array.isArray(s.cardPerformance))s.cardPerformance=[];if(!Array.isArray(s.performance))s.performance=[];if(!s.log)s.log={};return s}catch(e){return {cards:[],cardPerformance:[],performance:[],log:{}}}}
-function save(s){try{localStorage.setItem(KEY,JSON.stringify(s));if(typeof window.auroreUpdateMemoryHomeStats==="function")window.auroreUpdateMemoryHomeStats(s.cards);else try{localStorage.removeItem("aurore-memory-home-stats-v1")}catch(cacheError){}return true}catch(e){return false}}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s));if(window.auroreMemoryCloudSync&&typeof window.auroreMemoryCloudSync.schedule==="function")window.auroreMemoryCloudSync.schedule(s);if(typeof window.auroreUpdateMemoryHomeStats==="function")window.auroreUpdateMemoryHomeStats(s.cards);else try{localStorage.removeItem("aurore-memory-home-stats-v1")}catch(cacheError){}return true}catch(e){return false}}
 function initEditor(){
 var s=read(),params=new URLSearchParams(location.search),deck=params.get("deck")||"",old=s.cards.filter(c=>c.deck===deck&&isMemory(c)),title=$("#workspaceTitle"),source=$("#workspaceText"),list=$("#workspaceChunks"),feedback=$("#workspaceFeedback"),highlight=$("#workspaceTextHighlight"),chunks=[],selectionCutUsed=false,
 pendingSelection=null;
