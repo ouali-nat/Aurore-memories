@@ -67,7 +67,9 @@ export default {
         ok: true,
         service: "aurore-memories",
         authConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY),
-        storageConfigured: Boolean(env.MEMORIES_BUCKET)
+        storageConfigured: Boolean(env.MEMORIES_BUCKET),
+        memorySyncVersion: "2026-10-17-r2-memory-sync",
+        conditionalWrites: true
       }, 200, corsHeaders(request, env));
     }
     if (!url.pathname.startsWith("/api/storage")) return env.ASSETS.fetch(request);
