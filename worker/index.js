@@ -61,7 +61,7 @@ export default {
     if (url.pathname === "/health" && request.method === "GET") {
       return json({
         ok: true,
-        service: "aurore-memoire",
+        service: "aurore-memories",
         authConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY),
         storageConfigured: Boolean(env.MEMORIES_BUCKET)
       }, 200, corsHeaders(request, env));
