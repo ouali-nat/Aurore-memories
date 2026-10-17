@@ -303,6 +303,7 @@
     try {
       if (action === "merge") {
         await archiveSnapshot(selected.local, "avant-fusion-locale");
+        await archiveSnapshot(selected.remote, "avant-fusion-cloud");
         var merged = mergeData(selected.local, selected.remote);
         var result = await putObject(CLOUD_KEY, envelope(merged), { type: "match", etag: selected.etag });
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(merged));
