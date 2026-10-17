@@ -1,0 +1,15 @@
+name = "aurore-memoire"
+main = "worker/index.js"
+compatibility_date = "2026-10-17"
+
+[vars]
+SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co"
+
+[[r2_buckets]]
+binding = "MEMORIES_BUCKET"
+bucket_name = "aurore-memories"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/health"]
