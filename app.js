@@ -364,7 +364,7 @@
         await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
       }
       if (!window.auroreAuth) {
-        await loadScript("auth.js?v=20261017-memory-cloud");
+        await loadScript("auth.js?v=20261017-memory-cloud2");
       }
       if (!window.__auroreMemoryCloudSyncLoaded) {
         await loadScript("memory-cloud-sync.js?v=20261017-memory-cloud");
