@@ -176,10 +176,13 @@
   }
   function schedule(state) {
     latestState = state;
-    if (phase !== "ready" || busy) return;
+    if (phase === "checking") { queued = true; return; }
+    if (phase !== "ready") return;
+    if (busy) { queued = true; return; }
     window.clearTimeout(timer);
     timer = window.setTimeout(async function () {
-      if (busy || phase !== "ready") return;
+      if (busy) { queued = true; return; }
+      if (phase !== "ready") return;
       busy = true;
       try {
         await writeCloud(latestState || readLocal());
