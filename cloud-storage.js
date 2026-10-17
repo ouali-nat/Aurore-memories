@@ -140,18 +140,31 @@
       return;
     }
     button.disabled = true;
+    var sent = 0;
     try {
+      var existingResponse = await window.auroreAuth.api("/api/storage/list", { method: "GET" });
+      var existingData = await existingResponse.json();
+      var knownKeys = new Set((Array.isArray(existingData.objects) ? existingData.objects : []).map(function (item) { return item.key; }));
       for (var i = 0; i < files.length; i += 1) {
         var file = files[i];
+        if (knownKeys.has(file.name) && !window.confirm("Un fichier nommé « " + file.name + " » existe déjà. Le remplacer ?")) {
+          continue;
+        }
         setStatus("Envoi de " + file.name + " (" + (i + 1) + "/" + files.length + ")…");
         await window.auroreAuth.api("/api/storage?key=" + encodeURIComponent(file.name), {
           method: "POST",
           headers: { "Content-Type": file.type || "application/octet-stream" },
           body: file
         });
+        knownKeys.add(file.name);
+        sent += 1;
       }
       picker.value = "";
-      setStatus(files.length > 1 ? files.length + " fichiers envoyés avec succès." : "Fichier envoyé avec succès.");
+      if (!sent) {
+        setStatus("Aucun fichier envoyé : les fichiers déjà présents n’ont pas été remplacés.");
+        return;
+      }
+      setStatus(sent > 1 ? sent + " fichiers envoyés avec succès." : "Fichier envoyé avec succès.");
       await loadFiles();
     } catch (error) {
       setStatus(error.message || "Envoi impossible.", true);
@@ -180,10 +193,13 @@
         signIn.disabled = false;
       }
     });
-    window.addEventListener("aurore:auth-changed", function (event) {
-      showSignedIn(event.detail && event.detail.session);
-      loadFiles();
-    });
+    if (!window.__auroreCloudStorageAuthListenerBound) {
+      window.__auroreCloudStorageAuthListenerBound = true;
+      window.addEventListener("aurore:auth-changed", function (event) {
+        showSignedIn(event.detail && event.detail.session);
+        loadFiles();
+      });
+    }
     getSession().then(function (session) {
       showSignedIn(session);
       loadFiles();
