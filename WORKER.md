@@ -1,33 +1,46 @@
 # Aurore Mémoire — Cloudflare Worker
 
-Ce Worker suit l'architecture déjà utilisée par Aurore Plume et Aurore Talents : un point d'entrée \`worker/index.js\`, une configuration \`wrangler.toml\`, un binding R2 \`MEMORIES_BUCKET\`, et les fichiers statiques servis par \`ASSETS\`.
+## Configuration déclarée dans le dépôt
 
-## Configuration Cloudflare
+- Worker : `aurore-memories` (le nom doit être identique dans Cloudflare et `wrangler.toml`).
+- Entrée JavaScript : `worker/index.js`.
+- Site statique : fichiers à la racine, servis via le binding `ASSETS`.
+- Bucket R2 existant : `aurore-memories`, binding `MEMORIES_BUCKET`.
+- Supabase Mémoire : `https://oegxxndiuovisustjstp.supabase.co`.
+- Dépôt : `ouali-nat/Aurore-memories`, branche `main`, répertoire racine `/`.
 
-Le Worker est nommé \`aurore-memoire\`. La configuration lie le bucket existant \`aurore-memories\` et le projet Supabase Aurore Mémoire (\`oegxxndiuovisustjstp\`). La clé publique Supabase ne figure volontairement pas dans GitHub.
+Le fichier `wrangler.toml` est la source de vérité pour le nom, l'entrée JavaScript, les actifs et le binding R2. Le déploiement Cloudflare doit exécuter `npx wrangler deploy` à la racine du dépôt. Il ne suffit pas que GitHub/Vercel publie le site statique.
 
-Dans Cloudflare > Workers & Pages > aurore-memoire > Settings > Variables and Secrets, ajouter :
-- \`SUPABASE_PUBLISHABLE_KEY\` : la clé publishable du projet Supabase Aurore Mémoire, enregistrée comme variable/secret de runtime.
-- \`ALLOWED_ORIGINS\` (facultatif) : les origines de production supplémentaires séparées par des virgules.
+## Diagnostic du mode « static assets only »
 
-La clé doit être celle du projet Supabase Mémoire, pas celle d'Archives, Plume, Talents ou Aurore ID.
+Si Cloudflare affiche « Variables cannot be added to a Worker that only has static assets » ou « Bindings cannot be added… », la version actuellement active n'a pas été déployée comme Worker avec script. La configuration du dépôt déclare pourtant `main = "worker/index.js"` et un binding `ASSETS`; la configuration inclut aussi `MEMORIES_BUCKET`.
 
-## Git integration
+Après un déploiement du commit courant, vérifier `GET /health`. La réponse attendue contient :
+- `ok: true`
+- `service: "aurore-memories"`
+- `storageConfigured: true`
+- `authConfigured: false` tant que la clé runtime n'a pas été configurée, puis `true`.
 
-Connecter le Worker au dépôt \`ouali-nat/Aurore-memories\`, branche \`main\`, répertoire racine \`/\`. Ne pas définir de commande de build Node : le site est constitué de fichiers statiques à la racine. Le fichier \`wrangler.toml\` configure la publication du Worker et des actifs.
+Si Cloudflare affiche toujours le mode « static assets only » après le déploiement, le build Git intégré n'a pas appliqué `wrangler.toml`/le script. Vérifier le détail du déploiement et que la commande exacte est `npx wrangler deploy`, le répertoire racine `/`, la branche `main`, et que les builds ne sont pas désactivés. Ne pas essayer d'ajouter les bindings dans l'écran tant que le Worker n'est pas déployé avec son script.
 
-Le Worker Cloudflare est distinct d'un déploiement Vercel. Un push GitHub ne créera pas un Worker Cloudflare si le Worker n'a pas d'abord été créé/lié au dépôt dans Workers & Pages. Le nom dans Cloudflare doit correspondre exactement à \`name = "aurore-memoire"\`.
+## Secrets runtime à ajouter après activation du script
 
-## Routes de stockage
+Dans Cloudflare > Workers & Pages > `aurore-memories` > Settings > Variables and Secrets :
+- `SUPABASE_PUBLISHABLE_KEY` : clé publishable du projet Supabase Mémoire (pas celle d'Archives, Plume, Talents ou Aurore ID). La conserver comme secret runtime et ne jamais la committer dans GitHub.
+- `ALLOWED_ORIGINS` (facultatif) : origines de production additionnelles, séparées par des virgules.
 
-- \`GET /health\` : état de configuration, sans données privées.
-- \`GET /api/storage/list\` : liste les fichiers de l'utilisateur connecté.
-- \`POST /api/storage?key=nom-ou-chemin\` : téléverse le corps brut du fichier.
-- \`GET /api/storage?key=nom-ou-chemin\` : télécharge un fichier de l'utilisateur.
-- \`DELETE /api/storage?key=nom-ou-chemin\` : supprime un fichier de l'utilisateur.
+Le binding R2 `MEMORIES_BUCKET` est déclaré dans `wrangler.toml`. Une fois le déploiement Wrangler appliqué, vérifier qu'il pointe bien vers le bucket `aurore-memories`.
 
-Toutes les routes de stockage exigent \`Authorization: Bearer <jeton-de-session-Supabase>\`. Le Worker vérifie le jeton avec \`/auth/v1/user\` et isole les objets dans \`Aurore mémoires/<user-id>/\`. Limite : 10 Mo, comme les Workers Plume et Talents.
+## API privée de stockage
 
-## Note sur le frontend et Aurore ID
+Toutes les routes de stockage exigent `Authorization: Bearer <jeton-de-session-Supabase>`. Le Worker vérifie le jeton via `/auth/v1/user` et isole les objets sous `Aurore mémoires/<user-id>/`. Taille maximale d'un fichier : 10 Mo.
 
-Le Worker fournit l'infrastructure. Il ne modifie pas automatiquement l'authentification du site ni les mémorisations conservées dans \`localStorage\`. La prochaine étape sera de raccorder le client Mémoire à \`/api/storage\` et d'enregistrer Aurore ID comme fournisseur OIDC du projet Supabase Mémoire, après validation de la configuration du Worker.
+- `GET /health` : état de configuration non sensible.
+- `GET /api/storage/list` : liste les fichiers de l'utilisateur connecté.
+- `POST /api/storage?key=nom-ou-chemin` : téléverse le corps brut du fichier.
+- `GET /api/storage?key=nom-ou-chemin` : télécharge un fichier de l'utilisateur.
+- `DELETE /api/storage?key=nom-ou-chemin` : supprime un fichier de l'utilisateur.
+
+## Limites restantes
+
+Le Worker ne raccorde pas automatiquement le frontend au stockage R2 et ne configure pas à lui seul Aurore ID comme fournisseur OIDC. Ces deux étapes ne doivent être déclarées terminées qu'après intégration du client Mémoire et validation du flux de connexion Aurore ID.
