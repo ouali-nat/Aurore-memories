@@ -19,7 +19,8 @@ Après un déploiement du commit courant, vérifier `GET /health`. La réponse a
 - `ok: true`
 - `service: "aurore-memories"`
 - `storageConfigured: true`
-- `authConfigured: false` tant que la clé runtime n'a pas été configurée, puis `true`.
+- `authConfigured: true` après configuration de `SUPABASE_PUBLISHABLE_KEY`.
+- `memorySyncVersion: "2026-10-17-r2-memory-sync"` et `conditionalWrites: true` pour confirmer que la version de sauvegarde des mémorisations est active.
 
 Si Cloudflare affiche toujours le mode « static assets only » après le déploiement, le build Git intégré n'a pas appliqué `wrangler.toml`/le script. Vérifier le détail du déploiement et que la commande exacte est `npx wrangler deploy`, le répertoire racine `/`, la branche `main`, et que les builds ne sont pas désactivés. Ne pas essayer d'ajouter les bindings dans l'écran tant que le Worker n'est pas déployé avec son script.
 
@@ -45,11 +46,12 @@ Toutes les routes de stockage exigent `Authorization: Bearer <jeton-de-session-S
 
 Le frontend contient maintenant :
 - `auth.js` : client Supabase Auth, session persistante et connexion Aurore ID par le fournisseur `custom:aurore-id`.
-- `fichiers.html` + `cloud-storage.js` : page de fichiers privés pour lister, envoyer, télécharger et supprimer des objets du Worker.
+- `fichiers.html` + `cloud-storage.js` : page privée pour lister, envoyer, télécharger et supprimer des objets du Worker.
+- `memory-cloud-sync.js` : sauvegarde automatique du contenu `aurore-memory-cards-v1`, qui contient les cartes recto-verso, les blocs de mémorisation et l'historique de révision.
+- `app.js` : charge la liaison cloud sur les pages de mémorisation concernées.
 - `cloud-files.css` : présentation mobile et bureau.
-- Un accès « Mes fichiers privés » depuis l'accueil.
 
-Les cartes et mémorisations existantes continuent d'utiliser leur stockage local ; aucune migration de ces données n'a été effectuée. La page de fichiers ne peut pas réussir la connexion ou un upload tant que le fournisseur OIDC et son client n'ont pas été enregistrés.
+Les données restent d'abord enregistrées localement, puis sont sauvegardées sous `sauvegarde-memorisations.json` dans le dossier privé de l'utilisateur. Si une version cloud existe et diffère, la synchronisation s'arrête et propose de fusionner, conserver la version locale ou restaurer le cloud. Les versions sont archivées avant les opérations de résolution. Les écritures du fichier principal et des archives utilisent `If-Match` / `If-None-Match` afin de détecter les modifications distantes. Aucune donnée locale n'est effacée automatiquement. L'authentification OIDC reste nécessaire avant le premier transfert.
 
 ### Réglages OIDC indispensables pour finaliser la liaison
 
@@ -69,9 +71,11 @@ Ne jamais committer le Client Secret dans GitHub ni dans le JavaScript. Il appar
 
 ### Test de validation
 
-1. Ouvrir `https://aurore-memories-aurore9.vercel.app/fichiers.html` et se connecter avec Aurore ID.
-2. Envoyer un fichier de moins de 10 Mo.
-3. Vérifier dans R2 que l'objet apparaît sous `Aurore mémoires/<identifiant-utilisateur-Mémoire>/<nom-du-fichier>`.
-4. Télécharger puis supprimer ce fichier depuis la page. Tester aussi qu'une session déconnectée ne peut ni lister ni modifier les fichiers.
+1. Ouvrir `https://aurore-memories.oualikevin6.workers.dev/health` et vérifier `memorySyncVersion` et `conditionalWrites`, en plus de `authConfigured` et `storageConfigured`.
+2. Ouvrir `https://aurore-memories-aurore9.vercel.app/fichiers.html` et se connecter avec Aurore ID.
+3. Envoyer un fichier de moins de 10 Mo.
+4. Vérifier dans R2 que l'objet apparaît sous `Aurore mémoires/<identifiant-utilisateur-Mémoire>/<nom-du-fichier>`.
+5. Télécharger puis supprimer ce fichier depuis la page. Tester aussi qu'une session déconnectée ne peut ni lister ni modifier les fichiers.
+6. Créer ou modifier une carte et une mémoire, attendre la confirmation de sauvegarde, puis vérifier `Aurore mémoires/<identifiant-utilisateur-Mémoire>/sauvegarde-memorisations.json`.
 
 La validation HTTP de la page publiée est faite (réponse 200). La connexion OIDC, l'envoi, le téléchargement et la suppression restent à valider une fois les réglages ci-dessus enregistrés.
