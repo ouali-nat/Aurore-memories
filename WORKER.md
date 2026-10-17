@@ -51,7 +51,7 @@ Le frontend contient maintenant :
 - `app.js` : charge la liaison cloud sur les pages de mémorisation concernées.
 - `cloud-files.css` : présentation mobile et bureau.
 
-Les données restent d'abord enregistrées localement, puis sont sauvegardées sous `sauvegarde-memorisations.json` dans le dossier privé de l'utilisateur. Si une version cloud existe et diffère, la synchronisation s'arrête et propose de fusionner, conserver la version locale ou restaurer le cloud. Les versions sont archivées avant les opérations de résolution. Les écritures du fichier principal et des archives utilisent `If-Match` / `If-None-Match` afin de détecter les modifications distantes. Aucune donnée locale n'est effacée automatiquement. L'authentification OIDC reste nécessaire avant le premier transfert.
+Les données restent d'abord enregistrées localement, puis sont sauvegardées sous `sauvegarde-memorisations.json` dans le dossier privé de l'utilisateur. Si une version cloud existe et diffère, la synchronisation s'arrête et propose de fusionner, conserver la version locale ou restaurer le cloud. Avant une fusion, les versions locale et cloud sont archivées séparément ; avant un remplacement ou une restauration, la version qui ne sera pas conservée est archivée. Les écritures du fichier principal et des archives utilisent `If-Match` / `If-None-Match` afin de détecter les modifications distantes. Aucune donnée locale n'est effacée automatiquement. L'authentification OIDC reste nécessaire avant le premier transfert.
 
 ### Réglages OIDC indispensables pour finaliser la liaison
 
