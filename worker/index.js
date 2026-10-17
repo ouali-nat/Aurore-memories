@@ -10,7 +10,7 @@ function corsHeaders(request, env) {
   const headers = new Headers({
     "Vary": "Origin",
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, If-Match, If-None-Match",
     "Access-Control-Max-Age": "86400"
   });
   if (origin && (sameOrigin || allowed.includes(origin))) {
@@ -43,6 +43,10 @@ async function authenticatedUser(request, env) {
   if (!response.ok) return null;
   const user = await response.json();
   return user && typeof user.id === "string" ? user : null;
+}
+
+function normalizedEtag(value) {
+  return String(value || "").replace(/^"|"$/g, "");
 }
 
 function relativeKey(value) {
@@ -111,19 +115,35 @@ export default {
         if (declaredLength > 10 * 1024 * 1024) {
           return json({ error: "File exceeds 10 MB limit" }, 413, cors);
         }
+        const ifMatch = request.headers.get("If-Match");
+        const ifNoneMatch = request.headers.get("If-None-Match");
+        const requiresCondition = key === "sauvegarde-memorisations.json" || key.startsWith("archives/");
+        const current = await env.MEMORIES_BUCKET.head(objectKey);
+        if (ifNoneMatch === "*" && current) {
+          return json({ error: "Object already exists; no data was overwritten." }, 412, cors);
+        }
+        if (ifMatch && (!current || normalizedEtag(current.httpEtag) !== normalizedEtag(ifMatch))) {
+          return json({ error: "Cloud object changed; retry after refreshing the remote version." }, 412, cors);
+        }
+        if (requiresCondition && ifNoneMatch !== "*" && !ifMatch) {
+          return json({ error: "A conditional write is required to protect existing memorisations." }, 428, cors);
+        }
+        if (current && current.customMetadata?.ownerId !== user.id) {
+          return json({ error: "Forbidden" }, 403, cors);
+        }
         const body = await request.arrayBuffer();
         if (body.byteLength > 10 * 1024 * 1024) {
           return json({ error: "File exceeds 10 MB limit" }, 413, cors);
         }
         const contentType = request.headers.get("Content-Type") || "application/octet-stream";
-        await env.MEMORIES_BUCKET.put(objectKey, body, {
+        const stored = await env.MEMORIES_BUCKET.put(objectKey, body, {
           httpMetadata: {
             contentType,
             cacheControl: "private, no-store"
           },
           customMetadata: { ownerId: user.id }
         });
-        return json({ ok: true, key }, 201, cors);
+        return json({ ok: true, key, etag: stored.etag }, 201, cors);
       }
 
       if (request.method === "DELETE") {
