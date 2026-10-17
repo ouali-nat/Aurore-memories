@@ -64,8 +64,8 @@ function json(data, status, request, env, extraHeaders) {
   return new Response(JSON.stringify(data), { status: status || 200, headers });
 }
 
-function errorResponse(message, status, request, env) {
-  return json({ error: message }, status, request, env);
+function errorResponse(message, status, request, env, extraHeaders) {
+  return json({ error: message }, status, request, env, extraHeaders);
 }
 
 function isAllowedOrigin(origin, env) {
