@@ -1,13 +1,8 @@
 (function(){
 "use strict";
 var KEY="aurore-memory-cards-v1";
-(function loadMemoryCloudSync(){
-if(window.__auroreMemoryCloudLoaderStarted)return;
-window.__auroreMemoryCloudLoaderStarted=true;
-function load(src){return new Promise(function(resolve,reject){var existing=Array.prototype.find.call(document.scripts,function(s){return s.src&&s.src.indexOf(src)>=0});if(existing){if(existing.dataset.loaded==="true"||document.readyState==="complete")return resolve();existing.addEventListener("load",resolve,{once:true});existing.addEventListener("error",reject,{once:true});return}var s=document.createElement("script");s.src=src;s.async=false;s.onload=function(){s.dataset.loaded="true";resolve()};s.onerror=reject;document.head.appendChild(s)})}
-var chain=window.auroreAuth?Promise.resolve():(window.supabase&&window.supabase.createClient?Promise.resolve():load("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2")).then(function(){return window.auroreAuth?Promise.resolve():load("auth.js?v=20261017-memory-cloud3")});
-chain.then(function(){return load("cloud-sync.js?v=20261017-memory-cloud3")}).catch(function(e){console.warn("Aurore Mémoire : sauvegarde cloud indisponible ; données locales conservées.",e)});
-})();
+// Cloud backup is initialized centrally by app.js with memory-cloud-sync.js.
+// Do not load the legacy cloud-sync.js here: it races auth initialization and writes a second R2 object.
 var MODES=[["Toucher pour révéler","mode-revelation.html"],["Curseur","mode-curseur.html"],["Écouter","mode-ecouter.html"],["Première lettre","mode-premiere-lettre.html"],["Trous","mode-trous.html"],["Réordonner","mode-reordonner.html"],["Taper","mode-taper.html"],["Choix multiple","mode-choix-multiple.html"],["Parler","mode-parler.html"]];
 var $=function(s){return document.querySelector(s)};
 var safe=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
