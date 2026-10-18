@@ -124,14 +124,14 @@
         button.textContent="Demande envoyée";
         return;
       }
-      var result=await client.from("study_group_members").insert({group_id:groupId,user_id:session.user.id});
-      if(result.error && result.error.code!=="23505") throw result.error;
+      var result=await client.rpc("join_open_study_group",{p_group_id:groupId});
+      if(result.error) throw result.error;
       joinedGroupIds[groupId]=true;
       toast("Tu as rejoint le groupe.");
       renderGroups();
     } catch(error) {
       console.error("Joining public group:",error);
-      toast("Impossible de rejoindre ce groupe. Réessaie après t’être reconnecté.");
+      toast(error && error.message && error.message.includes("GROUP_FULL")?"Ce groupe a atteint sa capacité maximale.":"Impossible de rejoindre ce groupe. Réessaie après t’être reconnecté.");
       button.disabled=false; button.textContent=group.join_policy==="open"?"Rejoindre":"Demander à rejoindre";
     }
   }
