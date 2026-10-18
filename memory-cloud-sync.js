@@ -136,6 +136,17 @@
     });
     return response.json();
   }
+
+  // Vérifie réellement la sauvegarde dans R2 après chaque écriture principale.
+  // Un succès HTTP seul ne suffit pas à afficher « sauvegardé ».
+  async function writeMainVerified(data, condition) {
+    var result = await putObject(CLOUD_KEY, envelope(data), condition);
+    var remote = await readCloud();
+    if (!sameData(data, remote.data)) {
+      throw new Error("La vérification après envoi ne correspond pas aux données locales. Les données locales sont conservées.");
+    }
+    return result;
+  }
   async function archiveSnapshot(data, label) {
     var key = "archives/" + label + "-" + stamp() + ".json";
     await putObject(key, envelope(data), { type: "none" });
@@ -175,7 +186,7 @@
         }
         status("Première sauvegarde des cartes et mémoires vers ton espace privé…", "info");
         try {
-          var created = await putObject(CLOUD_KEY, envelope(local), { type: "none" });
+          var created = await writeMainVerified(local, { type: "none" });
           saveBase(created.etag);
           conflict = null;
           status("Cartes et mémoires sauvegardées dans ton espace privé R2.", "ok");
@@ -200,7 +211,7 @@
       if (base && remoteEtag && base === remoteEtag) {
         status("Enregistrement des dernières modifications dans R2…", "info");
         try {
-          var updated = await putObject(CLOUD_KEY, envelope(local), { type: "match", etag: remoteEtag });
+          var updated = await writeMainVerified(local, { type: "match", etag: remoteEtag });
           saveBase(updated.etag);
           conflict = null;
           status("Modifications des cartes et mémoires sauvegardées dans R2.", "ok");
@@ -305,7 +316,7 @@
         await archiveSnapshot(selected.local, "avant-fusion-locale");
         await archiveSnapshot(selected.remote, "avant-fusion-cloud");
         var merged = mergeData(selected.local, selected.remote);
-        var result = await putObject(CLOUD_KEY, envelope(merged), { type: "match", etag: selected.etag });
+        var result = await writeMainVerified(merged, { type: "match", etag: selected.etag });
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(merged));
         saveBase(result.etag);
         conflict = null;
@@ -313,7 +324,7 @@
       } else if (action === "local") {
         if (!window.confirm("Conserver les données de cet appareil dans la sauvegarde principale ? La version cloud actuelle sera d’abord archivée dans R2.")) return;
         await archiveSnapshot(selected.remote, "avant-remplacement-cloud");
-        var resultLocal = await putObject(CLOUD_KEY, envelope(selected.local), { type: "match", etag: selected.etag });
+        var resultLocal = await writeMainVerified(selected.local, { type: "match", etag: selected.etag });
         saveBase(resultLocal.etag);
         conflict = null;
         status("Sauvegarde de cet appareil devenue la version principale. L’ancienne version cloud est conservée dans les archives R2.", "ok");
