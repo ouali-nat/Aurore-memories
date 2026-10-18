@@ -358,7 +358,7 @@
     });
   }
 
-  (async function () {
+  window.auroreMemoryCloudBootstrapPromise = (async function () {
     try {
       if (!window.supabase || typeof window.supabase.createClient !== "function") {
         await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
