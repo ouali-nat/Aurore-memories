@@ -23,12 +23,12 @@
     <section class="groups-hero">
       <p class="eyebrow">APPRENDRE ENSEMBLE</p>
       <h1>Les groupes d'étude</h1>
-      <p>Découvre des groupes publics pour apprendre à plusieurs, ou crée ton propre espace. Un compte Google sera nécessaire pour créer un groupe, rejoindre un groupe ou partager des cartes.</p>
+      <p>Découvre des groupes publics ou crée un espace privé pour apprendre à plusieurs. La création et l’adhésion nécessitent une connexion Aurore ID.</p>
     </section>
     <div class="groups-toolbar">
       <label class="groups-search"><span aria-hidden="true">⌕</span><input id="groupSearch" type="search" placeholder="Rechercher un groupe, une matière…" aria-label="Rechercher un groupe"></label>
       <button class="groups-btn primary" id="createGroupButton" type="button">＋ Créer un groupe</button>
-      <button class="groups-btn" id="googleSignInButton" type="button">Continuer avec Google</button>
+      <button class="groups-btn" id="auroreIdSignInButton" type="button">Connexion Aurore ID</button>
     </div>
     <div class="groups-tabs" role="tablist" aria-label="Filtrer les groupes">
       <button class="groups-tab" type="button" role="tab" aria-selected="true" data-filter="public">Groupes publics</button>
@@ -53,15 +53,22 @@
           <input name="subject" maxlength="80" placeholder="Ex. Mathématiques, SVT, Français">
         </label>
         <label>Niveau (facultatif)
-          <input name="level" maxlength="80" placeholder="Ex. 3e, Terminale D, Licence 1">
+          <select name="level"><option value="">Choisir un niveau (facultatif)</option><option value="Primaire">Primaire</option><option value="Secondaire">Secondaire</option><option value="Licence">Licence</option><option value="Master">Master</option><option value="Autre">Autre</option></select>
         </label>
         <fieldset style="border:0;padding:0;margin:0">
           <legend style="font-size:.8rem;font-weight:800;margin-bottom:7px">Visibilité du groupe</legend>
           <div class="groups-visibility-options">
             <label class="groups-visibility-option"><input type="radio" name="visibility" value="public" checked><span>🌐 Public<small>Visible dans la liste des groupes.</small></span></label>
-            <label class="groups-visibility-option"><input type="radio" name="visibility" value="private"><span>🔒 Privé<small>Réservé aux personnes autorisées. Les invitations arrivent ensuite.</small></span></label>
+            <label class="groups-visibility-option"><input type="radio" name="visibility" value="private"><span>🔒 Privé<small>Non répertorié. Seuls les membres autorisés y accèdent.</small></span></label>
           </div>
         </fieldset>
+        <label>Adhésion au groupe
+          <select name="join_policy"><option value="approval" selected>Après approbation du propriétaire</option><option value="open">Libre pour les groupes publics</option></select>
+          <small>Les groupes privés restent accessibles uniquement sur invitation.</small>
+        </label>
+        <label>Nombre maximal de membres
+          <select name="max_members"><option value="10">10 membres</option><option value="30" selected>30 membres</option><option value="100">100 membres</option><option value="500">500 membres</option></select>
+        </label>
         <p class="groups-status" id="createGroupStatus" role="status" aria-live="polite"></p>
         <div class="groups-modal-actions"><button class="groups-btn" type="button" data-close-modal>Annuler</button><button class="groups-btn primary" id="submitCreateGroup" type="submit">Créer le groupe</button></div>
       </form>
@@ -70,6 +77,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
   <script src="app.js?v=20261015-nav-final"></script>
-  <script src="groupes.js?v=20261016-google-groups"></script>
+  <script src="groupes.js?v=20261018-aurore-id-groups-primary"></script>
 </body>
 </html>
