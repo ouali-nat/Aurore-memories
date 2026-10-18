@@ -7,7 +7,7 @@
   <meta name="description" content="Découvre les groupes d'étude Aurore Mémoire et partage tes progrès.">
   <title>Groupes d'étude — Aurore Mémoire</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="memoire.css?v=20261018-groups-invitations">
+  <link rel="stylesheet" href="memoire.css?v=20261018-group-covers-3col">
 </head>
 <body data-page="groups">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -52,6 +52,10 @@
         <label>Matière (facultatif)
           <input name="subject" maxlength="80" placeholder="Ex. Mathématiques, SVT, Français">
         </label>
+        <label>Couverture du groupe (facultatif)
+          <input name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+          <small>Photo JPG, PNG, WebP ou AVIF, 5 Mo maximum.</small>
+        </label>
         <label>Niveau (facultatif)
           <select name="level"><option value="">Choisir un niveau (facultatif)</option><option value="Primaire">Primaire</option><option value="Secondaire">Secondaire</option><option value="Licence">Licence</option><option value="Master">Master</option><option value="Autre">Autre</option></select>
         </label>
@@ -91,7 +95,7 @@
         loaded = true;
         if (timeoutId) window.clearTimeout(timeoutId);
         var script = document.createElement("script");
-        script.src = "groupes.js?v=20261018-supabase-loader-fallback-1";
+        script.src = "groupes.js?v=20261018-group-covers-diagnostic-2";
         document.body.appendChild(script);
       }
       function tryNext() {
