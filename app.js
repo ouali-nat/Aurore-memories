@@ -364,10 +364,10 @@
         await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
       }
       if (!window.auroreAuth) {
-        await loadScript("auth.js?v=20261017-memory-cloud2");
+        await loadScript("auth.js?v=20261018-r2-verified-sync");
       }
       if (!window.__auroreMemoryCloudSyncLoaded) {
-        await loadScript("memory-cloud-sync.js?v=20261017-memory-cloud");
+        await loadScript("memory-cloud-sync.js?v=20261018-r2-verified-sync");
       }
     } catch (error) {
       console.warn("Aurore Mémoire : la sauvegarde cloud n’est pas initialisée. Les données locales restent disponibles.", error);
