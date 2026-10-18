@@ -67,7 +67,7 @@
     grid.setAttribute("aria-busy","true");
     grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
     try {
-      var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,created_at").order("created_at",{ascending:false}).limit(100);
+      var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
       if (result.error) throw result.error;
       groups = result.data || [];
       joinedGroupIds = Object.create(null);
@@ -105,7 +105,10 @@
       var isOwner=signedIn()&&g.created_by===session.user.id, isMember=!!joinedGroupIds[g.id]||isOwner;
       var visibilityLabel=g.visibility==="private"?"🔒 Privé":"🌐 Public";
       var action=isMember?'<button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Ouvrir le groupe ↗</button>':'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Détails</button><button class="groups-btn primary" type="button" data-join-group="'+escapeHtml(g.id)+'">'+(signedIn()?(g.join_policy==="open"?"Rejoindre":"Demander à rejoindre"):"Connexion Aurore ID")+'</button></div>';
-      return '<article class="group-card"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">♧</span><span class="group-visibility">' + visibilityLabel + '</span></div><h2>'+escapeHtml(g.name)+'</h2><p>'+escapeHtml(g.description||"Un espace d’étude pour apprendre et partager ses progrès.")+'</p><div class="group-meta">'+meta.join("")+'</div>'+action+'</article>';
+      var cover = g.cover_url
+        ? '<div class="group-cover"><img src="' + escapeHtml(g.cover_url) + '" alt="Couverture du groupe ' + escapeHtml(g.name) + '" loading="lazy"></div>'
+        : '<div class="group-cover group-cover-placeholder" aria-hidden="true"><span>AURORE · ÉTUDE</span><b>♧</b></div>';
+      return '<article class="group-card">' + cover + '<div class="group-card-body"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">♧</span><span class="group-visibility">' + visibilityLabel + '</span></div><h2>'+escapeHtml(g.name)+'</h2><p>'+escapeHtml(g.description||"Un espace d’étude pour apprendre et partager ses progrès.")+'</p><div class="group-meta">'+meta.join("")+'</div>'+action+'</div></article>';
     }).join("");
     grid.querySelectorAll("[data-open-group]").forEach(function(button){button.addEventListener("click",function(){window.location.href="groupe.html?id="+encodeURIComponent(button.dataset.openGroup);});});
     grid.querySelectorAll("[data-join-group]").forEach(function(button){button.addEventListener("click",function(){joinGroup(button.dataset.joinGroup,button);});});
@@ -149,16 +152,31 @@
       max_members:Number(data.get("max_members")||30),
       created_by:session.user.id
     };
+    var coverFile = form.querySelector('[name="cover"]').files[0] || null;
+    if (coverFile && (!/^image\/(jpeg|png|webp|avif)$/.test(coverFile.type) || coverFile.size > 5 * 1024 * 1024)) {
+      status.textContent = "La couverture doit être une image JPG, PNG, WebP ou AVIF de 5 Mo maximum.";
+      return;
+    }
     if(payload.name.length<3){status.textContent="Le nom doit contenir au moins 3 caractères.";return;}
     submit.disabled=true; status.textContent="Création du groupe…";
     try{
+      if (coverFile) {
+        status.textContent = "Envoi de la couverture…";
+        var extension = ({ "image/jpeg":"jpg", "image/png":"png", "image/webp":"webp", "image/avif":"avif" })[coverFile.type];
+        var objectPath = session.user.id + "/" + crypto.randomUUID() + "." + extension;
+        var upload = await client.storage.from("study-group-covers").upload(objectPath, coverFile, { upsert:false, contentType:coverFile.type, cacheControl:"3600" });
+        if (upload.error) throw upload.error;
+        payload.cover_url = client.storage.from("study-group-covers").getPublicUrl(objectPath).data.publicUrl;
+      }
+      status.textContent = "Création du groupe…";
       var result=await client.from("study_groups").insert(payload).select("id").single();
       if(result.error)throw result.error;
       closeModal();form.reset();toast("Groupe créé.");await loadGroups();
       if(result.data && result.data.id)window.location.href="groupe.html?id="+encodeURIComponent(result.data.id);
     }catch(error){
       console.error("Creating study group:",error);
-      status.textContent=error && error.code==="42501"?"Tu n’as pas l’autorisation de créer ce groupe. Reconnecte-toi.":"La création a échoué. Vérifie ta connexion et réessaie.";
+      var detail = [error && error.message, error && error.details, error && error.hint, error && error.code].filter(Boolean).join(" · ");
+      status.textContent = detail ? "Échec : " + detail : "La création a échoué. Vérifie ta connexion et réessaie.";
     }finally{submit.disabled=false;}
   }
   function setFilter(value) {
