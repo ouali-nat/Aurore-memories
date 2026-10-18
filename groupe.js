@@ -65,9 +65,9 @@ if(!client||!currentGroup)return;if(!session){await signIn();return;}
 joinButton.disabled=true;joinButton.textContent="…";
 try{
 if(currentGroup.visibility!=="public"){toast("Ce groupe est privé. Utilise un lien d’invitation valide.");return;}
-if(currentGroup.join_policy==="open"){var result=await client.from("study_group_members").insert({group_id:id,user_id:session.user.id});if(result.error&&result.error.code!=="23505")throw result.error;toast("Tu as rejoint le groupe.");joinButton.hidden=true;message("Tu fais partie de ce groupe.");}
+if(currentGroup.join_policy==="open"){var result=await client.rpc("join_open_study_group",{p_group_id:id});if(result.error)throw result.error;toast("Tu as rejoint le groupe.");joinButton.hidden=true;message("Tu fais partie de ce groupe.");}
 else{var req=await client.from("study_group_join_requests").insert({group_id:id,user_id:session.user.id});if(req.error&&req.error.code!=="23505")throw req.error;toast("Demande envoyée au propriétaire.");joinButton.textContent="Demande envoyée";joinButton.disabled=true;}
-}catch(error){console.error(error);toast("Impossible de rejoindre le groupe. Vérifie la capacité maximale et réessaie.");joinButton.disabled=false;joinButton.textContent=currentGroup.join_policy==="open"?"Rejoindre le groupe":"Demander à rejoindre";}
+}catch(error){console.error(error);toast(error&&error.message&&error.message.includes("GROUP_FULL")?"Ce groupe a atteint sa capacité maximale.":"Impossible de rejoindre le groupe. Vérifie les paramètres d’adhésion et réessaie.");joinButton.disabled=false;joinButton.textContent=currentGroup.join_policy==="open"?"Rejoindre le groupe":"Demander à rejoindre";}
 }
 async function createInvite(){
 if(!session||!currentGroup||session.user.id!==currentGroup.created_by){toast("Seul le propriétaire peut créer une invitation.");return;}
