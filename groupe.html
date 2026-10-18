@@ -39,10 +39,45 @@
 </section>
 </main>
 <script src="app.js?v=20261015-nav-final"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="groupe.js?v=20261018-supabase-loader-fallback-1"></script>
+<script>
+(function () {
+  var sources = [
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
+    "https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+    "https://unpkg.com/@supabase/supabase-js@2"
+  ];
+  function loadApp() {
+    var app = document.createElement("script");
+    app.src = "groupe.js?v=20261018-sdk-loader-fallback-2";
+    app.onerror = function () {
+      var title = document.getElementById("groupTitle");
+      var status = document.getElementById("groupStatus");
+      if (title) title.textContent = "Service indisponible";
+      if (status) status.textContent = "Le script de l’espace collectif n’a pas pu être chargé. Vérifie la connexion puis recharge la page.";
+    };
+    document.body.appendChild(app);
+  }
+  function trySource(index) {
+    if (window.supabase && window.supabase.createClient) { loadApp(); return; }
+    if (index >= sources.length) {
+      var title = document.getElementById("groupTitle");
+      var status = document.getElementById("groupStatus");
+      if (title) title.textContent = "Service momentanément indisponible";
+      if (status) status.textContent = "La bibliothèque de connexion n’a pas pu être chargée depuis les serveurs disponibles. Vérifie la connexion puis appuie sur Actualiser.";
+      return;
+    }
+    var script = document.createElement("script");
+    script.src = sources[index];
+    script.onload = function () {
+      if (window.supabase && window.supabase.createClient) loadApp();
+      else trySource(index + 1);
+    };
+    script.onerror = function () { trySource(index + 1); };
+    document.head.appendChild(script);
+  }
+  trySource(0);
+})();
+</script>
 </body>
 </html>
