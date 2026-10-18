@@ -3,37 +3,8 @@
 
   var STORAGE_KEY = "aurore-memory-cards-v1";
 
-  // Charge le module de sauvegarde cloud sur toutes les pages utilisant le moteur mémoire.
-  // L'absence de connexion n'empêche jamais l'utilisation hors ligne.
-  (function loadMemoryCloudSync() {
-    if (window.__auroreMemoryCloudLoaderStarted) return;
-    window.__auroreMemoryCloudLoaderStarted = true;
-    function loadScript(src) {
-      return new Promise(function (resolve, reject) {
-        var existing = Array.prototype.find.call(document.scripts, function (script) {
-          return script.src && script.src.indexOf(src) >= 0;
-        });
-        if (existing) {
-          if (existing.dataset.loaded === "true" || document.readyState === "complete") return resolve();
-          existing.addEventListener("load", resolve, { once: true });
-          existing.addEventListener("error", reject, { once: true });
-          return;
-        }
-        var script = document.createElement("script");
-        script.src = src;
-        script.async = false;
-        script.onload = function () { script.dataset.loaded = "true"; resolve(); };
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-    var chain = window.auroreAuth ? Promise.resolve() :
-      (window.supabase && window.supabase.createClient ? Promise.resolve() :
-        loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"))
-        .then(function () { return window.auroreAuth ? Promise.resolve() : loadScript("auth.js?v=20261017-memory-cloud3"); });
-    chain.then(function () { return loadScript("cloud-sync.js?v=20261017-memory-cloud3"); })
-      .catch(function (error) { console.warn("Aurore Mémoire : synchronisation cloud indisponible, les données locales restent conservées.", error); });
-  })();
+  // La sauvegarde R2 unifiée est initialisée par app.js via memory-cloud-sync.js.
+  // Ne pas charger cloud-sync.js ici : il écrivait une deuxième sauvegarde concurrente.
   var SELECTED_DECK_KEY = "aurore-memory-selected-deck";
   var SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co";
   var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
