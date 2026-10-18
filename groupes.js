@@ -9,7 +9,7 @@
   var form = document.getElementById("createGroupForm");
   var status = document.getElementById("createGroupStatus");
   var submit = document.getElementById("submitCreateGroup");
-  var loginButton = document.getElementById("googleSignInButton");
+  var loginButton = document.getElementById("auroreIdSignInButton");
   var createButton = document.getElementById("createGroupButton");
 
   function toast(message) {
@@ -21,23 +21,23 @@
   }
   function signedIn() { return !!(session && session.user); }
   function openModal() {
-    if (!signedIn()) { toast("Connecte-toi avec Google pour créer un groupe."); startGoogleSignIn(); return; }
+    if (!signedIn()) { toast("Connecte-toi avec Aurore ID pour créer un groupe."); startAuroreIdSignIn(); return; }
     status.textContent = "";
     modal.hidden = false;
     var name = form.querySelector('[name="name"]'); if(name) name.focus();
   }
   function closeModal() { modal.hidden = true; }
-  async function startGoogleSignIn() {
+  async function startAuroreIdSignIn() {
     if (!client) { toast("Le service de connexion n'est pas encore disponible. Réessaie plus tard."); return; }
     try {
       var result = await client.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { access_type: "offline", prompt: "select_account" } }
+        provider: "custom:aurore-id",
+        options: { redirectTo: window.location.origin + window.location.pathname, scopes: "openid email profile" }
       });
       if (result.error) throw result.error;
     } catch (error) {
-      console.error("Google sign-in:", error);
-      toast("La connexion Google n'est pas encore configurée. Elle sera activée après le réglage du fournisseur dans Supabase.");
+      console.error("Aurore ID sign-in:", error);
+      toast("La connexion Aurore ID a échoué. Vérifie la configuration du fournisseur dans Supabase Mémoire.");
     }
   }
   async function loadSession() {
@@ -53,8 +53,8 @@
     updateAuthButtons();
   }
   function updateAuthButtons() {
-    loginButton.textContent = signedIn() ? "Connecté · " + (session.user.user_metadata && (session.user.user_metadata.full_name || session.user.user_metadata.name) || session.user.email || "Compte") : "Continuer avec Google";
-    loginButton.title = signedIn() ? "Compte connecté" : "Se connecter avec Google";
+    loginButton.textContent = signedIn() ? "Connecté · " + (session.user.user_metadata && (session.user.user_metadata.full_name || session.user.user_metadata.name) || session.user.email || "Compte") : "Connexion Aurore ID";
+    loginButton.title = signedIn() ? "Compte connecté" : "Se connecter avec Aurore ID";
     createButton.textContent = signedIn() ? "＋ Créer un groupe" : "＋ Créer un groupe";
   }
   async function loadGroups() {
@@ -67,7 +67,7 @@
     grid.setAttribute("aria-busy","true");
     grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
     try {
-      var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,created_by,created_at").order("created_at",{ascending:false}).limit(100);
+      var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,created_at").order("created_at",{ascending:false}).limit(100);
       if (result.error) throw result.error;
       groups = result.data || [];
       joinedGroupIds = Object.create(null);
@@ -93,7 +93,7 @@
     });
     if(!visible.length) {
       var title=activeFilter==="mine"?"Tes groupes apparaîtront ici":"Aucun groupe public pour le moment";
-      var desc=activeFilter==="mine"?(signedIn()?"Tu n’as pas encore créé de groupe. Tu peux en créer un avec le bouton ci-dessus.":"Connecte-toi avec Google pour retrouver et créer tes groupes."):"La liste se remplira dès que des groupes publics auront été créés. Tu peux être le premier à en créer un après la connexion Google.";
+      var desc=activeFilter==="mine"?(signedIn()?"Tu n’as pas encore créé de groupe. Tu peux en créer un avec le bouton ci-dessus.":"Connecte-toi avec Aurore ID pour retrouver et créer tes groupes."):"La liste se remplira dès que des groupes publics auront été créés. Tu peux être le premier à en créer un après la connexion Aurore ID.";
       grid.innerHTML='<div class="groups-empty"><strong>'+escapeHtml(title)+'</strong><p>'+escapeHtml(desc)+'</p><button class="groups-btn primary" type="button" id="emptyCreateGroup">＋ Créer un groupe</button></div>';
       var create=document.getElementById("emptyCreateGroup"); if(create)create.addEventListener("click",openModal);
       return;
@@ -103,14 +103,15 @@
       if(g.subject)meta.push('<span>'+escapeHtml(g.subject)+'</span>');
       if(g.level)meta.push('<span>'+escapeHtml(g.level)+'</span>');
       var isOwner=signedIn()&&g.created_by===session.user.id, isMember=!!joinedGroupIds[g.id]||isOwner;
+      var visibilityLabel=g.visibility==="private"?"🔒 Privé":"🌐 Public";
       var action=isMember?'<button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Ouvrir le groupe ↗</button>':'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><button class="groups-btn" type="button" data-open-group="'+escapeHtml(g.id)+'">Détails</button><button class="groups-btn primary" type="button" data-join-group="'+escapeHtml(g.id)+'">'+(signedIn()?"Rejoindre":"Connexion")+'</button></div>';
-      return '<article class="group-card"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">♧</span><span class="group-visibility">🌐 Public</span></div><h2>'+escapeHtml(g.name)+'</h2><p>'+escapeHtml(g.description||"Un espace d’étude pour apprendre et partager ses progrès.")+'</p><div class="group-meta">'+meta.join("")+'</div>'+action+'</article>';
+      return '<article class="group-card"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">♧</span><span class="group-visibility">' + visibilityLabel + '</span></div><h2>'+escapeHtml(g.name)+'</h2><p>'+escapeHtml(g.description||"Un espace d’étude pour apprendre et partager ses progrès.")+'</p><div class="group-meta">'+meta.join("")+'</div>'+action+'</article>';
     }).join("");
     grid.querySelectorAll("[data-open-group]").forEach(function(button){button.addEventListener("click",function(){window.location.href="groupe.html?id="+encodeURIComponent(button.dataset.openGroup);});});
     grid.querySelectorAll("[data-join-group]").forEach(function(button){button.addEventListener("click",function(){joinGroup(button.dataset.joinGroup,button);});});
   }
   async function joinGroup(groupId, button) {
-    if (!signedIn()) { startGoogleSignIn(); return; }
+    if (!signedIn()) { startAuroreIdSignIn(); return; }
     if (joinedGroupIds[groupId]) { window.location.href="groupe.html?id="+encodeURIComponent(groupId); return; }
     button.disabled=true; button.textContent="…";
     try {
@@ -127,7 +128,7 @@
   }
   async function createGroup(event) {
     event.preventDefault();
-    if(!signedIn()){status.textContent="Une connexion Google est nécessaire pour créer un groupe.";startGoogleSignIn();return;}
+    if(!signedIn()){status.textContent="Une connexion Aurore ID est nécessaire pour créer un groupe.";startAuroreIdSignIn();return;}
     var data=new FormData(form);
     var payload={
       name:String(data.get("name")||"").trim(),
@@ -135,6 +136,8 @@
       subject:String(data.get("subject")||"").trim(),
       level:String(data.get("level")||"").trim(),
       visibility:String(data.get("visibility")||"public"),
+      join_policy:String(data.get("join_policy")||"approval"),
+      max_members:Number(data.get("max_members")||30),
       created_by:session.user.id
     };
     if(payload.name.length<3){status.textContent="Le nom doit contenir au moins 3 caractères.";return;}
@@ -155,7 +158,7 @@
     renderGroups();
   }
   createButton.addEventListener("click",openModal);
-  loginButton.addEventListener("click",function(){if(signedIn()){toast("Tu es déjà connecté.");return;}startGoogleSignIn();});
+  loginButton.addEventListener("click",function(){if(signedIn()){toast("Tu es déjà connecté.");return;}startAuroreIdSignIn();});
   document.querySelectorAll("[data-close-modal]").forEach(function(button){button.addEventListener("click",closeModal);});
   modal.addEventListener("click",function(event){if(event.target===modal)closeModal();});
   document.addEventListener("keydown",function(event){if(event.key==="Escape"&&!modal.hidden)closeModal();});
