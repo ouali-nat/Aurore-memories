@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111019">
   <meta name="description" content="Aurore Mémoire : organisez vos contenus et consolidez vos apprentissages.">
   <title>Accueil — Aurore Mémoire</title>
-  <link rel="stylesheet" href="style.css?v=20261018-auth-menu">
+  <link rel="stylesheet" href="style.css?v=20261018-header-menu-layout">
   <link rel="stylesheet" href="memory-access.css?v=20261018-auth-menu">
   <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation">
   <link rel="stylesheet" href="cloud-files.css?v=20261017-r2">
@@ -122,60 +122,10 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20261018-auth-init"></script>
-  <script src="memory-access.js?v=20261018-auth-menu-fix1"></script>
+  <script src="memory-access.js?v=20261018-auth-menu-fix2"></script>
   <script src="app.js?v=20261017-memory-cloud2"></script>
   <script src="home-stats.js?v=20261015-nav-stats-cache"></script>
   <script src="spa-router.js?v=20261016-spa-shell"></script>
-  <script>
-    // Secours local : le menu doit rester fonctionnel même si un autre script échoue.
-    (function () {
-      function bindAuroreMenu() {
-        var toggle = document.getElementById("appMenuToggle");
-        var panel = document.getElementById("appMenuPanel");
-        var signIn = document.getElementById("appMenuSignIn");
-        var gate = document.getElementById("memoryAccessLock");
-        if (!toggle || !panel || toggle.dataset.menuBound === "true") return;
-        toggle.dataset.menuBound = "true";
-        toggle.addEventListener("click", function (event) {
-          event.preventDefault();
-          event.stopPropagation();
-          var open = panel.hidden;
-          panel.hidden = !open;
-          toggle.setAttribute("aria-expanded", open ? "true" : "false");
-        });
-        document.addEventListener("click", function (event) {
-          if (!event.target.closest(".app-menu-wrap")) {
-            panel.hidden = true;
-            toggle.setAttribute("aria-expanded", "false");
-          }
-        });
-        document.addEventListener("keydown", function (event) {
-          if (event.key === "Escape") {
-            panel.hidden = true;
-            toggle.setAttribute("aria-expanded", "false");
-          }
-        });
-        if (signIn && !signIn.dataset.menuBound) {
-          signIn.dataset.menuBound = "true";
-          signIn.addEventListener("click", function (event) {
-            event.preventDefault();
-            panel.hidden = true;
-            toggle.setAttribute("aria-expanded", "false");
-            if (typeof window.auroreShowAccessGate === "function") {
-              window.auroreShowAccessGate();
-            } else if (gate) {
-              gate.hidden = false;
-              document.body.classList.add("memory-access-open");
-            }
-          });
-        }
-      }
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", bindAuroreMenu, { once: true });
-      } else {
-        bindAuroreMenu();
-      }
-    })();
-  </script>
+  <script src="app-menu.js?v=20261018-single-menu-handler"></script>
 </body>
 </html>

@@ -308,3 +308,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible 
   .app-menu-toggle { width:36px; height:36px; }
   .top-actions { display:none; }
 }
+
+/* Barre d’accueil : sélecteur d’apparence à gauche, marque au centre, menu à droite. */
+@media (min-width: 1px) {
+  body[data-page="home"] .topbar-inner { justify-content:space-between; }
+  body[data-page="home"] .header-right { order:0; flex:0 1 auto; justify-content:flex-start; margin-right:auto; }
+  body[data-page="home"] .brand { order:1; flex:0 0 auto; }
+  body[data-page="home"] .app-menu-wrap { order:2; margin-left:auto; }
+  body[data-page="home"] .header-right .appearance { order:0; }
+  body[data-page="home"] .header-right .top-actions { order:1; }
+  body[data-page="home"] .color-theme-panel { left:0; right:auto; }
+  body[data-page="home"] .app-menu-panel { left:auto; right:0; }
+}
+@media (max-width:560px) {
+  body[data-page="home"] .topbar-inner { flex-wrap:nowrap; gap:8px; }
+  body[data-page="home"] .header-right { flex:0 1 auto; min-width:0; margin-right:auto; }
+  body[data-page="home"] .appearance { flex-wrap:nowrap; }
+  body[data-page="home"] .brand { margin-inline:auto; }
+  body[data-page="home"] .app-menu-wrap { margin-left:0; }
+}

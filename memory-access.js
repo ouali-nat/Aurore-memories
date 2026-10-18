@@ -32,23 +32,6 @@
   }
   window.auroreShowAccessGate=showGate;
 
-  if(menuToggle && menuPanel){
-    menuToggle.addEventListener("click",function(event){
-      event.stopPropagation();
-      var opening=menuPanel.hidden;
-      menuPanel.hidden=!opening;
-      menuToggle.setAttribute("aria-expanded",opening?"true":"false");
-    });
-    document.addEventListener("click",function(event){
-      if(!event.target.closest(".app-menu-wrap")) closeMenu();
-    });
-    document.addEventListener("keydown",function(event){
-      if(event.key==="Escape") closeMenu();
-    });
-  }
-  if(menuSignIn){
-    menuSignIn.addEventListener("click",showGate);
-  }
   if(visitor){
     visitor.addEventListener("click",hideGate);
   }
