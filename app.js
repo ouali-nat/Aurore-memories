@@ -366,6 +366,9 @@
       if (!window.auroreAuth) {
         await loadScript("auth.js?v=20261018-r2-verified-sync");
       }
+      // Wait until Supabase has created the client and restored the saved session.
+      // Otherwise sync can start too early and miss the initial sync for a signed-in user.
+      if (window.auroreAuthReady) await window.auroreAuthReady;
       if (!window.__auroreMemoryCloudSyncLoaded) {
         await loadScript("memory-cloud-sync.js?v=20261018-r2-verified-sync");
       }
