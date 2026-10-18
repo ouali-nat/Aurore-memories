@@ -75,8 +75,53 @@
     </section>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
   <script src="app.js?v=20261015-nav-final"></script>
-  <script src="groupes.js?v=20261018-aurore-id-groups-primary"></script>
+  <script>
+    (function () {
+      "use strict";
+      var sources = [
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
+        "https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+        "https://unpkg.com/@supabase/supabase-js@2"
+      ];
+      var index = 0, loaded = false, timeoutId = null;
+      function startGroups() {
+        if (loaded) return;
+        loaded = true;
+        if (timeoutId) window.clearTimeout(timeoutId);
+        var script = document.createElement("script");
+        script.src = "groupes.js?v=20261018-supabase-loader-fallback-1";
+        document.body.appendChild(script);
+      }
+      function tryNext() {
+        if (window.supabase && typeof window.supabase.createClient === "function") {
+          startGroups();
+          return;
+        }
+        if (index >= sources.length) {
+          console.error("Supabase JS n'a pu être chargé depuis les sources de secours.");
+          startGroups();
+          return;
+        }
+        var script = document.createElement("script");
+        script.src = sources[index++];
+        script.async = true;
+        var settled = false;
+        function nextOnce() {
+          if (settled) return;
+          settled = true;
+          if (timeoutId) window.clearTimeout(timeoutId);
+          if (window.supabase && typeof window.supabase.createClient === "function") startGroups();
+          else tryNext();
+        }
+        script.onload = nextOnce;
+        script.onerror = nextOnce;
+        document.head.appendChild(script);
+        timeoutId = window.setTimeout(nextOnce, 9000);
+      }
+      tryNext();
+    })();
+  </script>
 </body>
 </html>
