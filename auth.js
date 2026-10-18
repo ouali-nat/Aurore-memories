@@ -1,26 +1,47 @@
 (function () {
   "use strict";
-  if (window.auroreAuth) return;
+
+  if (window.auroreAuth) {
+    window.auroreAuthReady = Promise.resolve(window.auroreAuth);
+    return;
+  }
 
   var SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co";
   var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
   var WORKER_URL = "https://aurore-memories.oualikevin6.workers.dev";
   var OIDC_PROVIDER = "custom:aurore-id";
-  var client;
+  var client = null;
 
-  if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    console.error("Aurore Mémoire : la bibliothèque Supabase JS n'a pas été chargée.");
-    return;
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = function () { resolve(); };
+      script.onerror = function () { reject(new Error("Chargement impossible : " + src)); };
+      document.head.appendChild(script);
+    });
   }
 
-  client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: "pkce"
+  async function ensureSupabaseLibrary() {
+    if (window.supabase && typeof window.supabase.createClient === "function") return;
+    var sources = [
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+      "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
+    ];
+    var lastError = null;
+    for (var i = 0; i < sources.length; i += 1) {
+      try {
+        await loadScript(sources[i]);
+        if (window.supabase && typeof window.supabase.createClient === "function") return;
+        lastError = new Error("La bibliothèque chargée n’expose pas Supabase JS.");
+      } catch (error) {
+        lastError = error;
+      }
     }
-  });
+    throw new Error("Impossible de charger le service d’authentification. Vérifiez votre connexion Internet puis réessayez." +
+      (lastError && lastError.message ? " (" + lastError.message + ")" : ""));
+  }
 
   function currentSession() {
     return client.auth.getSession().then(function (result) {
@@ -63,9 +84,14 @@
     }
   }
 
+  function isHomePage() {
+    var page = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    return !page || page === "index.html";
+  }
+
   function mountHeader() {
     var header = document.querySelector(".header-right");
-    if (!header || document.getElementById("auroreAuthControls")) return;
+    if (!header || isHomePage() || document.getElementById("auroreAuthControls")) return;
     var box = document.createElement("div");
     box.id = "auroreAuthControls";
     box.className = "aurore-auth-controls";
@@ -103,7 +129,7 @@
         });
         if (result.error) throw result.error;
         if (!result.data || !result.data.url) {
-          throw new Error("Le fournisseur Aurore ID n'a pas renvoyé d'adresse de connexion.");
+          throw new Error("Aurore ID n’a pas renvoyé d’adresse de connexion. Vérifiez le fournisseur custom:aurore-id dans Supabase Mémoire.");
         }
       } catch (error) {
         button.disabled = false;
@@ -134,33 +160,57 @@
     }
   }
 
-  window.auroreAuth = {
-    client: client,
-    workerUrl: WORKER_URL,
-    provider: OIDC_PROVIDER,
-    getSession: currentSession,
-    api: api,
-    signIn: async function (redirectPath) {
-      var result = await client.auth.signInWithOAuth({
-        provider: OIDC_PROVIDER,
-        options: {
-          redirectTo: new URL(redirectPath || "fichiers.html", window.location.origin).toString(),
-          scopes: "openid email profile"
-        }
-      });
-      if (result.error) throw result.error;
-      return result.data;
-    },
-    signOut: function () { return client.auth.signOut(); }
-  };
+  async function initializeAuth() {
+    await ensureSupabaseLibrary();
+    client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: "pkce"
+      }
+    });
 
-  mountHeader();
-  client.auth.onAuthStateChange(function (_event, session) {
-    updateHeader(session);
-    window.dispatchEvent(new CustomEvent("aurore:auth-changed", { detail: { session: session || null } }));
-  });
-  currentSession().then(updateHeader).catch(function (error) {
-    console.warn("Aurore Mémoire : lecture de la session impossible.", error);
-    updateHeader(null);
+    var authApi = {
+      client: client,
+      workerUrl: WORKER_URL,
+      provider: OIDC_PROVIDER,
+      getSession: currentSession,
+      api: api,
+      signIn: async function (redirectPath) {
+        var result = await client.auth.signInWithOAuth({
+          provider: OIDC_PROVIDER,
+          options: {
+            redirectTo: new URL(redirectPath || "fichiers.html", window.location.origin).toString(),
+            scopes: "openid email profile"
+          }
+        });
+        if (result.error) throw result.error;
+        if (!result.data || !result.data.url) {
+          throw new Error("Aurore ID n’a pas renvoyé d’adresse de connexion. Vérifiez le fournisseur custom:aurore-id dans Supabase Mémoire.");
+        }
+        return result.data;
+      },
+      signOut: function () { return client.auth.signOut(); }
+    };
+    window.auroreAuth = authApi;
+
+    client.auth.onAuthStateChange(function (_event, session) {
+      updateHeader(session);
+      window.dispatchEvent(new CustomEvent("aurore:auth-changed", { detail: { session: session || null } }));
+    });
+    try {
+      updateHeader(await currentSession());
+    } catch (error) {
+      console.warn("Aurore Mémoire : lecture de la session impossible.", error);
+      updateHeader(null);
+    }
+    return authApi;
+  }
+
+  window.auroreAuthReady = initializeAuth();
+  window.auroreAuthReady.catch(function (error) {
+    window.auroreAuthInitError = error;
+    console.error("Aurore Mémoire : initialisation de l’authentification impossible.", error);
   });
 })();

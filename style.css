@@ -1,4 +1,4 @@
-/* Aurore — Section Mémoire : interface volontairement légère, sans dépendance externe. */
+/* Aurore Mémoire : interface volontairement légère, sans dépendance externe. */
 :root {
   color-scheme: dark;
   --accent: #8B5CF6;
@@ -278,4 +278,33 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible 
   .home-action-card { min-height:145px; padding:11px; border-radius:14px; }
   .home-action-card strong { font-size:.76rem; }
   .home-action-card small { font-size:.64rem; }
+}
+
+
+/* Menu flottant de navigation et d'accès au compte. */
+.app-menu-wrap { position:relative; flex:0 0 auto; }
+.app-menu-toggle {
+  width:42px; height:42px; display:grid; align-content:center; justify-items:center; gap:4px;
+  padding:8px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:12px;
+}
+.app-menu-toggle:hover,.app-menu-toggle[aria-expanded="true"] { border-color:var(--accent); background:var(--soft); }
+.app-menu-toggle span { display:block; width:18px; height:2px; border-radius:2px; background:currentColor; }
+.app-menu-panel {
+  position:absolute; left:0; top:calc(100% + 8px); z-index:80;
+  width:min(260px,calc(100vw - 24px)); padding:8px;
+  background:var(--surface); border:1px solid var(--soft-border); border-radius:15px;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+.app-menu-panel[hidden] { display:none !important; }
+.app-menu-item {
+  width:100%; display:flex; align-items:center; min-height:42px; padding:10px 12px;
+  border:1px solid transparent; border-radius:10px; color:var(--text); background:transparent;
+  font-size:.81rem; font-weight:650; text-align:left; text-decoration:none;
+}
+.app-menu-item:hover { background:var(--soft); border-color:var(--soft-border); }
+.app-menu-login { margin-bottom:5px; background:var(--soft); border-color:var(--soft-border); font-weight:800; }
+.app-menu-login:hover { border-color:var(--accent); }
+@media(max-width:560px) {
+  .app-menu-toggle { width:36px; height:36px; }
+  .top-actions { display:none; }
 }

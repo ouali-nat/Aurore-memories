@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111019">
   <meta name="description" content="Aurore Mémoire : organisez vos contenus et consolidez vos apprentissages.">
-  <title>Accueil — Section Mémoire — Aurore</title>
+  <title>Accueil — Aurore Mémoire</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="memory-access.css?v=20261017-aurore-id-gate">
+  <link rel="stylesheet" href="memory-access.css?v=20261018-auth-menu">
   <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation">
   <link rel="stylesheet" href="cloud-files.css?v=20261017-r2">
   <link rel="prefetch" href="memoire.js" as="script">
@@ -22,7 +22,7 @@
         <div class="memory-access-institution">
           <div class="memory-access-logo" aria-hidden="true">A</div>
           <div>
-            <div class="memory-access-brand">Aurore — Section Mémoire</div>
+            <div class="memory-access-brand">Aurore Mémoire</div>
             <div class="memory-access-tagline">Un espace personnel pour apprendre et se souvenir.</div>
           </div>
         </div>
@@ -40,7 +40,7 @@
               </button>
             </div>
             <p class="memory-access-message" id="memoryAccessMessage" role="alert" aria-live="polite"></p>
-            <div class="memory-access-note">Connexion sécurisée · Aurore — Section Mémoire</div>
+            <div class="memory-access-note">Connexion sécurisée · Aurore Mémoire</div>
           </section>
           <section class="memory-access-panel memory-access-panel-alt" aria-label="Autres possibilités">
             <div class="memory-access-alt-head">Autres possibilités</div>
@@ -52,11 +52,23 @@
           </section>
         </div>
       </div>
-      <div class="memory-access-footer">© 2026 Aurore — Section Mémoire</div>
+      <div class="memory-access-footer">© 2026 Aurore Mémoire</div>
     </div>
   </section>
   <header class="topbar"><div class="wrap topbar-inner">
-    <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Section Mémoire</small></span></a>
+    <div class="app-menu-wrap">
+      <button class="app-menu-toggle" id="appMenuToggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="appMenuPanel">
+        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
+      <div class="app-menu-panel" id="appMenuPanel" hidden aria-label="Menu principal">
+        <button class="app-menu-item app-menu-login" id="appMenuSignIn" type="button">Se connecter</button>
+        <a class="app-menu-item" href="index.html">Accueil</a>
+        <a class="app-menu-item" href="choisir.html">Bibliothèque</a>
+        <a class="app-menu-item" href="revisions.html">Révisions</a>
+        <a class="app-menu-item" href="fichiers.html">Mes fichiers privés</a>
+      </div>
+    </div>
+    <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Aurore Mémoire</small></span></a>
     <div class="header-right">
       <nav class="top-actions" aria-label="Navigation principale"><a class="nav-link active" data-nav="home" href="index.html">Accueil</a><a class="nav-link" data-nav="library" href="choisir.html">Bibliothèque</a><a class="nav-link" data-nav="reviews" href="revisions.html">Révisions</a></nav>
       <div class="appearance">
@@ -106,11 +118,11 @@
       <div class="home-action-card is-coming"><span class="action-icon" aria-hidden="true">✎</span><strong>Produire ma dissertation</strong><small>Organisez une problématique, un plan et vos arguments.</small><span class="coming-label">Bientôt disponible</span></div>
     </div>
   </section></main>
-  <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore <span>· Section Mémoire</span></strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
+  <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore Mémoire</strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="auth.js?v=20261017-r2-link"></script>
-  <script src="memory-access.js?v=20261017-aurore-id-gate"></script>
+  <script src="auth.js?v=20261018-auth-init"></script>
+  <script src="memory-access.js?v=20261018-auth-menu"></script>
   <script src="app.js?v=20261017-memory-cloud2"></script>
   <script src="home-stats.js?v=20261015-nav-stats-cache"></script>
   <script src="spa-router.js?v=20261016-spa-shell"></script>
