@@ -173,23 +173,25 @@
     }
   }
   function init() {
-    if (!byId("cloudFilesPage") || !window.auroreAuth) return;
+    if (!byId("cloudFilesPage") || window.__auroreCloudFilesInitialized) return;
+    window.__auroreCloudFilesInitialized = true;
     var form = byId("cloudFilesUpload");
     if (form) form.addEventListener("submit", uploadFiles);
     var refresh = byId("cloudFilesRefresh");
     if (refresh) refresh.addEventListener("click", function () {
       setStatus("Actualisation…");
-      loadFiles();
+      loadFiles().catch(function (error) { setStatus(error.message || "Actualisation impossible.", true); });
     });
     var signIn = byId("cloudFilesSignIn");
     if (signIn) signIn.addEventListener("click", async function () {
       signIn.disabled = true;
       setStatus("Redirection vers Aurore ID…");
       try {
-        await window.auroreAuth.signIn("fichiers.html");
+        var auth = window.auroreAuth || (window.auroreAuthReady ? await window.auroreAuthReady : null);
+        if (!auth || typeof auth.signIn !== "function") throw new Error("Le service de connexion n’est pas prêt. Rechargez la page.");
+        await auth.signIn("fichiers.html");
       } catch (error) {
-        setStatus("La connexion n’est pas encore configurée : " + (error.message || "erreur inconnue") +
-          ". Le fournisseur custom:aurore-id doit être activé dans Supabase Mémoire.", true);
+        setStatus("La connexion n’a pas pu démarrer : " + (error.message || "erreur inconnue"), true);
         signIn.disabled = false;
       }
     });
@@ -197,13 +199,32 @@
       window.__auroreCloudStorageAuthListenerBound = true;
       window.addEventListener("aurore:auth-changed", function (event) {
         showSignedIn(event.detail && event.detail.session);
-        loadFiles();
+        loadFiles().catch(function (error) { setStatus(error.message || "Lecture des fichiers impossible.", true); });
       });
     }
     getSession().then(function (session) {
       showSignedIn(session);
-      loadFiles();
-    }).catch(function (error) { setStatus(error.message || "Lecture de session impossible.", true); });
+      return loadFiles();
+    }).catch(function (error) {
+      showSignedIn(null);
+      setStatus(error.message || "Lecture de session impossible.", true);
+    });
   }
-  init();
+
+  // auth.js initialise Supabase de manière asynchrone. N’attacher le formulaire
+  // qu’après sa résolution : sinon le submit natif recharge la page et efface
+  // la sélection du fichier sans envoyer quoi que ce soit.
+  (async function waitForAuthAndInitialize() {
+    if (!byId("cloudFilesPage")) return;
+    try {
+      var auth = window.auroreAuth;
+      if (!auth && window.auroreAuthReady) auth = await window.auroreAuthReady;
+      if (!auth || typeof auth.getSession !== "function") {
+        throw window.auroreAuthInitError || new Error("Le service de connexion n’est pas prêt. Rechargez la page.");
+      }
+      init();
+    } catch (error) {
+      setStatus(error.message || "Initialisation du stockage impossible.", true);
+    }
+  })();
 })();
