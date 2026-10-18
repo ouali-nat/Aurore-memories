@@ -113,8 +113,17 @@
   async function joinGroup(groupId, button) {
     if (!signedIn()) { startAuroreIdSignIn(); return; }
     if (joinedGroupIds[groupId]) { window.location.href="groupe.html?id="+encodeURIComponent(groupId); return; }
+    var group = groups.find(function (item) { return item.id === groupId; });
+    if (!group || group.visibility !== "public") { toast("Ce groupe n’est pas accessible publiquement."); return; }
     button.disabled=true; button.textContent="…";
     try {
+      if (group.join_policy !== "open") {
+        var request = await client.from("study_group_join_requests").insert({group_id:groupId,user_id:session.user.id});
+        if (request.error && request.error.code !== "23505") throw request.error;
+        toast("Demande envoyée. Le propriétaire doit l’approuver.");
+        button.textContent="Demande envoyée";
+        return;
+      }
       var result=await client.from("study_group_members").insert({group_id:groupId,user_id:session.user.id});
       if(result.error && result.error.code!=="23505") throw result.error;
       joinedGroupIds[groupId]=true;
@@ -123,7 +132,7 @@
     } catch(error) {
       console.error("Joining public group:",error);
       toast("Impossible de rejoindre ce groupe. Réessaie après t’être reconnecté.");
-      button.disabled=false; button.textContent="Rejoindre";
+      button.disabled=false; button.textContent=group.join_policy==="open"?"Rejoindre":"Demander à rejoindre";
     }
   }
   async function createGroup(event) {
