@@ -1,0 +1,49 @@
+/* Cartes publiques — design flottant, texte dans le cadre, rotation au clic */
+.public-card-feed-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,284px),1fr))!important;gap:38px 24px!important;padding:14px 4px 44px!important;align-items:stretch!important}
+.public-flashcard.pf-ready{position:relative!important;display:block!important;width:100%!important;height:auto!important;min-height:0!important;aspect-ratio:4/5!important;margin:0!important;padding:0!important;border:0!important;border-radius:28px!important;background:none!important;box-shadow:none!important;overflow:visible!important;transform:none!important;filter:none!important;transition:none!important;isolation:isolate;perspective:1200px;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+.public-flashcard.pf-ready::before{content:none!important}
+.public-flashcard.pf-ready::after{content:""!important;position:absolute!important;left:14%!important;right:14%!important;bottom:-16px!important;top:auto!important;height:22px!important;border-radius:50%!important;background:radial-gradient(closest-side,color-mix(in srgb,var(--card-art-color,#4937a6) 65%,#000),transparent)!important;opacity:.5;z-index:-1;pointer-events:none}
+.public-flashcard.pf-ready:focus-visible{outline:3px solid rgba(255,255,255,.85)!important;outline-offset:6px}
+.pf-float,.pf-tilt,.pf-flip{position:absolute;inset:0;transform-style:preserve-3d}
+.pf-tilt{transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--s,1));transition:transform .18s ease-out}
+.pf-flip{transition:transform .8s cubic-bezier(.22,.9,.24,1)}
+.public-flashcard.pf-ready.is-revealed .pf-flip{transform:rotateY(180deg)}
+.public-flashcard.pf-ready.pf-live .pf-float{animation:pf-float 6s ease-in-out infinite;animation-delay:calc(var(--pf-i,0)*-.9s)}
+.public-flashcard.pf-ready.pf-live::after{animation:pf-shadow 6s ease-in-out infinite;animation-delay:calc(var(--pf-i,0)*-.9s)}
+@media (hover:hover){.public-flashcard.pf-ready:hover{--s:1.03}.public-flashcard.pf-ready:hover .pf-float{animation-play-state:paused}}
+@keyframes pf-float{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-9px,0)}}
+@keyframes pf-shadow{0%,100%{transform:scaleX(1);opacity:.5}50%{transform:scaleX(.86);opacity:.28}}
+
+.pf-face{position:absolute;inset:0;display:flex;flex-direction:column;box-sizing:border-box;padding:16px 16px 14px;overflow:hidden;border-radius:28px;color:#fff;isolation:isolate;-webkit-backface-visibility:hidden;backface-visibility:hidden;background-color:var(--card-art-color,#4937a6);background-size:cover;background-position:center;box-shadow:0 22px 38px -18px rgba(0,0,0,.65),0 8px 18px rgba(0,0,0,.3)}
+.pf-front{background-image:linear-gradient(160deg,rgba(255,255,255,.12),rgba(0,0,0,.2)),var(--pf-image,none)}
+.pf-back{transform:rotateY(180deg);background-color:color-mix(in srgb,var(--card-art-color,#4937a6) 55%,#0b0a12);background-image:linear-gradient(160deg,rgba(0,0,0,.35),rgba(0,0,0,.55)),var(--pf-image,none)}
+.public-flashcard:not(.pf-has-image) .pf-front{background-image:radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.24),transparent 55%),radial-gradient(90% 70% at 100% 100%,rgba(0,0,0,.42),transparent 60%),linear-gradient(155deg,color-mix(in srgb,var(--card-art-color,#4937a6) 86%,#fff),var(--card-art-color,#4937a6) 45%,color-mix(in srgb,var(--card-art-color,#4937a6) 55%,#000))}
+.public-flashcard:not(.pf-has-image) .pf-back{background-image:radial-gradient(110% 80% at 100% 0%,rgba(255,255,255,.14),transparent 55%),linear-gradient(200deg,rgba(0,0,0,.15),rgba(0,0,0,.5))}
+.pf-face::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.2),rgba(0,0,0,.04) 38%,rgba(0,0,0,.58))}
+.pf-back::before{background:linear-gradient(to bottom,rgba(0,0,0,.25),rgba(0,0,0,.3))}
+.pf-face::after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),inset 0 1px 0 rgba(255,255,255,.3)}
+
+.pf-meta{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between}
+.pf-chip{max-width:62%;padding:5px 10px;overflow:hidden;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(0,0,0,.4);color:#fff;font:600 .68rem/1.1 system-ui,sans-serif;text-overflow:ellipsis;white-space:nowrap}
+.pf-domain{background:rgba(255,255,255,.2)}
+.public-flashcard.pf-ready .pf-body{position:relative;z-index:2;display:flex!important;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:flex-start;margin:0!important;padding:10px 4px!important;overflow-y:auto;border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;scrollbar-width:none}
+.pf-body::-webkit-scrollbar{display:none}
+.pf-body>:first-child{margin-top:auto!important}
+.pf-body>:last-child{margin-bottom:auto!important}
+.public-flashcard.pf-ready .pf-eyebrow{margin:0 0 8px!important;color:rgba(255,255,255,.74)!important;font:700 .66rem/1 system-ui,sans-serif!important;letter-spacing:.2em;text-align:center}
+.public-flashcard.pf-ready .pf-q,.public-flashcard.pf-ready .pf-a{width:100%;margin:0!important;color:#fff!important;font-family:inherit;font-size:clamp(1.08rem,4.3vw,1.42rem)!important;font-weight:700;line-height:1.32!important;text-align:center;text-shadow:0 2px 14px rgba(0,0,0,.5);overflow-wrap:anywhere;word-break:break-word}
+.public-flashcard.pf-ready .pf-a{font-weight:600}
+.pf-face .katex{color:#fff;font-size:1.05em}
+.pf-face .katex-display{margin:.25em 0!important;overflow-x:auto;overflow-y:hidden}
+.public-flashcard.pf-ready .public-card-answer[hidden]{display:flex!important}
+
+.pf-foot{position:relative;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px}
+.public-flashcard.pf-ready .pf-hint{position:static!important;display:inline-flex;align-items:center;gap:6px;margin:0!important;padding:0!important;border:0!important;background:none!important;color:rgba(255,255,255,.8)!important;font:600 .72rem/1 system-ui,sans-serif!important;letter-spacing:.02em}
+.pf-hint::before{content:"↻";font-size:1rem}
+.pf-actions{display:flex;gap:8px}
+.public-flashcard.pf-ready .pf-btn{display:grid;place-items:center;width:38px;height:38px;margin:0!important;padding:0!important;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:rgba(0,0,0,.35);color:#fff;font:700 1rem/1 system-ui,sans-serif;cursor:pointer;transition:transform .15s ease,background .15s ease}
+.public-flashcard.pf-ready .pf-btn:hover{transform:scale(1.1)}
+.public-flashcard.pf-ready .pf-btn:active{transform:scale(.92)}
+.public-flashcard.pf-ready .pf-add{border-color:transparent;background:rgba(255,255,255,.94);color:#1a1530}
+
+@media (prefers-reduced-motion:reduce){.public-flashcard.pf-ready.pf-live .pf-float,.public-flashcard.pf-ready.pf-live::after{animation:none!important}.pf-flip{transition-duration:.01s}.pf-tilt{transition:none}}
