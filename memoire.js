@@ -510,17 +510,136 @@
     }catch(error){console.error(error);if(status)status.textContent=String(error.message||"Le partage a échoué.");if(button){button.disabled=false;button.textContent="Réessayer le partage";}}
   }
   function openSeriesShareOptions(deck){openSharingDialog("Partager « "+deck+" »",'<p class="sharing-modal-intro">Choisissez le format qui vous convient.</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="export-series-pdf" data-deck="'+escapeHtml(deck)+'"><span>▤</span><strong>PDF</strong><small>Document prêt à imprimer ou envoyer.</small></button><button type="button" class="series-export-choice" data-act="export-series-images" data-deck="'+escapeHtml(deck)+'"><span>▧</span><strong>Images</strong><small>Une image par carte.</small></button><button type="button" class="series-export-choice" data-act="share-deck" data-deck="'+escapeHtml(deck)+'"><span>↗</span><strong>Lien</strong><small>Partager le lien public de la série.</small></button></div>');}
-  function exportDeckPdf(deck){
-    var cards=state.cards.filter(function(card){return isFlashcard(card)&&card.deck===deck;});if(!cards.length){notify("Cette série ne contient aucune carte.");return;}var w=window.open("","_blank");if(!w){notify("Autorisez l’ouverture de la fenêtre pour créer le PDF.");return;}
-    var esc=function(v){return escapeHtml(v).replace(/\n/g,"<br>");};
-    w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+escapeHtml(deck)+'</title><style>body{font:14px Georgia,serif;color:#191624;margin:20mm}h1{font:700 24px Arial}article{break-inside:avoid;border:1px solid #ddd;border-radius:10px;padding:16px;margin:0 0 12px}small{color:#666;font:10px Arial;letter-spacing:.12em}h2{font:700 16px Arial}p{line-height:1.65;overflow-wrap:anywhere}.answer{border-top:1px solid #ddd;padding-top:8px}@media print{body{margin:12mm}article{break-inside:avoid}}</style></head><body><h1>'+escapeHtml(deck)+'</h1><p>'+cards.length+' cartes</p>'+cards.map(function(card,i){return '<article><small>CARTE '+(i+1)+' · QUESTION</small><h2>'+esc(card.front)+'</h2><div class="answer"><small>RÉPONSE</small><p>'+esc(card.back)+'</p></div></article>';}).join("")+'<script>window.onload=function(){window.print()}<\\/script></body></html>');w.document.close();
+  function exportCardMarkup(card, index, side) {
+    var style = state.deckStyles && state.deckStyles["flashcard:" + card.deck] || {};
+    var background = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor :
+      (/^#[0-9a-f]{6}$/i.test(style.backgroundColor || "") ? style.backgroundColor : "#4937a6");
+    var image = card.backgroundMode === "image" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage || "") ? card.backgroundImage : "";
+    var value = side === "front" ? card.front : card.back;
+    return '<article class="deck-export-card" data-card-index="' + index + '" data-side="' + side + '" style="--card-bg:' + background + ';' + (image ? 'background-image:linear-gradient(0deg,rgba(0,0,0,.12),rgba(0,0,0,.12)),url(&quot;' + escapeHtml(image) + '&quot;);' : '') + '">' +
+      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span></article>';
   }
-  async function exportDeckImages(deck){
-    var cards=state.cards.filter(function(card){return isFlashcard(card)&&card.deck===deck;});if(!cards.length){notify("Cette série ne contient aucune carte.");return;}
-    for(var i=0;i<cards.length;i++){var card=cards[i],canvas=document.createElement("canvas");canvas.width=1200;canvas.height=1500;var ctx=canvas.getContext("2d"),style=state.deckStyles&&state.deckStyles["flashcard:"+deck]||{},bg=/^#[0-9a-f]{6}$/i.test(card.backgroundColor||"")?card.backgroundColor:(style.backgroundColor||"#4937a6");ctx.fillStyle=bg;ctx.fillRect(0,0,1200,1500);ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 28px Arial";ctx.fillText(deck.slice(0,48),600,120);
-      function wrapped(value,y,font,size){ctx.font=font+" "+size+"px Arial";var line="",lines=[];String(value||"").split(/\s+/).forEach(function(word){var test=line?line+" "+word:word;if(ctx.measureText(test).width>980&&line){lines.push(line);line=word;}else line=test;});if(line)lines.push(line);lines.slice(0,38).forEach(function(l,n){ctx.fillText(l,600,y+n*size*1.5);});}
-      wrapped("QUESTION",270,"bold",26);wrapped(card.front,340,"bold",44);ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(120,730,960,2);ctx.fillStyle="#fff";wrapped("RÉPONSE",800,"bold",26);wrapped(card.back,870,"normal",34);var blob=await new Promise(function(resolve){canvas.toBlob(resolve,"image/png");});if(!blob)continue;var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=deck.replace(/[^a-z0-9_-]+/gi,"-")+"-carte-"+(i+1)+".png";document.body.appendChild(a);a.click();a.remove();await new Promise(function(resolve){setTimeout(resolve,250)});URL.revokeObjectURL(url);}
-    notify("Export des images terminé.");
+
+  function deckExportDocument(deck, cards, imageMode) {
+    var batches = [];
+    for (var i = 0; i < cards.length; i += 8) batches.push(cards.slice(i, i + 8));
+    var pages = batches.map(function (batch, batchIndex) {
+      var offset = batchIndex * 8;
+      var fronts = batch.map(function (card, i) { return exportCardMarkup(card, offset + i, "front"); }).join("");
+      var backs = "";
+      for (var row = 0; row < batch.length; row += 2) {
+        batch.slice(row, row + 2).reverse().forEach(function (card) {
+          backs += exportCardMarkup(card, cards.indexOf(card), "back");
+        });
+      }
+      return '<section class="deck-export-page"><div class="deck-export-grid">' + fronts + '</div><p class="deck-export-footer">' + escapeHtml(deck) + ' · RECTOS · PLANCHE ' + (batchIndex + 1) + '</p></section>' +
+        '<section class="deck-export-page"><div class="deck-export-grid">' + backs + '</div><p class="deck-export-footer">' + escapeHtml(deck) + ' · VERSOS · PLANCHE ' + (batchIndex + 1) + '</p></section>';
+    }).join("");
+    var imageCards = imageMode ? cards.map(function (card, i) {
+      return exportCardMarkup(card, i, "front") + exportCardMarkup(card, i, "back");
+    }).join("") : "";
+    var css = 'html,body{margin:0;padding:0;color:#171421;font-family:Georgia,"Times New Roman",serif;background:#fff}*{box-sizing:border-box}.deck-export-page{width:210mm;height:297mm;padding:10mm 13mm 12mm;position:relative;page-break-after:always;break-after:page;background:#fff}.deck-export-grid{display:grid;grid-template-columns:repeat(2,85mm);grid-auto-rows:55mm;gap:4mm;justify-content:center;align-content:start}.deck-export-card{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;width:85mm;height:55mm;flex:0 0 85mm;overflow:hidden;padding:6mm 5mm;border:.35mm solid #bdb9c8;border-radius:3mm;background-color:var(--card-bg,#4937a6);background-size:cover;background-position:center;color:#fff;text-align:center}.deck-export-label{position:absolute;top:3mm;left:4mm;right:4mm;font:700 7pt Arial,sans-serif;letter-spacing:.12em;opacity:.9}.deck-export-content{width:100%;max-height:43mm;overflow:hidden;font-size:12pt;line-height:1.35;overflow-wrap:anywhere}.deck-export-content .katex-display{margin:.18em 0}.deck-export-content .katex{font-size:1em}.deck-export-number{position:absolute;right:3mm;bottom:2mm;font:7pt Arial,sans-serif;opacity:.85}.deck-export-footer{margin:5mm 0 0;text-align:center;color:#777;font:7pt Arial,sans-serif}.deck-export-card .katex,.deck-export-card .katex *{color:inherit}.deck-export-stage{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;padding:18px}.deck-export-stage .deck-export-card{margin:0;box-shadow:0 2px 8px #0002}@page{size:A4 portrait;margin:0}@media screen{body{background:#eceaf1}.deck-export-page{margin:12px auto;box-shadow:0 4px 22px #0002}}@media print{.deck-export-page{margin:0;box-shadow:none}.deck-export-footer{margin-top:5mm}}';
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(deck) + ' — cartes</title><style>' + css + '</style></head><body>' +
+      (imageMode ? '<p style="padding:12px;font:14px Arial">Préparation des images recto-verso… Gardez cette fenêtre ouverte.</p><div class="deck-export-stage">' + imageCards + '</div>' : pages) + '</body></html>';
+  }
+
+  function loadDeckExportScript(targetWindow, src) {
+    return new Promise(function (resolve, reject) {
+      var script = targetWindow.document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = function () { reject(new Error("Impossible de charger le moteur d’exportation.")); };
+      targetWindow.document.head.appendChild(script);
+    });
+  }
+
+  function renderDeckExportMath(targetWindow) {
+    if (typeof targetWindow.renderMathInElement !== "function") return;
+    Array.prototype.forEach.call(targetWindow.document.querySelectorAll(".deck-export-content"), function (node) {
+      try {
+        targetWindow.renderMathInElement(node, {
+          delimiters: [
+            {left: "\\[", right: "\\]", display: true},
+            {left: "\\(", right: "\\)", display: false},
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+          ],
+          throwOnError: false,
+          strict: "ignore"
+        });
+      } catch (error) { console.warn("Formule ignorée pendant l’export.", error); }
+    });
+  }
+
+  function exportDeckPdf(deck) {
+    var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
+    if (!cards.length) { notify("Cette série ne contient aucune carte."); return; }
+    var w = window.open("", "_blank");
+    if (!w) { notify("Autorisez l’ouverture de la fenêtre pour créer le PDF."); return; }
+    w.document.open();
+    w.document.write(deckExportDocument(deck, cards, false));
+    w.document.close();
+    Promise.all([
+      loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"),
+      loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js")
+    ]).then(function () {
+      var link = w.document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
+      w.document.head.appendChild(link);
+      renderDeckExportMath(w);
+      w.setTimeout(function () { w.focus(); w.print(); }, 500);
+    }).catch(function (error) {
+      console.error(error);
+      w.focus();
+      w.print();
+    });
+  }
+
+  async function exportDeckImages(deck) {
+    var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
+    if (!cards.length) { notify("Cette série ne contient aucune carte."); return; }
+    var w = window.open("", "_blank");
+    if (!w) { notify("Autorisez l’ouverture de la fenêtre pour créer les images."); return; }
+    w.document.open();
+    w.document.write(deckExportDocument(deck, cards, true));
+    w.document.close();
+    try {
+      await Promise.all([
+        loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"),
+        loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"),
+        loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js")
+      ]);
+      var link = w.document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
+      w.document.head.appendChild(link);
+      renderDeckExportMath(w);
+      await new Promise(function (resolve) { w.setTimeout(resolve, 800); });
+      var nodes = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-card"));
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        var canvas = await w.html2canvas(node, {scale: 3, backgroundColor: null, useCORS: true, logging: false});
+        var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, "image/png"); });
+        if (!blob) continue;
+        var url = w.URL.createObjectURL(blob);
+        var anchor = w.document.createElement("a");
+        anchor.href = url;
+        anchor.download = deck.replace(/[^a-z0-9_-]+/gi, "-") + "-carte-" + (Number(node.dataset.cardIndex) + 1) + "-" + node.dataset.side + ".png";
+        w.document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        await new Promise(function (resolve) { w.setTimeout(resolve, 350); });
+        w.URL.revokeObjectURL(url);
+      }
+      var note = w.document.createElement("p");
+      note.textContent = "Export terminé : recto et verso téléchargés séparément pour chaque carte.";
+      note.style.cssText = "padding:16px;font:14px Arial;color:#333";
+      w.document.body.insertBefore(note, w.document.body.firstChild);
+    } catch (error) {
+      console.error(error);
+      notify("L’export image a échoué. Vérifiez la connexion Internet puis réessayez.");
+    }
   }
 
   function formatPublicDate(value) {
