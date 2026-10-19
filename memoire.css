@@ -1049,3 +1049,38 @@ body[data-page="groups"] .group-card .groups-btn{margin-top:auto}
 @media(max-width:760px){body[data-page="groups"] .groups-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}body[data-page="groups"] .group-card-body{padding:11px}}
 @media(max-width:420px){body[data-page="groups"] .groups-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}body[data-page="groups"] .group-card-body{padding:9px;gap:8px}body[data-page="groups"] .group-card h2{font-size:.9rem}body[data-page="groups"] .group-visibility{font-size:.59rem;padding:3px 6px}}
 @media(prefers-reduced-motion:reduce){body[data-page="groups"] .group-card{transition:none}}
+
+/* Détail de groupe : en-tête compact, menu à trois points et gestion dans une fenêtre. */
+body[data-page="group-detail"] .groups-detail-hero{padding:0;margin:10px 0 18px;overflow:hidden;border-radius:18px}
+body[data-page="group-detail"] .groups-detail-heading{display:flex;align-items:center;gap:15px;padding:14px 16px;min-width:0}
+body[data-page="group-detail"] .groups-detail-cover{width:108px;height:74px;flex:0 0 108px;border-radius:12px;overflow:hidden;background:var(--soft)}
+body[data-page="group-detail"] .groups-detail-cover img{display:block;width:100%;height:100%;object-fit:cover}
+body[data-page="group-detail"] .groups-detail-title{flex:1;min-width:0;text-align:center;transform:translateX(7px)}
+body[data-page="group-detail"] .groups-detail-title .eyebrow{margin:0 0 5px;font-size:.62rem;letter-spacing:.17em}
+body[data-page="group-detail"] .groups-detail-title h1{margin:0;font-size:clamp(1.1rem,3vw,1.65rem);line-height:1.25;overflow-wrap:anywhere}
+body[data-page="group-detail"] .groups-detail-description{margin:5px 0 0;color:var(--muted);font-size:.78rem;line-height:1.4}
+body[data-page="group-detail"] .groups-menu-trigger{flex:0 0 38px;width:38px;height:38px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);font-weight:900;letter-spacing:2px;cursor:pointer}
+.group-settings-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(5,5,12,.68);backdrop-filter:blur(7px)}
+.group-settings-backdrop[hidden],.group-settings-panel[hidden]{display:none}
+.group-settings-dialog{width:min(620px,100%);max-height:min(84dvh,760px);overflow:auto;padding:17px;border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:0 24px 80px #0006}
+.group-settings-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.group-settings-header h2{margin:0;font-size:1.1rem}
+.group-settings-tabs{display:flex;gap:7px;margin:15px 0 12px;padding:4px;border-radius:12px;background:var(--soft)}
+.group-settings-tabs button{flex:1;padding:10px 8px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:.78rem;font-weight:750;cursor:pointer}
+.group-settings-tabs button[aria-selected=true]{background:var(--surface);color:var(--text);box-shadow:0 1px 5px #0002}
+.group-settings-panel{min-width:0}
+.group-management-compact{margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.group-management-compact h3{margin:8px 0;font-size:.9rem}
+.group-management-intro,.group-settings-hint{margin:0 0 12px;color:var(--muted);font-size:.77rem;line-height:1.45}
+.group-invite-controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:end}
+.group-invite-controls label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:.72rem;font-weight:700}
+.group-invite-controls select{width:100%;min-width:0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}
+.group-invite-controls .groups-btn{grid-column:1/-1;min-height:38px}
+.group-invite-actions{display:flex;gap:8px;flex-wrap:wrap}
+.group-management-subhead{margin-top:16px!important;padding-top:12px;border-top:1px solid var(--border)}
+.group-management-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.group-management-grid .group-card{padding:10px;border-radius:12px;min-height:0;gap:6px}
+.group-management-grid .group-card h3{font-size:.78rem;margin:0}
+.group-management-grid .group-card p{font-size:.7rem;margin:0;overflow-wrap:anywhere}
+.group-management-grid .groups-btn{min-height:32px;padding:6px 10px;font-size:.72rem}
+@media(max-width:480px){body[data-page="group-detail"] .groups-detail-heading{gap:9px;padding:11px}.group-settings-dialog{padding:13px;border-radius:16px}.group-management-grid{grid-template-columns:1fr}.group-invite-controls{gap:7px}body[data-page="group-detail"] .groups-detail-cover{width:78px;height:62px;flex-basis:78px}body[data-page="group-detail"] .groups-detail-title .eyebrow{font-size:.55rem}body[data-page="group-detail"] .groups-detail-description{font-size:.7rem}}
