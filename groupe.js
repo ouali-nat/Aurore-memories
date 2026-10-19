@@ -43,15 +43,34 @@ var members=await client.from("study_group_members").select("user_id,role,joined
 if(members.error)throw members.error;
 memberBox.innerHTML=(members.data||[]).length?(members.data||[]).map(function(m){return '<article class="group-card"><h3>'+(m.user_id===currentGroup.created_by?"Propriétaire · modérateur":m.role==="moderator"?"Modérateur":"Membre")+'</h3><p>Identifiant : '+escapeHtml(m.user_id.slice(0,8))+'…</p></article>';}).join(""):'<div class="groups-empty"><p>Aucun membre affichable.</p></div>';
 }
+
+/* Menu compact du groupe : les outils du propriétaire restent dans Infos du groupe. */
+(function(){
+ var modal=document.getElementById("groupSettingsModal"),open=document.getElementById("groupMenuButton"),close=document.getElementById("closeGroupSettings");
+ if(!modal||!open||!close)return;
+ function showPanel(name){
+  document.querySelectorAll("[data-group-panel]").forEach(function(btn){var active=btn.getAttribute("data-group-panel")===name;btn.setAttribute("aria-selected",active?"true":"false");});
+  document.getElementById("groupInfoPanel").hidden=name!=="info";
+  document.getElementById("groupSettingsPanel").hidden=name!=="settings";
+ }
+ open.addEventListener("click",function(){modal.hidden=false;open.setAttribute("aria-expanded","true");showPanel("info");});
+ close.addEventListener("click",function(){modal.hidden=true;open.setAttribute("aria-expanded","false");});
+ modal.addEventListener("click",function(e){if(e.target===modal){modal.hidden=true;open.setAttribute("aria-expanded","false");}});
+ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!modal.hidden){modal.hidden=true;open.setAttribute("aria-expanded","false");}});
+ document.querySelectorAll("[data-group-panel]").forEach(function(btn){btn.addEventListener("click",function(){showPanel(btn.getAttribute("data-group-panel"));});});
+ var observer=new MutationObserver(function(){var tools=document.getElementById("groupOwnerTools"),empty=document.getElementById("groupInfoEmpty");if(tools&&!tools.hidden&&empty)empty.hidden=true;});
+ var tools=document.getElementById("groupOwnerTools");if(tools)observer.observe(tools,{attributes:true,attributeFilter:["hidden"]});
+})();
+
 async function loadGroup(){
 if(!id){title.textContent="Invitation ou groupe introuvable";message("Aucun groupe n’a été sélectionné.");if(inviteToken&&!session){message("Connecte-toi avec Aurore ID pour accepter cette invitation privée.");joinButton.hidden=false;joinButton.textContent="Connexion Aurore ID";}return;}
 if(!client){title.textContent="Service indisponible";message("Le service des groupes n’a pas pu être initialisé.");return;}
 try{
 var sr=await client.auth.getSession();session=sr.data.session;
 if(inviteToken){if(!session){title.textContent="Invitation à un groupe privé";message("Connecte-toi avec Aurore ID pour accepter l’invitation et accéder au groupe.");joinButton.hidden=false;joinButton.textContent="Connexion Aurore ID";return;}await redeemInvitation();}
-var result=await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by").eq("id",id).maybeSingle();
+var result=await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,cover_url").eq("id",id).maybeSingle();
 if(result.error||!result.data){title.textContent="Groupe inaccessible";message("Ce groupe n’existe pas ou tu n’as pas l’autorisation d’y accéder.");return;}
-currentGroup=result.data;title.textContent=currentGroup.name;description.textContent=[currentGroup.description,currentGroup.subject,currentGroup.level].filter(Boolean).join(" · ")||"Un espace pour apprendre ensemble.";
+currentGroup=result.data;title.textContent=currentGroup.name;description.textContent=[currentGroup.description,currentGroup.subject,currentGroup.level].filter(Boolean).join(" · ")||"Un espace pour apprendre ensemble.";var cover=document.getElementById("groupCover");if(currentGroup.cover_url){cover.innerHTML='<img src="'+escapeHtml(currentGroup.cover_url)+'" alt="Couverture de '+escapeHtml(currentGroup.name)+'">';cover.hidden=false;}else{cover.hidden=true;cover.innerHTML="";}
 var isOwner=!!(session&&session.user.id===currentGroup.created_by),isMember=false;
 if(session){var membership=await client.from("study_group_members").select("group_id").eq("group_id",id).eq("user_id",session.user.id).maybeSingle();isMember=!!membership.data||isOwner;}
 if(currentGroup.visibility==="public"&&!isMember){joinButton.hidden=false;joinButton.textContent=!session?"Connexion Aurore ID":currentGroup.join_policy==="open"?"Rejoindre le groupe":"Demander à rejoindre";}
