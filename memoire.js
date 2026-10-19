@@ -469,31 +469,47 @@
   }
 
   function openGroupDialog(deck) {
-    var settings = deckSettingsFor(deck);
-    var group = settings.group || {};
-    openSharingDialog("Créer un groupe", 
-      '<p class="sharing-modal-intro">Préparez les informations du groupe associé à cette série.</p>' +
-      '<div class="sharing-form">' +
-      '<label for="groupName">Nom du groupe <span>*</span><input id="groupName" type="text" maxlength="120" required value="' + escapeHtml(group.name || "") + '" placeholder="Ex. : Groupe de révision L1"></label>' +
-      '<label for="groupDomain">Domaine <span>*</span><input id="groupDomain" type="text" maxlength="100" required value="' + escapeHtml(group.domain || settings.domain || "") + '" placeholder="Ex. : Biologie, Mathématiques"></label>' +
-      '<p class="sharing-modal-note">Cette première étape enregistre le nom et le domaine sur cet appareil. Les invitations et la gestion des membres ne sont pas encore activées.</p>' +
-      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="close-sharing-modal">Annuler</button><button type="button" class="primary-btn" data-act="save-group" data-deck="' + escapeHtml(deck) + '">Enregistrer le groupe</button></div>' +
-      '</div>');
+    openSharingDialog("Partager avec un groupe", '<p class="sharing-modal-intro">Choisissez un ou plusieurs de vos groupes pour partager cette série avec leurs membres.</p><div id="seriesGroupsList" class="series-groups-list"><p class="sharing-modal-note">Chargement de vos groupes…</p></div><p id="seriesGroupShareStatus" class="sharing-modal-note" role="status" aria-live="polite"></p><div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="close-sharing-modal">Annuler</button><button type="button" class="primary-btn" data-act="confirm-group-share" data-deck="' + escapeHtml(deck) + '">Partager la série</button></div>');
+    loadGroupsForSharing();
   }
-
-  function saveGroupFromDialog(deck) {
-    var modal = $("#sharingModal");
-    if (!modal) return;
-    var nameInput = $("#groupName", modal), domainInput = $("#groupDomain", modal);
-    var name = String(nameInput && nameInput.value || "").trim();
-    var domain = String(domainInput && domainInput.value || "").trim();
-    if (!name || !domain) { notify("Renseignez le nom du groupe et son domaine."); return; }
-    var settings = deckSettingsFor(deck);
-    settings.group = { name: name, domain: domain, createdAt: new Date().toISOString() };
-    save();
-    closeSharingDialog();
-    renderLibrary();
-    notify("Informations du groupe enregistrées sur cet appareil.");
+  async function getGroupSharingClient() {
+    if(window.auroreMemoryGroupClient)return window.auroreMemoryGroupClient;
+    if(!window.supabase||typeof window.supabase.createClient!=="function"){await new Promise(function(resolve,reject){var script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";script.onload=resolve;script.onerror=function(){reject(new Error("Service de groupes indisponible."));};document.head.appendChild(script);});}
+    window.auroreMemoryGroupClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);return window.auroreMemoryGroupClient;
+  }
+  async function loadGroupsForSharing(){
+    var box=$("#seriesGroupsList");if(!box)return;
+    try{if(window.auroreAuthReady)await window.auroreAuthReady;var client=await getGroupSharingClient(),auth=await client.auth.getSession(),session=auth.data&&auth.data.session;
+      if(!session){box.innerHTML='<div class="sharing-empty"><strong>Connexion Aurore ID requise</strong><p>Connectez-vous avec Aurore ID pour choisir vos groupes.</p><button type="button" class="primary-btn" data-act="group-signin">Se connecter</button></div>';return;}
+      var result=await client.from("study_group_members").select("group_id,role").eq("user_id",session.user.id);if(result.error)throw result.error;var ids=(result.data||[]).map(function(m){return m.group_id;});
+      if(!ids.length){box.innerHTML='<div class="sharing-empty"><strong>Aucun groupe disponible</strong><p>Rejoignez ou créez un groupe avant de partager cette série.</p><a class="secondary-btn" href="groupes.html">Découvrir les groupes</a></div>';return;}
+      var groups=await client.from("study_groups").select("id,name,subject,level,visibility").in("id",ids).order("name");if(groups.error)throw groups.error;
+      if(!groups.data||!groups.data.length){box.innerHTML='<div class="sharing-empty"><p>Aucun groupe accessible pour le moment.</p></div>';return;}
+      box.innerHTML=groups.data.map(function(g){return '<label class="series-group-choice"><input type="checkbox" value="'+escapeHtml(g.id)+'" data-group-choice><span><strong>'+escapeHtml(g.name)+'</strong><small>'+escapeHtml([g.subject,g.level,g.visibility==="private"?"Privé":"Public"].filter(Boolean).join(" · "))+'</small></span></label>';}).join("");
+    }catch(error){console.error(error);box.innerHTML='<div class="sharing-empty"><strong>Impossible de charger les groupes</strong><p>Vérifiez la connexion Aurore ID et réessayez.</p><button type="button" class="secondary-btn" data-act="reload-series-groups">Réessayer</button></div>';}
+  }
+  async function shareDeckWithSelectedGroups(deck){
+    var modal=$("#sharingModal"),status=$("#seriesGroupShareStatus",modal),button=modal&&$("[data-act='confirm-group-share']",modal),selected=Array.prototype.slice.call(modal?modal.querySelectorAll("[data-group-choice]:checked"):[]).map(function(i){return i.value;});
+    if(!selected.length){if(status)status.textContent="Sélectionnez au moins un groupe.";return;}var cards=state.cards.filter(function(card){return isFlashcard(card)&&card.deck===deck;});if(!cards.length){if(status)status.textContent="Cette série ne contient aucune carte.";return;}
+    if(button){button.disabled=true;button.textContent="Partage…";}
+    try{var client=await getGroupSharingClient(),auth=await client.auth.getSession(),session=auth.data&&auth.data.session;if(!session)throw new Error("Connectez-vous avec Aurore ID pour partager dans un groupe.");
+      var payloadCards=cards.map(function(card){return {front:String(card.front||""),back:String(card.back||""),cardMode:card.cardMode==="scientific"?"scientific":"simple",backgroundMode:card.backgroundMode==="image"?"image":"color",backgroundColor:card.backgroundColor||"",backgroundImage:/^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage||"")?card.backgroundImage:""};}),failed=[];
+      for(var i=0;i<selected.length;i++){var result=await client.from("study_group_shared_series").insert({group_id:selected[i],title:deck,description:"Série de cartes partagée depuis la bibliothèque Aurore Mémoire.",subject:(deckSettingsFor(deck).domain||""),cards:payloadCards,shared_by:session.user.id});if(result.error)failed.push(result.error.message||"erreur");}
+      if(failed.length)throw new Error("Certaines destinations ont refusé le partage. Vérifiez vos droits de membre et réessayez.");closeSharingDialog();notify("Série partagée dans "+selected.length+" groupe"+(selected.length>1?"s":"")+".");
+    }catch(error){console.error(error);if(status)status.textContent=String(error.message||"Le partage a échoué.");if(button){button.disabled=false;button.textContent="Réessayer le partage";}}
+  }
+  function openSeriesShareOptions(deck){openSharingDialog("Partager « "+deck+" »",'<p class="sharing-modal-intro">Choisissez le format qui vous convient.</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="export-series-pdf" data-deck="'+escapeHtml(deck)+'"><span>▤</span><strong>PDF</strong><small>Document prêt à imprimer ou envoyer.</small></button><button type="button" class="series-export-choice" data-act="export-series-images" data-deck="'+escapeHtml(deck)+'"><span>▧</span><strong>Images</strong><small>Une image par carte.</small></button><button type="button" class="series-export-choice" data-act="share-deck" data-deck="'+escapeHtml(deck)+'"><span>↗</span><strong>Lien</strong><small>Partager le lien public de la série.</small></button></div>');}
+  function exportDeckPdf(deck){
+    var cards=state.cards.filter(function(card){return isFlashcard(card)&&card.deck===deck;});if(!cards.length){notify("Cette série ne contient aucune carte.");return;}var w=window.open("","_blank");if(!w){notify("Autorisez l’ouverture de la fenêtre pour créer le PDF.");return;}
+    var esc=function(v){return escapeHtml(v).replace(/\n/g,"<br>");};
+    w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+escapeHtml(deck)+'</title><style>body{font:14px Georgia,serif;color:#191624;margin:20mm}h1{font:700 24px Arial}article{break-inside:avoid;border:1px solid #ddd;border-radius:10px;padding:16px;margin:0 0 12px}small{color:#666;font:10px Arial;letter-spacing:.12em}h2{font:700 16px Arial}p{line-height:1.65;overflow-wrap:anywhere}.answer{border-top:1px solid #ddd;padding-top:8px}@media print{body{margin:12mm}article{break-inside:avoid}}</style></head><body><h1>'+escapeHtml(deck)+'</h1><p>'+cards.length+' cartes</p>'+cards.map(function(card,i){return '<article><small>CARTE '+(i+1)+' · QUESTION</small><h2>'+esc(card.front)+'</h2><div class="answer"><small>RÉPONSE</small><p>'+esc(card.back)+'</p></div></article>';}).join("")+'<script>window.onload=function(){window.print()}<\\/script></body></html>');w.document.close();
+  }
+  async function exportDeckImages(deck){
+    var cards=state.cards.filter(function(card){return isFlashcard(card)&&card.deck===deck;});if(!cards.length){notify("Cette série ne contient aucune carte.");return;}
+    for(var i=0;i<cards.length;i++){var card=cards[i],canvas=document.createElement("canvas");canvas.width=1200;canvas.height=1500;var ctx=canvas.getContext("2d"),style=state.deckStyles&&state.deckStyles["flashcard:"+deck]||{},bg=/^#[0-9a-f]{6}$/i.test(card.backgroundColor||"")?card.backgroundColor:(style.backgroundColor||"#4937a6");ctx.fillStyle=bg;ctx.fillRect(0,0,1200,1500);ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 28px Arial";ctx.fillText(deck.slice(0,48),600,120);
+      function wrapped(value,y,font,size){ctx.font=font+" "+size+"px Arial";var line="",lines=[];String(value||"").split(/\s+/).forEach(function(word){var test=line?line+" "+word:word;if(ctx.measureText(test).width>980&&line){lines.push(line);line=word;}else line=test;});if(line)lines.push(line);lines.slice(0,38).forEach(function(l,n){ctx.fillText(l,600,y+n*size*1.5);});}
+      wrapped("QUESTION",270,"bold",26);wrapped(card.front,340,"bold",44);ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(120,730,960,2);ctx.fillStyle="#fff";wrapped("RÉPONSE",800,"bold",26);wrapped(card.back,870,"normal",34);var blob=await new Promise(function(resolve){canvas.toBlob(resolve,"image/png");});if(!blob)continue;var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=deck.replace(/[^a-z0-9_-]+/gi,"-")+"-carte-"+(i+1)+".png";document.body.appendChild(a);a.click();a.remove();await new Promise(function(resolve){setTimeout(resolve,250)});URL.revokeObjectURL(url);}
+    notify("Export des images terminé.");
   }
 
   function formatPublicDate(value) {
@@ -708,10 +724,9 @@
         var seriesSettings = deckSettingsFor(name);
         var visibilityLabel = seriesSettings.visibility === "public" ? "Public" : "Privé";
         var groupTag = seriesSettings.group && seriesSettings.group.name ? '<span class="series-group-tag">Groupe : ' + escapeHtml(seriesSettings.group.name) + '</span>' : '';
-        return '<article class="memory-row"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div>' + main +
+        return '<article class="memory-row memory-series-card"><div class="memory-row-mark card-series-mark" aria-hidden="true">▧</div><button class="series-menu-trigger" type="button" data-act="series-menu" data-deck="' + escapeHtml(name) + '" aria-label="Options de la série ' + escapeHtml(name) + '" aria-haspopup="dialog">•••</button>' + main +
           '<div class="memory-row-actions"><a class="primary-btn" href="reviser-cartes.html?deck=' + encodeURIComponent(name) + '">Étudier</a><a class="secondary-btn" href="creer-cartes.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="flashcard" data-deck="' + escapeHtml(name) + '">Supprimer</button></div>' +
-          '<div class="series-sharing-area"><div class="series-sharing-status"><span class="visibility-pill visibility-' + visibilityLabel.toLowerCase() + '">' + visibilityLabel + '</span>' + groupTag + '</div>' +
-          '<div class="series-sharing-actions"><button type="button" class="secondary-btn" data-act="visibility" data-deck="' + escapeHtml(name) + '">Visibilité</button><button type="button" class="secondary-btn series-share-action" data-act="share-deck" data-deck="' + escapeHtml(name) + '">↗ Partager</button><button type="button" class="secondary-btn series-group-action" data-act="group-deck" data-deck="' + escapeHtml(name) + '">♧ Groupe</button></div></div></article>';
+          '<div class="series-sharing-status"><span class="visibility-pill visibility-' + visibilityLabel.toLowerCase() + '">' + visibilityLabel + '</span>' + groupTag + '</div></article>';
       }).join("") + '</div>';
     }
 
@@ -1456,10 +1471,20 @@
       shareDeckLink(button.dataset.deck || "");
     } else if (action === "copy-share-link") {
       copyPublicShareLink();
-    } else if (action === "group-deck") {
-      openGroupDialog(button.dataset.deck || "");
-    } else if (action === "save-group") {
-      saveGroupFromDialog(button.dataset.deck || "");
+    } else if (action === "group-deck" || action === "series-menu") {
+      openSharingDialog("Options de la série", '<p class="sharing-modal-intro">Que souhaitez-vous faire avec cette série ?</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="group-deck" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>♧</span><strong>Partager avec un groupe</strong><small>Sélectionner un ou plusieurs groupes.</small></button><button type="button" class="series-export-choice" data-act="series-share-options" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>↗</span><strong>Partager la série</strong><small>PDF, images ou lien.</small></button></div>');
+    } else if (action === "series-share-options") {
+      openSeriesShareOptions(button.dataset.deck || "");
+    } else if (action === "confirm-group-share") {
+      shareDeckWithSelectedGroups(button.dataset.deck || "");
+    } else if (action === "reload-series-groups") {
+      loadGroupsForSharing();
+    } else if (action === "group-signin") {
+      if(window.auroreAuth&&typeof window.auroreAuth.signIn==="function")window.auroreAuth.signIn("mes-memoires.html?view=cards");else notify("Ouvrez la connexion Aurore ID depuis le menu du site.");
+    } else if (action === "export-series-pdf") {
+      exportDeckPdf(button.dataset.deck || "");
+    } else if (action === "export-series-images") {
+      exportDeckImages(button.dataset.deck || "");
     } else if (action === "public-answer") {
       var answerNode = document.getElementById(button.dataset.target || "");
       if (answerNode) {
