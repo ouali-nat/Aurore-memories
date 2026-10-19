@@ -3,13 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111019">
+  <meta name="theme-color" content="#09080F">
   <meta name="description" content="Aurore Mémoire : organisez vos contenus et consolidez vos apprentissages.">
   <title>Accueil — Aurore Mémoire</title>
-  <link rel="stylesheet" href="style.css?v=20261018-header-menu-layout">
+  <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="style.css?v=20261019-design-archives">
   <link rel="stylesheet" href="memory-access.css?v=20261018-auth-menu">
-  <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation">
-  <link rel="stylesheet" href="cloud-files.css?v=20261017-r2">
+  <!-- L'accueil n'a pas besoin de memoire.css pour s'afficher : chargement non bloquant, prêt pour les pages suivantes. -->
+  <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="cloud-files.css?v=20261017-r2" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation"><link rel="stylesheet" href="cloud-files.css?v=20261017-r2"></noscript>
   <link rel="prefetch" href="memoire.js" as="script">
   <link rel="prefetch" href="math-render.js?v=20261016-lazy-katex" as="script">
   <link rel="prefetch" href="reviser-cartes.js?v=20261015-katex-newline-fix" as="script">
@@ -125,7 +129,7 @@
   <script src="memory-access.js?v=20261018-auth-menu-fix2"></script>
   <script src="app.js?v=20261017-memory-cloud2"></script>
   <script src="home-stats.js?v=20261015-nav-stats-cache"></script>
-  <script src="spa-router.js?v=20261016-spa-shell"></script>
+  <script src="spa-router.js?v=20261019-prefetch"></script>
   <script src="app-menu.js?v=20261018-auth-aware-menu"></script>
 </body>
 </html>
