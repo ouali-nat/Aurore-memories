@@ -473,18 +473,29 @@
     loadGroupsForSharing();
   }
   async function getGroupSharingClient() {
-    if(window.auroreMemoryGroupClient)return window.auroreMemoryGroupClient;
-    if(!window.supabase||typeof window.supabase.createClient!=="function"){await new Promise(function(resolve,reject){var script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";script.onload=resolve;script.onerror=function(){reject(new Error("Service de groupes indisponible."));};document.head.appendChild(script);});}
-    window.auroreMemoryGroupClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);return window.auroreMemoryGroupClient;
+    if (window.auroreAuthReady) await window.auroreAuthReady;
+    if (window.auroreAuth && window.auroreAuth.client) return window.auroreAuth.client;
+    if (window.auroreMemoryGroupClient) return window.auroreMemoryGroupClient;
+    if (!window.supabase || typeof window.supabase.createClient !== "function") {
+      await new Promise(function (resolve, reject) {
+        var script = document.createElement("script"); script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+        script.onload = resolve; script.onerror = function () { reject(new Error("Service de groupes indisponible.")); };
+        document.head.appendChild(script);
+      });
+    }
+    window.auroreMemoryGroupClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce"}});
+    return window.auroreMemoryGroupClient;
   }
   async function loadGroupsForSharing(){
     var box=$("#seriesGroupsList");if(!box)return;
     try{if(window.auroreAuthReady)await window.auroreAuthReady;var client=await getGroupSharingClient(),auth=await client.auth.getSession(),session=auth.data&&auth.data.session;
       if(!session){box.innerHTML='<div class="sharing-empty"><strong>Connexion Aurore ID requise</strong><p>Connectez-vous avec Aurore ID pour choisir vos groupes.</p><button type="button" class="primary-btn" data-act="group-signin">Se connecter</button></div>';return;}
-      var result=await client.from("study_group_members").select("group_id,role").eq("user_id",session.user.id);if(result.error)throw result.error;var ids=(result.data||[]).map(function(m){return m.group_id;});
+      var memberships=await client.from("study_group_members").select("group_id,role").eq("user_id",session.user.id);if(memberships.error)throw memberships.error;
+      var owned=await client.from("study_groups").select("id,name,subject,level,visibility").eq("created_by",session.user.id);if(owned.error)throw owned.error;
+      var ids=(memberships.data||[]).map(function(m){return m.group_id;});(owned.data||[]).forEach(function(g){ids.push(g.id);});ids=ids.filter(function(id,index,all){return all.indexOf(id)===index;});
       if(!ids.length){box.innerHTML='<div class="sharing-empty"><strong>Aucun groupe disponible</strong><p>Rejoignez ou créez un groupe avant de partager cette série.</p><a class="secondary-btn" href="groupes.html">Découvrir les groupes</a></div>';return;}
       var groups=await client.from("study_groups").select("id,name,subject,level,visibility").in("id",ids).order("name");if(groups.error)throw groups.error;
-      if(!groups.data||!groups.data.length){box.innerHTML='<div class="sharing-empty"><p>Aucun groupe accessible pour le moment.</p></div>';return;}
+      if(!groups.data||!groups.data.length){box.innerHTML='<div class="sharing-empty"><strong>Aucun groupe accessible</strong><p>Reconnectez-vous à Aurore ID puis réessayez.</p><button type="button" class="secondary-btn" data-act="reload-series-groups">Réessayer</button></div>';return;}
       box.innerHTML=groups.data.map(function(g){return '<label class="series-group-choice"><input type="checkbox" value="'+escapeHtml(g.id)+'" data-group-choice><span><strong>'+escapeHtml(g.name)+'</strong><small>'+escapeHtml([g.subject,g.level,g.visibility==="private"?"Privé":"Public"].filter(Boolean).join(" · "))+'</small></span></label>';}).join("");
     }catch(error){console.error(error);box.innerHTML='<div class="sharing-empty"><strong>Impossible de charger les groupes</strong><p>Vérifiez la connexion Aurore ID et réessayez.</p><button type="button" class="secondary-btn" data-act="reload-series-groups">Réessayer</button></div>';}
   }
@@ -1471,8 +1482,10 @@
       shareDeckLink(button.dataset.deck || "");
     } else if (action === "copy-share-link") {
       copyPublicShareLink();
-    } else if (action === "group-deck" || action === "series-menu") {
+    } else if (action === "series-menu") {
       openSharingDialog("Options de la série", '<p class="sharing-modal-intro">Que souhaitez-vous faire avec cette série ?</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="group-deck" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>♧</span><strong>Partager avec un groupe</strong><small>Sélectionner un ou plusieurs groupes.</small></button><button type="button" class="series-export-choice" data-act="series-share-options" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>↗</span><strong>Partager la série</strong><small>PDF, images ou lien.</small></button></div>');
+    } else if (action === "group-deck") {
+      openGroupDialog(button.dataset.deck || "");
     } else if (action === "series-share-options") {
       openSeriesShareOptions(button.dataset.deck || "");
     } else if (action === "confirm-group-share") {
