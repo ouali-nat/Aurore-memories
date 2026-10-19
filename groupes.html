@@ -43,46 +43,46 @@
       <div class="groups-skel-card" aria-hidden="true"><div class="sk-cover aurore-skel"></div><div class="sk-body aurore-skel"></div></div>
     </section>
     <p class="groups-note">Les groupes publics peuvent être découverts par tous. Les groupes privés sont réservés à leur propriétaire et à leurs membres autorisés. Les propriétaires peuvent générer des invitations privées avec expiration et nombre d’utilisations limité.</p>
+    <div class="groups-modal-backdrop" id="createGroupModal" hidden>
+      <section class="groups-modal" role="dialog" aria-modal="true" aria-labelledby="createGroupTitle">
+        <div class="groups-modal-head"><h2 id="createGroupTitle">Créer un groupe</h2><button class="groups-icon-btn" type="button" data-close-modal aria-label="Fermer">×</button></div>
+        <form id="createGroupForm" class="groups-form">
+          <label>Nom du groupe
+            <input name="name" required minlength="3" maxlength="60" placeholder="Ex. Révisions de mathématiques">
+          </label>
+          <label>Description
+            <textarea name="description" maxlength="500" placeholder="Quel est l'objectif de ce groupe ?"></textarea>
+          </label>
+          <label>Matière (facultatif)
+            <input name="subject" maxlength="80" placeholder="Ex. Mathématiques, SVT, Français">
+          </label>
+          <label>Couverture du groupe (facultatif)
+            <input name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+            <small>Photo JPG, PNG, WebP ou AVIF, 5 Mo maximum.</small>
+          </label>
+          <label>Niveau (facultatif)
+            <select name="level"><option value="">Choisir un niveau (facultatif)</option><option value="Primaire">Primaire</option><option value="Secondaire">Secondaire</option><option value="Licence">Licence</option><option value="Master">Master</option><option value="Autre">Autre</option></select>
+          </label>
+          <fieldset style="border:0;padding:0;margin:0">
+            <legend style="font-size:.8rem;font-weight:800;margin-bottom:7px">Visibilité du groupe</legend>
+            <div class="groups-visibility-options">
+              <label class="groups-visibility-option"><input type="radio" name="visibility" value="public" checked><span>🌐 Public<small>Visible dans la liste des groupes.</small></span></label>
+              <label class="groups-visibility-option"><input type="radio" name="visibility" value="private"><span>🔒 Privé<small>Non répertorié. Seuls les membres autorisés y accèdent.</small></span></label>
+            </div>
+          </fieldset>
+          <label>Adhésion au groupe
+            <select name="join_policy"><option value="approval" selected>Après approbation du propriétaire</option><option value="open">Libre pour les groupes publics</option></select>
+            <small>Les groupes privés restent accessibles uniquement sur invitation.</small>
+          </label>
+          <label>Nombre maximal de membres
+            <select name="max_members"><option value="10">10 membres</option><option value="30" selected>30 membres</option><option value="100">100 membres</option><option value="500">500 membres</option></select>
+          </label>
+          <p class="groups-status" id="createGroupStatus" role="status" aria-live="polite"></p>
+          <div class="groups-modal-actions"><button class="groups-btn" type="button" data-close-modal>Annuler</button><button class="groups-btn primary" id="submitCreateGroup" type="submit">Créer le groupe</button></div>
+        </form>
+      </section>
+    </div>
   </main>
-  <div class="groups-modal-backdrop" id="createGroupModal" hidden>
-    <section class="groups-modal" role="dialog" aria-modal="true" aria-labelledby="createGroupTitle">
-      <div class="groups-modal-head"><h2 id="createGroupTitle">Créer un groupe</h2><button class="groups-icon-btn" type="button" data-close-modal aria-label="Fermer">×</button></div>
-      <form id="createGroupForm" class="groups-form">
-        <label>Nom du groupe
-          <input name="name" required minlength="3" maxlength="60" placeholder="Ex. Révisions de mathématiques">
-        </label>
-        <label>Description
-          <textarea name="description" maxlength="500" placeholder="Quel est l'objectif de ce groupe ?"></textarea>
-        </label>
-        <label>Matière (facultatif)
-          <input name="subject" maxlength="80" placeholder="Ex. Mathématiques, SVT, Français">
-        </label>
-        <label>Couverture du groupe (facultatif)
-          <input name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
-          <small>Photo JPG, PNG, WebP ou AVIF, 5 Mo maximum.</small>
-        </label>
-        <label>Niveau (facultatif)
-          <select name="level"><option value="">Choisir un niveau (facultatif)</option><option value="Primaire">Primaire</option><option value="Secondaire">Secondaire</option><option value="Licence">Licence</option><option value="Master">Master</option><option value="Autre">Autre</option></select>
-        </label>
-        <fieldset style="border:0;padding:0;margin:0">
-          <legend style="font-size:.8rem;font-weight:800;margin-bottom:7px">Visibilité du groupe</legend>
-          <div class="groups-visibility-options">
-            <label class="groups-visibility-option"><input type="radio" name="visibility" value="public" checked><span>🌐 Public<small>Visible dans la liste des groupes.</small></span></label>
-            <label class="groups-visibility-option"><input type="radio" name="visibility" value="private"><span>🔒 Privé<small>Non répertorié. Seuls les membres autorisés y accèdent.</small></span></label>
-          </div>
-        </fieldset>
-        <label>Adhésion au groupe
-          <select name="join_policy"><option value="approval" selected>Après approbation du propriétaire</option><option value="open">Libre pour les groupes publics</option></select>
-          <small>Les groupes privés restent accessibles uniquement sur invitation.</small>
-        </label>
-        <label>Nombre maximal de membres
-          <select name="max_members"><option value="10">10 membres</option><option value="30" selected>30 membres</option><option value="100">100 membres</option><option value="500">500 membres</option></select>
-        </label>
-        <p class="groups-status" id="createGroupStatus" role="status" aria-live="polite"></p>
-        <div class="groups-modal-actions"><button class="groups-btn" type="button" data-close-modal>Annuler</button><button class="groups-btn primary" id="submitCreateGroup" type="submit">Créer le groupe</button></div>
-      </form>
-    </section>
-  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js?v=20261015-nav-final" defer></script>
   <script src="groupes.js?v=20261019-fast-swr" defer></script>
