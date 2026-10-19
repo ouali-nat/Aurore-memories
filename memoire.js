@@ -238,8 +238,9 @@
   function formatCardMathText(value, card) {
     var input = String(value == null ? "" : value), trimmed = input.trim();
     var wrapped = /^(?:\\\[[\s\S]*\\\]|\\\([\s\S]*\\\)|\$\$[\s\S]*\$\$|\$[^$\n]+\$)$/.test(trimmed);
+    var hasEnvironment = /\\begin\s*\{(equation\*?|align\*?|alignat\*?|gather\*?|multline\*?|CD|split|cases)\}/.test(input);
     var looksMath = /\\(?:lim|int|sqrt|frac|sum|prod|log|ln|sin|cos|tan|alpha|beta|gamma|delta|theta|lambda|pi|infty|to|left|right|mathrm|text|partial|nabla|cdot|times|approx|neq|leq|geq|begin|overline|widehat)\b/.test(input) || /(?:\^|_)\s*\{/.test(input);
-    if (trimmed && !wrapped && ((card && card.cardMode === "scientific") || looksMath)) input = "\\[" + input + "\\]";
+    if (trimmed && !wrapped && !hasEnvironment && ((card && card.cardMode === "scientific") || looksMath)) input = "\\[" + input + "\\]";
     return formatMathText(input);
   }
 
@@ -562,7 +563,18 @@
             {left: "\\[", right: "\\]", display: true},
             {left: "\\(", right: "\\)", display: false},
             {left: "$$", right: "$$", display: true},
-            {left: "$", right: "$", display: false}
+            {left: "$", right: "$", display: false},
+            {left: "\\begin{equation}", right: "\\end{equation}", display: true},
+            {left: "\\begin{equation*}", right: "\\end{equation*}", display: true},
+            {left: "\\begin{align}", right: "\\end{align}", display: true},
+            {left: "\\begin{align*}", right: "\\end{align*}", display: true},
+            {left: "\\begin{alignat}", right: "\\end{alignat}", display: true},
+            {left: "\\begin{alignat*}", right: "\\end{alignat*}", display: true},
+            {left: "\\begin{gather}", right: "\\end{gather}", display: true},
+            {left: "\\begin{gather*}", right: "\\end{gather*}", display: true},
+            {left: "\\begin{multline}", right: "\\end{multline}", display: true},
+            {left: "\\begin{multline*}", right: "\\end{multline*}", display: true},
+            {left: "\\begin{CD}", right: "\\end{CD}", display: true}
           ],
           throwOnError: false,
           strict: "ignore"
@@ -582,9 +594,17 @@
     var link = w.document.createElement("link");
     link.rel = "stylesheet";
     link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
-    w.document.head.appendChild(link);
+    await new Promise(function (resolve, reject) {
+      link.onload = resolve;
+      link.onerror = function () { reject(new Error("La feuille de style LaTeX n’a pas pu être chargée.")); };
+      w.document.head.appendChild(link);
+    });
     renderDeckExportMath(w);
-    await new Promise(function (resolve) { w.setTimeout(resolve, 700); });
+    var formulaNodes = w.document.querySelectorAll(".deck-export-content");
+    var rawLatex = Array.prototype.some.call(formulaNodes, function (node) { return /\\(?:frac|sqrt|sum|int|begin|alpha|beta|theta|pi|lim|mathrm|text)\b/.test(node.textContent); });
+    var renderedMath = w.document.querySelectorAll(".deck-export-content .katex").length;
+    if (rawLatex && !renderedMath) throw new Error("Les formules LaTeX n’ont pas été converties. Vérifiez le contenu des cartes.");
+    await new Promise(function (resolve) { w.setTimeout(resolve, 250); });
     return w;
   }
 
