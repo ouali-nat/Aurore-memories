@@ -8,6 +8,8 @@
 <title>Espace du groupe — Aurore Mémoire</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
+  <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
+  <link rel="prefetch" href="groupe.js?v=20261019-nav-stable" as="script">
 </head>
 <body data-page="group-detail">
 <div class="ambient-bg" aria-hidden="true"></div>
@@ -53,7 +55,7 @@
   ];
   function loadApp() {
     var app = document.createElement("script");
-    app.src = "groupe.js?v=20261018-sdk-loader-fallback-2";
+    app.src = "groupe.js?v=20261019-nav-stable";
     app.onerror = function () {
       var title = document.getElementById("groupTitle");
       var status = document.getElementById("groupStatus");
