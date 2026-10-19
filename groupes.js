@@ -2,7 +2,7 @@
   "use strict";
   var SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co";
   var SUPABASE_KEY = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
-  var client = null, session = null, activeFilter = "public", groups = [], joinedGroupIds = Object.create(null);
+  var client = null, session = null, activeFilter = "public", groups = [], joinedGroupIds = Object.create(null), loadToken = 0;
   var grid = document.getElementById("groupsGrid");
   var search = document.getElementById("groupSearch");
   var modal = document.getElementById("createGroupModal");
@@ -45,7 +45,8 @@
     var result = await client.auth.getSession();
     if (result.error) throw result.error;
     session = result.data.session;
-    client.auth.onAuthStateChange(function (_event, nextSession) {
+    if (window.__auroreGroupsAuthSubscription && window.__auroreGroupsAuthSubscription.data && window.__auroreGroupsAuthSubscription.data.subscription) { window.__auroreGroupsAuthSubscription.data.subscription.unsubscribe(); }
+    window.__auroreGroupsAuthSubscription = client.auth.onAuthStateChange(function (_event, nextSession) {
       session = nextSession;
       updateAuthButtons();
       loadGroups();
@@ -58,6 +59,7 @@
     createButton.textContent = signedIn() ? "＋ Créer un groupe" : "＋ Créer un groupe";
   }
   async function loadGroups() {
+    var requestId = ++loadToken;
     if (!client) {
       grid.setAttribute("aria-busy","false");
       grid.innerHTML='<div class="groups-error"><strong>Connexion aux groupes indisponible</strong><p>Le service de données n’a pas pu être initialisé. Recharge la page dans quelques instants.</p><button class="groups-btn" type="button" id="retryGroups">Réessayer</button></div>';
@@ -69,19 +71,22 @@
     try {
       var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
       if (result.error) throw result.error;
+      if (requestId !== loadToken) return;
       groups = result.data || [];
       joinedGroupIds = Object.create(null);
       if (signedIn()) {
         var memberships = await client.from("study_group_members").select("group_id").eq("user_id", session.user.id);
         if (memberships.error) throw memberships.error;
+        if (requestId !== loadToken) return;
         (memberships.data || []).forEach(function (row) { joinedGroupIds[row.group_id] = true; });
       }
       renderGroups();
     } catch (error) {
+      if (requestId !== loadToken) return;
       console.error("Loading study groups:",error);
       grid.innerHTML='<div class="groups-error"><strong>Impossible de charger les groupes</strong><p>Vérifie ta connexion puis réessaie. Aucun groupe fictif n’est affiché.</p><button class="groups-btn" type="button" id="retryGroups">Réessayer</button></div>';
       var retry=document.getElementById("retryGroups"); if(retry)retry.addEventListener("click",loadGroups);
-    } finally { grid.setAttribute("aria-busy","false"); }
+    } finally { if (requestId === loadToken) grid.setAttribute("aria-busy","false"); }
   }
   function renderGroups() {
     var term=(search.value||"").trim().toLocaleLowerCase("fr");
