@@ -8,6 +8,8 @@
   <title>Groupes d'étude — Aurore Mémoire</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
+  <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
+  <link rel="prefetch" href="groupes.js?v=20261019-nav-stable" as="script">
 </head>
 <body data-page="groups">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -95,7 +97,7 @@
         loaded = true;
         if (timeoutId) window.clearTimeout(timeoutId);
         var script = document.createElement("script");
-        script.src = "groupes.js?v=20261018-group-covers-diagnostic-2";
+        script.src = "groupes.js?v=20261019-nav-stable";
         document.body.appendChild(script);
       }
       function tryNext() {
