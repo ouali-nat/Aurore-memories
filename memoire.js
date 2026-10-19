@@ -509,7 +509,7 @@
       if(failed.length)throw new Error("Certaines destinations ont refusé le partage. Vérifiez vos droits de membre et réessayez.");closeSharingDialog();notify("Série partagée dans "+selected.length+" groupe"+(selected.length>1?"s":"")+".");
     }catch(error){console.error(error);if(status)status.textContent=String(error.message||"Le partage a échoué.");if(button){button.disabled=false;button.textContent="Réessayer le partage";}}
   }
-  function openSeriesShareOptions(deck){openSharingDialog("Partager « "+deck+" »",'<p class="sharing-modal-intro">Choisissez le format qui vous convient.</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="export-series-pdf" data-deck="'+escapeHtml(deck)+'"><span>▤</span><strong>PDF</strong><small>Document prêt à imprimer ou envoyer.</small></button><button type="button" class="series-export-choice" data-act="export-series-images" data-deck="'+escapeHtml(deck)+'"><span>▧</span><strong>Images</strong><small>Une image par carte.</small></button><button type="button" class="series-export-choice" data-act="share-deck" data-deck="'+escapeHtml(deck)+'"><span>↗</span><strong>Lien</strong><small>Partager le lien public de la série.</small></button></div>');}
+  function openSeriesShareOptions(deck){openSharingDialog("Partager « "+deck+" »",'<p class="sharing-modal-intro">Téléchargez d’abord vos cartes ou choisissez de les imprimer.</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="export-series-pdf" data-deck="'+escapeHtml(deck)+'"><span>⬇</span><strong>Télécharger le PDF</strong><small>Enregistre un fichier PDF sur votre appareil.</small></button><button type="button" class="series-export-choice" data-act="print-series" data-deck="'+escapeHtml(deck)+'"><span>▤</span><strong>Imprimer les cartes</strong><small>Ouvre les réglages d’impression séparément.</small></button><button type="button" class="series-export-choice" data-act="export-series-images" data-deck="'+escapeHtml(deck)+'"><span>▧</span><strong>Télécharger les images</strong><small>Une image PNG par recto et par verso.</small></button><button type="button" class="series-export-choice" data-act="share-deck" data-deck="'+escapeHtml(deck)+'"><span>↗</span><strong>Partager le lien</strong><small>Partager le lien public de la série.</small></button></div>');}
   function exportCardMarkup(card, index, side) {
     var style = state.deckStyles && state.deckStyles["flashcard:" + card.deck] || {};
     var background = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor :
@@ -571,28 +571,76 @@
     });
   }
 
-  function exportDeckPdf(deck) {
+  async function prepareDeckExportWindow(deck, cards, imageMode) {
+    var w = window.open("", "_blank");
+    if (!w) throw new Error("Autorisez l’ouverture de la fenêtre pour préparer l’export.");
+    w.document.open();
+    w.document.write(deckExportDocument(deck, cards, imageMode));
+    w.document.close();
+    await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js");
+    await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js");
+    var link = w.document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
+    w.document.head.appendChild(link);
+    renderDeckExportMath(w);
+    await new Promise(function (resolve) { w.setTimeout(resolve, 700); });
+    return w;
+  }
+
+  async function exportDeckPdf(deck) {
     var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
     if (!cards.length) { notify("Cette série ne contient aucune carte."); return; }
-    var w = window.open("", "_blank");
-    if (!w) { notify("Autorisez l’ouverture de la fenêtre pour créer le PDF."); return; }
-    w.document.open();
-    w.document.write(deckExportDocument(deck, cards, false));
-    w.document.close();
-    loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js")
-    .then(function () { return loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"); })
-    .then(function () {
-      var link = w.document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
-      w.document.head.appendChild(link);
-      renderDeckExportMath(w);
-      w.setTimeout(function () { w.focus(); w.print(); }, 500);
-    }).catch(function (error) {
-      console.error(error);
+    var w = null;
+    try {
+      w = await prepareDeckExportWindow(deck, cards, false);
+      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js");
+      var pages = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-page"));
+      if (!pages.length) throw new Error("Aucune page de cartes n’a été préparée.");
+      var stage = w.document.createElement("main");
+      stage.id = "deck-pdf-download";
+      stage.style.cssText = "width:210mm;margin:0;padding:0;background:#fff";
+      pages.forEach(function (page) { stage.appendChild(page.cloneNode(true)); });
+      w.document.body.innerHTML = "";
+      w.document.body.appendChild(stage);
+      var css = w.document.createElement("style");
+      css.textContent = ".deck-export-page{width:210mm;height:297mm;min-height:297mm;margin:0;padding:10mm 13mm 12mm;box-sizing:border-box;overflow:hidden;page-break-after:always;break-after:page;background:#fff}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{grid-template-columns:repeat(2,85mm);grid-auto-rows:55mm;gap:4mm}.deck-export-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck-export-content{overflow:hidden}.deck-export-footer{margin-top:5mm}";
+      w.document.head.appendChild(css);
+      var filename = deck.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "") || "aurore-cartes";
+      await w.html2pdf().set({
+        margin: 0,
+        filename: filename + "-recto-verso.pdf",
+        image: {type:"jpeg",quality:0.98},
+        html2canvas: {scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false,windowWidth:794},
+        jsPDF: {unit:"mm",format:"a4",orientation:"portrait",compress:true},
+        pagebreak: {mode:["css","legacy"],before:".deck-export-page:not(:first-child)"},
+        enableLinks: true
+      }).from(stage).save();
+      w.setTimeout(function(){if(w&&!w.closed)w.close();},1200);
+      notify("Téléchargement du PDF lancé.");
+    } catch (error) {
+      console.error("Échec du téléchargement PDF :", error);
+      if (w && !w.closed) {
+        var note = w.document.createElement("p");
+        note.textContent = "Le téléchargement automatique n’a pas abouti. Vous pouvez réessayer ou utiliser Imprimer les cartes.";
+        note.style.cssText = "padding:18px;font:16px Arial;color:#a21d35";
+        w.document.body.appendChild(note);
+      }
+      notify("Le PDF n’a pas pu être téléchargé. Réessayez ou utilisez Imprimer les cartes.");
+    }
+  }
+
+  async function printDeck(deck) {
+    var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
+    if (!cards.length) { notify("Cette série ne contient aucune carte."); return; }
+    try {
+      var w = await prepareDeckExportWindow(deck, cards, false);
       w.focus();
       w.print();
-    });
+    } catch (error) {
+      console.error(error);
+      notify(error.message || "Impossible d’ouvrir l’impression.");
+    }
   }
 
   async function exportDeckImages(deck) {
@@ -1612,6 +1660,8 @@
       if(window.auroreAuth&&typeof window.auroreAuth.signIn==="function")window.auroreAuth.signIn("mes-memoires.html?view=cards");else notify("Ouvrez la connexion Aurore ID depuis le menu du site.");
     } else if (action === "export-series-pdf") {
       exportDeckPdf(button.dataset.deck || "");
+    } else if (action === "print-series") {
+      printDeck(button.dataset.deck || "");
     } else if (action === "export-series-images") {
       exportDeckImages(button.dataset.deck || "");
     } else if (action === "public-answer") {
