@@ -579,10 +579,9 @@
     w.document.open();
     w.document.write(deckExportDocument(deck, cards, false));
     w.document.close();
-    Promise.all([
-      loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"),
-      loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js")
-    ]).then(function () {
+    loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js")
+    .then(function () { return loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"); })
+    .then(function () {
       var link = w.document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
@@ -605,11 +604,9 @@
     w.document.write(deckExportDocument(deck, cards, true));
     w.document.close();
     try {
-      await Promise.all([
-        loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"),
-        loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"),
-        loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js")
-      ]);
+      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js");
+      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js");
+      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
       var link = w.document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
