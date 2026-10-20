@@ -26,6 +26,8 @@
   async function ensureSupabaseLibrary() {
     if (window.supabase && typeof window.supabase.createClient === "function") return;
     var sources = [
+      // Le client est embarqué dans l’APK ; les opérations réseau restent naturellement en ligne.
+      "vendor/supabase.js",
       "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
       "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
     ];
@@ -41,6 +43,45 @@
     }
     throw new Error("Impossible de charger le service d’authentification. Vérifiez votre connexion Internet puis réessayez." +
       (lastError && lastError.message ? " (" + lastError.message + ")" : ""));
+  }
+
+  function isNativeApp() {
+    return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+  }
+
+  function authRedirect(redirectPath) {
+    if (isNativeApp()) return "app.aurore.memoire://auth/callback";
+    return new URL(redirectPath || "fichiers.html", window.location.origin).toString();
+  }
+
+  function installNativeAuthCallback() {
+    if (!isNativeApp() || window.__auroreNativeAuthCallbackInstalled) return;
+    var appPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if (!appPlugin || typeof appPlugin.addListener !== "function") {
+      console.warn("Aurore Mémoire : le gestionnaire de retour Android n’est pas disponible.");
+      return;
+    }
+    window.__auroreNativeAuthCallbackInstalled = true;
+    appPlugin.addListener("appUrlOpen", async function (event) {
+      var rawUrl = event && event.url;
+      if (!rawUrl || rawUrl.indexOf("app.aurore.memoire://auth/callback") !== 0) return;
+      try {
+        var callbackUrl = new URL(rawUrl);
+        var oauthError = callbackUrl.searchParams.get("error_description") || callbackUrl.searchParams.get("error");
+        if (oauthError) throw new Error(oauthError);
+        var code = callbackUrl.searchParams.get("code");
+        if (!code) throw new Error("Aucun code de retour n’a été reçu d’Aurore ID.");
+        var result = await client.auth.exchangeCodeForSession(code);
+        if (result.error) throw result.error;
+        window.dispatchEvent(new CustomEvent("aurore:auth-changed", { detail: { session: result.data.session || null } }));
+        window.location.replace("index.html?auth=success");
+      } catch (error) {
+        console.error("Aurore Mémoire : retour de connexion Android impossible.", error);
+        var message = document.getElementById("memoryAccessMessage") || document.getElementById("toast");
+        if (message) message.textContent = "Le retour d’Aurore ID n’a pas abouti : " + (error && error.message ? error.message : "erreur inconnue");
+        window.location.replace("index.html?auth=error");
+      }
+    });
   }
 
   function currentSession() {
@@ -181,7 +222,7 @@
         var result = await client.auth.signInWithOAuth({
           provider: OIDC_PROVIDER,
           options: {
-            redirectTo: new URL(redirectPath || "fichiers.html", window.location.origin).toString(),
+            redirectTo: authRedirect(redirectPath),
             scopes: "openid email profile"
           }
         });
@@ -194,6 +235,7 @@
       signOut: function () { return client.auth.signOut(); }
     };
     window.auroreAuth = authApi;
+    installNativeAuthCallback();
 
     client.auth.onAuthStateChange(function (_event, session) {
       updateHeader(session);

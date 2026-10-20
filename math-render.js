@@ -1,6 +1,10 @@
 (function () {
   "use strict";
   var sources = [
+    // Ressources embarquées dans l’APK : les formules fonctionnent sans CDN.
+    { js: "vendor/katex/katex.min.js",
+      auto: "vendor/katex/contrib/auto-render.min.js",
+      css: "vendor/katex/katex.min.css" },
     { js: "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js",
       auto: "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js",
       css: "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" },

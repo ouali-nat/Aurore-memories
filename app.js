@@ -11,6 +11,16 @@
 (function () {
   "use strict";
 
+  // Persistent IndexedDB mirror for cards and memorisations. The Android APK
+  // already bundles the pages; this module keeps the user's data available offline.
+  if (!window.__auroreOfflineStorageLoader) {
+    window.__auroreOfflineStorageLoader = true;
+    var offlineStorageScript = document.createElement("script");
+    offlineStorageScript.src = "offline-storage.js?v=20261020-offline-storage-1";
+    offlineStorageScript.async = true;
+    document.head.appendChild(offlineStorageScript);
+  }
+
   // Keep every Aurore Mémoire page on the stable production domain.
   // Deployment-specific Vercel URLs are temporary and must never become navigation/share origins.
   var AURORE_CANONICAL_HOST = "aurore-memories-aurore9.vercel.app";

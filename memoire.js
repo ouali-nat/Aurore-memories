@@ -550,11 +550,30 @@
 
   function loadDeckExportScript(targetWindow, src) {
     return new Promise(function (resolve, reject) {
-      var script = targetWindow.document.createElement("script");
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = function () { reject(new Error("Impossible de charger le moteur d’exportation.")); };
-      targetWindow.document.head.appendChild(script);
+      var nativeApp = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+      var localPath = "";
+      if (nativeApp) {
+        if (/\/katex\.min\.js(?:\?|$)/.test(src)) localPath = "vendor/katex/katex.min.js";
+        else if (/\/auto-render\.min\.js(?:\?|$)/.test(src)) localPath = "vendor/katex/contrib/auto-render.min.js";
+        else if (/\/html2pdf\.bundle\.min\.js(?:\?|$)/.test(src)) localPath = "vendor/html2pdf.bundle.min.js";
+        else if (/\/html2canvas\.min\.js(?:\?|$)/.test(src)) localPath = "vendor/html2canvas.min.js";
+      }
+      var sources = localPath ? [new URL(localPath, window.location.href).href, src] : [src];
+      function attempt(index) {
+        if (index >= sources.length) {
+          reject(new Error("Impossible de charger le moteur d’exportation. En mode hors ligne, vérifie que les ressources locales sont présentes."));
+          return;
+        }
+        var script = targetWindow.document.createElement("script");
+        script.src = sources[index];
+        script.onload = resolve;
+        script.onerror = function () {
+          script.remove();
+          attempt(index + 1);
+        };
+        targetWindow.document.head.appendChild(script);
+      }
+      attempt(0);
     });
   }
 
@@ -597,10 +616,23 @@
     await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js");
     var link = w.document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
+    var nativeApp = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+    link.href = nativeApp ? new URL("vendor/katex/katex.min.css", window.location.href).href : "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
     await new Promise(function (resolve, reject) {
       link.onload = resolve;
-      link.onerror = function () { reject(new Error("La feuille de style LaTeX n’a pas pu être chargée.")); };
+      link.onerror = function () {
+        if (nativeApp) {
+          link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
+        } else reject(new Error("La feuille de style LaTeX n’a pas pu être chargée."));
+      };
+      if (nativeApp) {
+        link.onload = resolve;
+        link.onerror = function () {
+          link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
+          link.onload = resolve;
+          link.onerror = function () { reject(new Error("La feuille de style LaTeX n’a pas pu être chargée.")); };
+        };
+      }
       w.document.head.appendChild(link);
     });
     renderDeckExportMath(w);
