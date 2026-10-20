@@ -90,6 +90,11 @@ jobs:
               manifest.write_text(xml)
           print("Lien profond Aurore ID configuré.")
           PY
+          if [ -f assets/icon.png ]; then
+            npx capacitor-assets generate
+          else
+            echo "::warning::Logo absent : ajoutez android-app/assets/icon.png pour générer les icônes de l’application."
+          fi
           npx cap sync android
 
       - name: Définir le numéro de version
