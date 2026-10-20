@@ -26,6 +26,8 @@
   async function ensureSupabaseLibrary() {
     if (window.supabase && typeof window.supabase.createClient === "function") return;
     var sources = [
+      // Le client est embarqué dans l’APK ; les opérations réseau restent naturellement en ligne.
+      "vendor/supabase.js",
       "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
       "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
     ];
