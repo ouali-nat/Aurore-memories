@@ -1,0 +1,100 @@
+/* ==========================================================================
+   Aurore Mémoire — design « pilule flottante » appliqué à tous les blocs.
+   Inspiré de la barre flottante (variantes blanche / accent / sombre) :
+   capsules aux coins très arrondis, ombre douce flottante, pastilles d'icône
+   en tuile, état actif/survol en tuile d'accent avec petit point.
+   Chargée en dernier par app.js sur toutes les pages. Suit --accent, le thème
+   clair/sombre et les 18 couleurs. Retrait : supprimer ce fichier.
+   ========================================================================== */
+:root {
+  --pill-radius: 32px;
+  --pill-radius-sm: 22px;
+  --pill-shadow: 0 16px 36px -14px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .18);
+  --pill-shadow-hover: 0 22px 46px -14px color-mix(in srgb, var(--accent) 55%, rgba(0, 0, 0, .5)), 0 3px 8px rgba(0, 0, 0, .2);
+  --pill-active: linear-gradient(140deg, var(--accent-deep), color-mix(in srgb, var(--accent-deep) 40%, var(--accent)));
+}
+html[data-theme="light"] {
+  --pill-shadow: 0 16px 34px -16px rgba(60, 40, 90, .32), 0 2px 6px rgba(60, 40, 90, .08);
+  --pill-shadow-hover: 0 22px 44px -16px color-mix(in srgb, var(--accent) 50%, rgba(60, 40, 90, .3)), 0 3px 8px rgba(60, 40, 90, .1);
+}
+
+/* 1. Barre du haut : pilule flottante, onglet actif en tuile avec point */
+:root:root:root .top-actions {
+  padding: 5px; gap: 2px; border-radius: 999px; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--pill-shadow);
+}
+:root:root:root .nav-link { position: relative; min-height: 40px; padding: 8px 16px 11px; border-radius: 999px; }
+:root:root:root .nav-link:hover { background: var(--soft); color: var(--text); }
+:root:root:root .nav-link.active {
+  color: #fff; background: var(--pill-active); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+:root:root:root .nav-link.active::after {
+  content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #fff;
+}
+:root:root:root .brand-mark { border-radius: 16px; }
+
+/* 2. Blocs de navigation : capsule flottante, survol en tuile d'accent */
+:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner) {
+  border-radius: var(--pill-radius); box-shadow: var(--pill-shadow);
+}
+:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner):hover {
+  background: var(--pill-active); border-color: transparent; box-shadow: var(--pill-shadow-hover); transform: translateY(-4px);
+}
+:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner):hover :is(strong, small, p, b, span, em, .card-arrow, .action-arrow, .library-choice-arrow, .chooser-arrow, .create-arrow, .card-stat) {
+  color: #fff;
+}
+:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut):hover :is(small, p) { opacity: .9; }
+:root:root:root :is(.library-choice-count, .coming-label):is(*) { border-radius: 999px; }
+:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut):hover :is(.library-choice-count, .coming-label) {
+  background: rgba(255, 255, 255, .2); border-color: rgba(255, 255, 255, .35);
+}
+
+/* 3. Pastilles d'icône : tuile arrondie ; en tuile blanche translucide au survol */
+:root:root:root :is(.card-symbol, .action-icon, .library-choice-icon, .chooser-icon, .creation-choice-icon, .library-shortcut-symbol, .group-card-symbol, .empty-icon, .memory-row-mark, .visibility-choice-icon, .science-mode-icon, .create-plus) {
+  border-radius: 18px;
+}
+:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner):hover :is(.card-symbol, .action-icon, .library-choice-icon, .chooser-icon, .creation-choice-icon, .library-shortcut-symbol, .create-plus) {
+  background: rgba(255, 255, 255, .2); border-color: rgba(255, 255, 255, .38); color: #fff; box-shadow: none;
+}
+
+/* 4. Panneaux et grands blocs de contenu : coins très arrondis + ombre flottante */
+:root:root:root :is(.form-panel, .study-card, .progress-panel, .mode-navigation, .workspace-panel, .practice-card-header, .practice-work-area, .memory-block-card, .chunk-chart-card, .groups-detail-content, .groups-modal, .sharing-modal, .science-mode-picker, .card-appearance-settings, .groups-note, .empty-state, .groups-empty, .groups-error, .groups-loading, .mini-hero, .groups-hero, .groups-detail-hero) {
+  border-radius: var(--pill-radius); box-shadow: var(--pill-shadow);
+}
+:root:root:root :is(.memory-block-card, .study-card, .chunk-chart-card, .workspace-panel):hover { box-shadow: var(--pill-shadow-hover); }
+
+/* 5. Rangées et petites tuiles */
+:root:root:root :is(.memory-row, .chunk-progress-row, .draft-card, .workspace-chunk, .visibility-choice) {
+  border-radius: var(--pill-radius-sm); box-shadow: var(--pill-shadow);
+}
+:root:root:root :is(.memory-row, .chunk-progress-row, .draft-card, .workspace-chunk, .visibility-choice):hover { box-shadow: var(--pill-shadow-hover); }
+:root:root:root :is(.library-summary > div, .review-summary > span, .chunk-kpis > div) { border-radius: 999px; box-shadow: var(--pill-shadow); }
+:root:root:root .mode-link { border-radius: 999px; box-shadow: var(--pill-shadow); }
+:root:root:root .mode-link:hover { background: var(--pill-active); border-color: transparent; color: #fff; }
+
+/* 6. Boutons, onglets, champs : capsules complètes */
+:root:root:root :is(.primary-btn, .secondary-btn, .text-link, .subtle-danger, .groups-btn, .back-link, .groups-tab, .theme-btn, .theme-mode-choices, .theme-mode-choices button, .app-menu-toggle, .color-theme-choice) {
+  border-radius: 999px;
+}
+:root:root:root :is(.primary-btn, .secondary-btn, .groups-btn, .back-link, .theme-btn, .app-menu-toggle) { box-shadow: var(--pill-shadow); }
+:root:root:root :is(.primary-btn, .groups-btn.primary) { box-shadow: 0 12px 26px -10px color-mix(in srgb, var(--accent) 70%, transparent); }
+:root:root:root :is(.search-field, .groups-search) { border-radius: 999px; box-shadow: var(--pill-shadow); }
+:root:root:root :is(.text-field, .groups-form input, .groups-form select, .sharing-form input) { border-radius: 20px; }
+:root:root:root :is(.text-area, .groups-form textarea, .sharing-form textarea) { border-radius: 22px; }
+
+/* 7. Menus déroulants */
+:root:root:root :is(.color-theme-panel, .app-menu-panel) { border-radius: 28px; box-shadow: var(--pill-shadow); }
+:root:root:root .app-menu-item { border-radius: 999px; }
+:root:root:root .app-menu-item:hover { background: var(--pill-active); border-color: transparent; color: #fff; }
+:root:root:root .color-theme-choice[aria-pressed="true"] { background: var(--pill-active); border-color: transparent; color: #fff; }
+
+/* 8. Cartes de groupe : couverture + fiche en blocs arrondis flottants */
+:root:root:root .group-cover { border-radius: 28px; box-shadow: var(--pill-shadow); }
+:root:root:root .group-card:hover .group-cover { box-shadow: var(--pill-shadow-hover); }
+:root:root:root .group-card-body { border-radius: 24px; box-shadow: var(--pill-shadow); }
+
+/* 9. Mobile : coins un peu moins larges pour garder le contenu lisible */
+@media (max-width: 560px) {
+  :root { --pill-radius: 26px; --pill-radius-sm: 20px; }
+  :root:root:root :is(.library-summary > div, .review-summary > span, .chunk-kpis > div) { border-radius: 22px; }
+}

@@ -1,3 +1,13 @@
+// Aurore Mémoire — design « pilule flottante » : feuille de style chargée sur toutes les pages, en dernier.
+(function () {
+  if (document.querySelector('link[data-aurore-pill]')) return;
+  var pill = document.createElement("link");
+  pill.rel = "stylesheet";
+  pill.href = "aurore-pill.css?v=20261020-pill";
+  pill.setAttribute("data-aurore-pill", "1");
+  document.head.appendChild(pill);
+})();
+
 (function () {
   "use strict";
 
