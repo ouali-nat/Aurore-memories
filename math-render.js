@@ -42,8 +42,10 @@
   }
   function renderTarget(target) {
     if (!target || isInsideMath(target) || !window.renderMathInElement || !hasMathSource(target)) return;
-    try { window.renderMathInElement(target, options); }
-    catch (error) { /* Une formule incomplète ne doit pas bloquer la navigation ou la saisie. */ }
+    try {
+      window.renderMathInElement(target, options);
+      if (typeof window.auroreMathRendered === "function") window.auroreMathRendered(target);
+    } catch (error) { /* Une formule incomplète ne doit pas bloquer la navigation ou la saisie. */ }
   }
   function startKatexLoad() {
     if (window.renderMathInElement) { finishLoading(loadRun); return; }
