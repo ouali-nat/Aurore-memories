@@ -387,7 +387,7 @@
       // Otherwise sync can start too early and miss the initial sync for a signed-in user.
       if (window.auroreAuthReady) await window.auroreAuthReady;
       if (!window.__auroreMemoryCloudSyncLoaded) {
-        await loadScript("memory-cloud-sync.js?v=20261020-auto-restore-v1");
+        await loadScript("memory-cloud-sync.js?v=20261020-migrate-mu-v1");
       }
     } catch (error) {
       console.warn("Aurore Mémoire : la sauvegarde cloud n’est pas initialisée. Les données locales restent disponibles.", error);
