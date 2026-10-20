@@ -12,6 +12,10 @@
   var shareTokens = {};
   try { shareTokens = JSON.parse(localStorage.getItem(SHARE_TOKEN_KEY) || "{}"); } catch (error) { shareTokens = {}; }
   var publicFeedCards = [];
+  var PUBLIC_MATH_CACHE_KEY = "aurore-public-card-math-cache-v1";
+  var PUBLIC_MATH_CACHE_VERSION = "katex-0.16.22-v1";
+  var publicMathCache = {};
+  try { publicMathCache = JSON.parse(localStorage.getItem(PUBLIC_MATH_CACHE_KEY) || "{}"); } catch (error) { publicMathCache = {}; }
   var DAY_MS = 86400000;
   var MODES = ["Toucher pour révéler", "Curseur", "Écouter", "Première lettre", "Trous", "Réordonner", "Taper", "Choix multiple", "Parler"];
   var MODE_PAGES = {"Toucher pour révéler":{"url":"mode-revelation.html","title":"Révélation","description":"Découvre la réponse après avoir essayé de la retrouver mentalement. La qualité de ton rappel nourrit la progression de chaque tranche."},"Curseur":{"url":"mode-curseur.html","title":"Curseur de confiance","description":"Indique ton niveau de confiance avant de révéler la réponse, puis note honnêtement la facilité du rappel."},"Écouter":{"url":"mode-ecouter.html","title":"Écoute active","description":"Écoute la question et la réponse avec la synthèse vocale du navigateur pour renforcer la familiarité avec les notions."},"Première lettre":{"url":"mode-premiere-lettre.html","title":"Première lettre","description":"Utilise les initiales comme indices graduels, puis restitue la réponse entière sans regarder."},"Trous":{"url":"mode-trous.html","title":"Texte à trous","description":"Récupère les mots importants à partir de la question et compare ta réponse avec le contenu attendu."},"Réordonner":{"url":"mode-reordonner.html","title":"Réordonner","description":"Reconstruis la réponse mot par mot. Cette méthode est utile pour les définitions, les étapes et les formulations précises."},"Taper":{"url":"mode-taper.html","title":"Réponse écrite","description":"Écris la réponse de mémoire. La vérification compare la réponse normalisée et enregistre le résultat de la tranche."},"Choix multiple":{"url":"mode-choix-multiple.html","title":"Choix multiple","description":"Distingue la bonne réponse parmi plusieurs propositions. Les distracteurs proviennent des autres cartes disponibles."},"Parler":{"url":"mode-parler.html","title":"Réponse vocale","description":"Prononce la réponse quand la reconnaissance vocale est disponible, ou utilise le champ écrit de secours."}};
@@ -783,17 +787,23 @@
         imageMarkup +
         '<div class="public-flashcard-shade" aria-hidden="true"></div>' +
         '<div class="public-flashcard-content"><div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
-        '<p class="public-card-eyebrow">QUESTION</p><h2>' + formatCardMathText(card.front, card) + '</h2>' +
-        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p>' + formatCardMathText(card.back, card) + '</p></div>' +
+        '<p class="public-card-eyebrow">QUESTION</p><h2 class="public-card-math" data-public-cache-key="' + escapeHtml(card.sourcePublicKey) + '" data-public-cache-side="front">' + publicCardMathHtml(card, "front") + '</h2>' +
+        '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p class="public-card-math" data-public-cache-key="' + escapeHtml(card.sourcePublicKey) + '" data-public-cache-side="back">' + publicCardMathHtml(card, "back") + '</p></div>' +
         '<div class="public-flashcard-bottom"><span class="public-card-hint" aria-hidden="true">Toucher pour révéler</span>' +
         '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">i</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
         '</div></article>';
     }).join("") + '</div>';
-    // Le flux public est reconstruit dynamiquement avec innerHTML.
-    // Déclencher explicitement le rendu LaTeX évite de dépendre uniquement
-    // du MutationObserver, notamment quand KaTeX finit de charger après les cartes.
+    // Rendu explicite des questions et réponses publiques qui n'ont pas encore de cache.
     if (typeof window.renderAuroreMath === "function") {
-      window.renderAuroreMath(root);
+      Array.prototype.forEach.call(root.querySelectorAll(".public-card-math"), function (node) {
+        var cacheKey = node.getAttribute("data-public-cache-key") + "|" + (node.getAttribute("data-public-cache-side") || "front");
+        var card = publicFeedCards.filter(function (item) { return item.sourcePublicKey === node.getAttribute("data-public-cache-key"); })[0];
+        var side = node.getAttribute("data-public-cache-side") || "front";
+        var cached = publicMathCache[cacheKey];
+        if (card && !(cached && cached.source === String(card[side] || "") && cached.version === PUBLIC_MATH_CACHE_VERSION)) {
+          window.renderAuroreMath(node);
+        }
+      });
     }
   }
 
@@ -942,18 +952,45 @@
   }
 
   // Cache persistant du HTML KaTeX : la source originale reste la référence éditable.
+  // Les cartes publiques utilisent un cache local séparé : aucune écriture n'est faite dans les données partagées.
   window.auroreMathRendered = function (root) {
-    if (!root || !root.matches || !root.matches(".card-math-preview")) return;
+    if (!root || !root.matches) return;
+    if (root.matches(".public-card-math")) {
+      var publicKey = root.getAttribute("data-public-cache-key");
+      var publicSide = root.getAttribute("data-public-cache-side") || "front";
+      var publicCard = publicFeedCards.filter(function (item) { return item.sourcePublicKey === publicKey; })[0];
+      if (!publicCard || (publicSide !== "front" && publicSide !== "back")) return;
+      var publicSource = String(publicCard[publicSide] == null ? "" : publicCard[publicSide]);
+      var cacheKey = publicKey + "|" + publicSide;
+      var publicCurrent = publicMathCache[cacheKey];
+      if (publicCurrent && publicCurrent.source === publicSource && publicCurrent.version === PUBLIC_MATH_CACHE_VERSION && publicCurrent.html === root.innerHTML) return;
+      publicMathCache[cacheKey] = { source: publicSource, html: root.innerHTML, version: PUBLIC_MATH_CACHE_VERSION };
+      try {
+        var keys = Object.keys(publicMathCache);
+        if (keys.length > 800) keys.slice(0, keys.length - 800).forEach(function (key) { delete publicMathCache[key]; });
+        localStorage.setItem(PUBLIC_MATH_CACHE_KEY, JSON.stringify(publicMathCache));
+      } catch (error) { /* Le cache est facultatif ; la source publique reste intacte. */ }
+      return;
+    }
+    if (!root.matches(".card-math-preview")) return;
     var id = root.getAttribute("data-card-id"), side = root.getAttribute("data-card-side") || "front";
     var card = state.cards.filter(function (item) { return String(item.id) === id && isFlashcard(item); })[0];
     if (!card || (side !== "front" && side !== "back")) return;
     var source = String(card[side] == null ? "" : card[side]);
     var current = card.mathCache && card.mathCache[side];
-    if (current && current.source === source && current.version === "katex-0.16.22-v1" && current.html === root.innerHTML) return;
+    if (current && current.source === source && current.version === PUBLIC_MATH_CACHE_VERSION && current.html === root.innerHTML) return;
     if (!card.mathCache || typeof card.mathCache !== "object") card.mathCache = {};
-    card.mathCache[side] = { source: source, html: root.innerHTML, version: "katex-0.16.22-v1" };
+    card.mathCache[side] = { source: source, html: root.innerHTML, version: PUBLIC_MATH_CACHE_VERSION };
     save();
   };
+
+  function publicCardMathHtml(card, side) {
+    var source = String(card && card[side] != null ? card[side] : "");
+    var key = String(card && card.sourcePublicKey || "") + "|" + side;
+    var cached = publicMathCache[key];
+    if (cached && cached.source === source && cached.version === PUBLIC_MATH_CACHE_VERSION && cached.html) return cached.html;
+    return formatCardMathText(source, card);
+  }
 
   function renderUncachedLibraryMath() {
     var previews = document.querySelectorAll(".card-math-preview");
