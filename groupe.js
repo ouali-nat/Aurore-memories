@@ -108,6 +108,17 @@ document.getElementById("createInviteButton").addEventListener("click",createInv
 document.getElementById("copyInviteButton").addEventListener("click",async function(){if(!createdInviteUrl)return;try{await navigator.clipboard.writeText(createdInviteUrl);toast("Lien copié.");}catch(e){inviteStatus.textContent=createdInviteUrl;toast("Copie automatique indisponible : sélectionne le lien affiché.");}});
 document.getElementById("shareInviteButton").addEventListener("click",function(){if(!createdInviteUrl)return;var text="Je t’invite à rejoindre le groupe privé « "+currentGroup.name+" » sur Aurore Mémoire : "+createdInviteUrl;if(navigator.share){navigator.share({title:"Invitation au groupe "+currentGroup.name,text:text,url:createdInviteUrl}).catch(function(e){if(e&&e.name!=="AbortError")window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");});}else{window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");}});
 joinButton.addEventListener("click",function(){if(inviteToken&&!session){signIn();return;}joinGroup();});
-if(window.supabase&&window.supabase.createClient){client=window.supabase.createClient(URL_BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});loadGroup();client.auth.onAuthStateChange(function(_event,next){session=next;if(next)loadGroup();});}
-else{title.textContent="Service indisponible";message("Le service des groupes n’a pas pu être initialisé.");}
+(async function initializeGroupDetail(){
+try {
+if(window.auroreAuthReady) await window.auroreAuthReady;
+if(!window.auroreAuth||!window.auroreAuth.client)throw new Error("Le client Aurore ID n’est pas initialisé.");
+client=window.auroreAuth.client;
+await loadGroup();
+client.auth.onAuthStateChange(function(_event,next){session=next;if(next)loadGroup();});
+} catch(error) {
+console.error("Initialisation de l’espace groupe:",error);
+title.textContent="Service momentanément indisponible";
+message("La session Aurore ID n’a pas pu être restaurée. Vérifie ta connexion puis réessaie ; les données du groupe n’ont pas été modifiées.");
+}
+})();
 })();
