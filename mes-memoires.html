@@ -39,7 +39,20 @@
   <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore Mémoire</strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="math-render.js?v=20261020-public-cache-fix"></script><script src="app.js"></script>
-  <script src="memoire.js?v=20261020-public-cache-fix"></script>
+  <script>
+    (async function () {
+      try {
+        if (window.auroreMemoryCloudBootstrapPromise) await window.auroreMemoryCloudBootstrapPromise;
+        if (window.auroreMemoryCloudInitialSync) await window.auroreMemoryCloudInitialSync;
+      } catch (error) {
+        console.warn("La bibliothèque s’ouvre avec les données locales disponibles :", error);
+      } finally {
+        var libraryScript = document.createElement("script");
+        libraryScript.src = "memoire.js?v=20261020-cloud-hydration";
+        document.body.appendChild(libraryScript);
+      }
+    })();
+  </script>
   <script src="spa-router.js?v=20261016-spa-shell"></script>
 </body>
 </html>
