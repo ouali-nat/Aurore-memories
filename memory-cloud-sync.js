@@ -201,6 +201,19 @@
       var base = readBase();
       var remote = await readCloud();
       var remoteEtag = String(remoteMeta.etag || "").replace(/^"|"$/g, "");
+
+      // Nouvel appareil / nouveau navigateur : si aucune donnée locale n'existe,
+      // restaurer automatiquement la sauvegarde du compte connecté. Ne jamais
+      // présenter une bibliothèque vide comme une divergence à résoudre manuellement.
+      if (!hasData(local) && hasData(remote.data)) {
+        savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(normalizeData(remote.data)));
+        saveBase(remoteEtag);
+        conflict = null;
+        status("Tes cartes, mémorisations et ta progression ont été récupérées depuis ton compte Aurore ID.", "ok");
+        window.setTimeout(function () { window.location.reload(); }, 250);
+        return;
+      }
+
       if (sameData(local, remote.data)) {
         saveBase(remoteEtag);
         conflict = null;
