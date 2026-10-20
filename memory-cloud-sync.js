@@ -62,6 +62,13 @@
   }
   function byteSize(text) { return new Blob([text]).size; }
   function stamp() { return String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8); }
+  function finishLegacyMigration() {
+    if (window.location.hostname !== "aurore-memories-mu.vercel.app") return;
+    status("Sauvegarde vérifiée. Ouverture du site principal Aurore Mémoire…", "ok");
+    var target = new URL(window.location.href);
+    target.hostname = "aurore-memories-aurore9.vercel.app";
+    window.setTimeout(function () { window.location.replace(target.toString()); }, 700);
+  }
 
   function mountPanel() {
     if (document.getElementById("auroreMemoryCloudPanel")) return;
@@ -190,6 +197,7 @@
           saveBase(created.etag);
           conflict = null;
           status("Cartes et mémoires sauvegardées dans ton espace privé R2.", "ok");
+          finishLegacyMigration();
         } catch (error) {
           if (error.status === 412) {
             await findConflict(local);
@@ -235,6 +243,7 @@
         saveBase(remoteEtag);
         conflict = null;
         status("Cartes et mémoires synchronisées avec R2.", "ok");
+        finishLegacyMigration();
         return;
       }
 
