@@ -394,3 +394,70 @@
     }
   })();
 })();
+
+
+// Aurore Mémoire — action explicite pour actualiser la version installée sans toucher aux données.
+(function installAuroreRefreshAction() {
+  "use strict";
+  if (window.__auroreRefreshActionInstalled) return;
+  window.__auroreRefreshActionInstalled = true;
+
+  function announce(message) {
+    if (typeof window.auroreToast === "function") window.auroreToast(message);
+    else {
+      var toast = document.getElementById("toast");
+      if (toast) { toast.textContent = message; toast.classList.add("show"); }
+    }
+  }
+
+  function mountButton() {
+    var nav = document.querySelector(".top-actions");
+    if (!nav || document.getElementById("auroreRefreshApp")) return;
+    var button = document.createElement("button");
+    button.type = "button";
+    button.id = "auroreRefreshApp";
+    button.className = "nav-link aurore-refresh-app";
+    button.textContent = "↻ Actualiser";
+    button.setAttribute("aria-label", "Actualiser Aurore Mémoire et charger la version la plus récente");
+    button.title = "Actualiser l’application sans effacer vos cartes ni vos mémorisations";
+    button.addEventListener("click", async function () {
+      if (!navigator.onLine) {
+        announce("Connexion nécessaire pour actualiser. Vos données locales sont conservées.");
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Actualisation…";
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          var registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(function (registration) {
+            return registration.update().catch(function () {});
+          }));
+        }
+        // Nettoyer uniquement le Cache Storage du navigateur, jamais localStorage ni IndexedDB.
+        // L’action est volontaire et uniquement proposée en ligne pour reconstituer ensuite le cache hors ligne.
+        if (window.caches && typeof window.caches.keys === "function") {
+          var keys = await window.caches.keys();
+          await Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
+        }
+        var url = new URL(window.location.href);
+        url.searchParams.set("__aurore_refresh", String(Date.now()));
+        announce("Actualisation en cours… vos cartes et mémorisations ne sont pas effacées.");
+        window.location.replace(url.toString());
+      } catch (error) {
+        console.warn("Actualisation Aurore Mémoire :", error);
+        button.disabled = false;
+        button.textContent = "↻ Actualiser";
+        announce("L’actualisation automatique a échoué. Réessayez avec une connexion active.");
+      }
+    });
+    nav.appendChild(button);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountButton, { once: true });
+  else mountButton();
+  if (window.MutationObserver && document.documentElement) {
+    var observer = new MutationObserver(function () { mountButton(); });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+})();
