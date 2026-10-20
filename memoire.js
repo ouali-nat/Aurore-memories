@@ -913,8 +913,17 @@
         var items = groups[name], due = dueCards(items).length;
         var count = items.length + (kind === "memory" ? (items.length === 1 ? " passage" : " passages") : (items.length === 1 ? " carte" : " cartes"));
         var detail = count + " · " + (due ? due + " à réviser" : "À jour");
-        var preview = items[0] ? (kind === "memory" ? items[0].back : items[0].front) : "";
-        var main = '<div class="memory-row-main"><h3>' + escapeHtml(name) + '</h3><p>' + detail + '</p><small>' + escapeHtml(preview) + '</small></div>';
+        var previewCard = items[0] || null;
+        var preview = previewCard ? (kind === "memory" ? previewCard.back : previewCard.front) : "";
+        var previewMarkup;
+        if (kind === "flashcard" && previewCard) {
+          var cached = previewCard.mathCache && previewCard.mathCache.front;
+          var cacheValid = cached && cached.source === String(preview) && cached.version === "katex-0.16.22-v1";
+          previewMarkup = '<small class="card-math-preview" data-card-id="' + escapeHtml(String(previewCard.id)) + '" data-card-side="front">' + (cacheValid ? cached.html : formatCardMathText(preview, previewCard)) + '</small>';
+        } else {
+          previewMarkup = '<small>' + formatMathText(preview) + '</small>';
+        }
+        var main = '<div class="memory-row-main"><h3>' + escapeHtml(name) + '</h3><p>' + detail + '</p>' + previewMarkup + '</div>';
         if (kind === "memory") return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">▤</div>' + main + '<div class="memory-row-actions"><a class="secondary-btn" href="memoire-blocs.html?deck=' + encodeURIComponent(name) + '">Consulter les passages</a><a class="secondary-btn" href="editer-memoire.html?deck=' + encodeURIComponent(name) + '">Modifier</a><button class="subtle-danger" type="button" data-act="delete-deck" data-kind="memory" data-deck="' + escapeHtml(name) + '">Supprimer</button></div></article>';
         var seriesSettings = deckSettingsFor(name);
         var visibilityLabel = seriesSettings.visibility === "public" ? "Public" : "Privé";
@@ -930,6 +939,32 @@
     var memorySection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À MÉMORISER</p><h2>' + (view === "memories" ? "Tous les textes" : "Mes mémoires") + '</h2><p>Des textes organisés en passages avec un suivi individuel.</p></div>' + memoryAction + '</div>' + rows(memoryNames,memoryGroupsByDeck,"memory") + '</section>';
     var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Des séries de questions-réponses pour consolider les notions essentielles.</p></div>' + cardsAction + '</div>' + rows(flashNames,flashGroupsByDeck,"flashcard") + '</section>';
     target.innerHTML = (view === "cards" ? "" : memorySection) + (view === "memories" ? "" : cardSection);
+  }
+
+  // Cache persistant du HTML KaTeX : la source originale reste la référence éditable.
+  window.auroreMathRendered = function (root) {
+    if (!root || !root.matches || !root.matches(".card-math-preview")) return;
+    var id = root.getAttribute("data-card-id"), side = root.getAttribute("data-card-side") || "front";
+    var card = state.cards.filter(function (item) { return String(item.id) === id && isFlashcard(item); })[0];
+    if (!card || (side !== "front" && side !== "back")) return;
+    var source = String(card[side] == null ? "" : card[side]);
+    var current = card.mathCache && card.mathCache[side];
+    if (current && current.source === source && current.version === "katex-0.16.22-v1" && current.html === root.innerHTML) return;
+    if (!card.mathCache || typeof card.mathCache !== "object") card.mathCache = {};
+    card.mathCache[side] = { source: source, html: root.innerHTML, version: "katex-0.16.22-v1" };
+    save();
+  };
+
+  function renderUncachedLibraryMath() {
+    var previews = document.querySelectorAll(".card-math-preview");
+    Array.prototype.forEach.call(previews, function (node) {
+      var id = node.getAttribute("data-card-id");
+      var card = state.cards.filter(function (item) { return String(item.id) === id && isFlashcard(item); })[0];
+      var cache = card && card.mathCache && card.mathCache.front;
+      if (card && !(cache && cache.source === String(card.front || "") && cache.version === "katex-0.16.22-v1")) {
+        if (typeof window.renderAuroreMath === "function") window.renderAuroreMath(node);
+      }
+    });
   }
 
   function renderLibrary() {
@@ -980,6 +1015,7 @@
     document.title = heading + " — Aurore Mémoire";
     root.innerHTML = '<div class="library-summary">' + summary + '</div>' + shortcuts + '<div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="' + placeholder + '" aria-label="' + placeholder.replace("…","") + '"></label><button class="secondary-btn" type="button" data-act="export">Exporter les données</button></div><div id="memoryList" aria-live="polite"></div>';
     renderMemoryList();
+    renderUncachedLibraryMath();
     var searchInput = $("#memorySearch");
     if (searchInput) searchInput.addEventListener("input", renderMemoryList);
   }
