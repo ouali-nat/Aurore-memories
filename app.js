@@ -15,8 +15,7 @@
   // Deployment-specific Vercel URLs are temporary and must never become navigation/share origins.
   var AURORE_CANONICAL_HOST = "aurore-memories-aurore9.vercel.app";
   var currentHost = String(window.location.hostname || "").toLowerCase();
-  var isRecoveryPage = /\/recuperer-cartes\.html$/i.test(String(window.location.pathname || ""));
-  if (!isRecoveryPage && currentHost !== AURORE_CANONICAL_HOST &&
+  if (currentHost !== AURORE_CANONICAL_HOST &&
       /^aurore-memories(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(currentHost)) {
     var canonicalUrl = new URL(window.location.href);
     canonicalUrl.hostname = AURORE_CANONICAL_HOST;
