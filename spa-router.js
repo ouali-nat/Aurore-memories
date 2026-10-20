@@ -23,8 +23,36 @@ function prefetch(a){var u=urlOf(a&&a.href);if(!eligible(u)||u.pathname===locati
 document.addEventListener("pointerover",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a&&(!e.relatedTarget||!a.contains(e.relatedTarget)))prefetch(a)},{passive:true});
 document.addEventListener("touchstart",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a)prefetch(a)},{passive:true});
 document.addEventListener("focusin",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a)prefetch(a)},{passive:true});
-async function metadata(doc,u){if(doc.title)document.title=doc.title;["description","theme-color"].forEach(function(n){var inc=doc.querySelector('meta[name="'+n+'"]');if(!inc)return;var cur=document.querySelector('meta[name="'+n+'"]');if(!cur){cur=document.createElement("meta");cur.name=n;document.head.appendChild(cur)}cur.content=inc.content||""});
-var pending=[];Array.prototype.forEach.call(doc.querySelectorAll('link[rel="stylesheet"][href]'),function(inc){var href,path;try{var hu=new URL(inc.getAttribute("href"),u.href);href=hu.href;path=hu.pathname}catch(e){return}var link=null;Array.prototype.some.call(document.querySelectorAll('link[rel="stylesheet"][href]'),function(l){try{if(new URL(l.href,location.href).pathname===path){link=l;return true}}catch(e){}return false});if(!link){link=document.createElement("link");link.rel="stylesheet";link.href=href;link.media="not all";document.head.appendChild(link)}if(inc.media&&inc.media!=="all")link.media=inc.media;else link.media="all";if(!link.sheet)pending.push(new Promise(function(resolve){var done=function(){link.media=inc.media&&inc.media!=="print"?inc.media:"all";resolve()};link.addEventListener("load",done,{once:true});link.addEventListener("error",done,{once:true});setTimeout(done,1800)}));});await Promise.all(pending)}
+async function metadata(doc,u){
+if(doc.title)document.title=doc.title;
+["description","theme-color"].forEach(function(n){var inc=doc.querySelector('meta[name="'+n+'"]');if(!inc)return;var cur=document.querySelector('meta[name="'+n+'"]');if(!cur){cur=document.createElement("meta");cur.name=n;document.head.appendChild(cur)}cur.content=inc.content||""});
+var pending=[];
+Array.prototype.forEach.call(doc.querySelectorAll('link[rel="stylesheet"][href]'),function(inc){
+var href,desiredMedia;
+try{href=new URL(inc.getAttribute("href"),u.href).href;desiredMedia=inc.media&&inc.media!=="all"&&inc.media!=="print"?inc.media:"all"}catch(e){return}
+var link=null;
+Array.prototype.some.call(document.querySelectorAll('link[rel="stylesheet"][href]'),function(l){try{if(new URL(l.href,location.href).href===href){link=l;return true}}catch(e){}return false});
+var created=false;
+if(!link){link=document.createElement("link");link.rel="stylesheet";link.href=href;link.media="not all";created=true}
+var needsWait=created||!link.sheet;
+if(needsWait){
+var promise=new Promise(function(resolve){
+var settled=false;
+var done=function(){if(settled)return;settled=true;link.removeEventListener("load",done);link.removeEventListener("error",done);link.media=desiredMedia;resolve()};
+link.addEventListener("load",done,{once:true});link.addEventListener("error",done,{once:true});
+link.media=desiredMedia;
+if(created)document.head.appendChild(link);
+window.setTimeout(done,2500);
+});
+pending.push(promise);
+}else{
+/* A page may declare media="print" and switch it to "all" on load.
+   During SPA navigation that lazy marker must never disable an already-loaded stylesheet. */
+link.media=desiredMedia;
+}
+});
+await Promise.all(pending);
+}
 function bodyRoute(body){["data-page","data-mode-page"].forEach(function(n){if(body.hasAttribute(n))document.body.setAttribute(n,body.getAttribute(n));else document.body.removeAttribute(n)});if(body.className)document.body.className=body.className;else document.body.removeAttribute("class")}
 function header(doc){var a=document.querySelectorAll(".top-actions a"),b=doc.querySelectorAll(".top-actions a");for(var i=0;i<Math.min(a.length,b.length);i++){a[i].href=b[i].getAttribute("href")||b[i].href;a[i].textContent=b[i].textContent;a[i].className=b[i].className;Array.from(a[i].attributes).forEach(function(x){if(x.name.indexOf("data-")===0&&!b[i].hasAttribute(x.name))a[i].removeAttribute(x.name)});Array.from(b[i].attributes).forEach(function(x){if(x.name.indexOf("data-")===0)a[i].setAttribute(x.name,x.value)})}
 var p=pageName(urlOf(location.href)),key=p==="index.html"?"home":((p==="revisions.html"||/^mode-.+\.html$/i.test(p)||p==="reviser-cartes.html")?"reviews":(p==="mes-memoires.html"||p==="choisir.html"||p==="cartes-publiques.html"?"library":(p==="groupes.html"||p==="groupe.html"?"groups":"")));
