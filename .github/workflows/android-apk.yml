@@ -69,6 +69,27 @@ jobs:
         working-directory: android-app
         run: |
           npx cap add android
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          xml = manifest.read_text()
+          if "app.aurore.memoire" not in xml:
+              activity_start = xml.find('android:name=".MainActivity"')
+              activity_end = xml.find("</activity>", activity_start)
+              if activity_start < 0 or activity_end < 0:
+                  raise SystemExit("Impossible de trouver MainActivity pour le retour Aurore ID.")
+              link = """
+                      <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="app.aurore.memoire" android:host="auth" android:pathPrefix="/callback" />
+                      </intent-filter>
+              """
+              xml = xml[:activity_end] + link + xml[activity_end:]
+              manifest.write_text(xml)
+          print("Lien profond Aurore ID configuré.")
+          PY
           npx cap sync android
 
       - name: Définir le numéro de version
