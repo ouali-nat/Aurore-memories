@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4f4f7">
+<title>Récupérer mes cartes — Aurore Mémoire</title>
+<style>
+:root{color-scheme:light;--ink:#272532;--muted:#696777;--line:#e2e0e9;--accent:#6e58b8;--paper:#fff;--bg:#f4f4f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,sans-serif;padding:24px 14px}.shell{max-width:720px;margin:4vh auto;background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:clamp(20px,5vw,38px);box-shadow:0 14px 42px #25203b0d}.brand{font-weight:800;letter-spacing:-.04em;color:var(--accent);font-size:1.1rem}.eyebrow{margin:26px 0 4px;color:var(--muted);font-size:.76rem;letter-spacing:.12em;font-weight:750}h1{font-size:clamp(1.7rem,6vw,2.4rem);line-height:1.1;letter-spacing:-.04em;margin:8px 0 14px}p{color:var(--muted)}.notice{background:#f5f2ff;border:1px solid #e3dcff;padding:14px 16px;border-radius:14px;color:#40356d;margin:18px 0}.stats{font-weight:750;color:var(--ink);margin:16px 0}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}button,.button{border:0;border-radius:12px;background:var(--accent);color:white;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}button.secondary,.button.secondary{background:#eeecf4;color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}input[type=file]{display:block;max-width:100%;margin:14px 0}.small{font-size:.9rem}#message{min-height:1.5em;margin-top:14px;font-weight:650}a{color:var(--accent)}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<main class="shell">
+<div class="brand">a. aurore mémoire</div>
+<div class="eyebrow">OUTIL DE RÉCUPÉRATION</div>
+<h1>Retrouver mes cartes et mémorisations</h1>
+<p>Cette page permet de récupérer une sauvegarde locale de votre navigateur et de la transférer vers l’adresse principale d’Aurore Mémoire. Elle ne supprime ni ne remplace automatiquement les données existantes.</p>
+<div class="notice" id="modeNotice">Lecture de la sauvegarde locale…</div>
+<div class="stats" id="stats" aria-live="polite"></div>
+<section id="exportPanel">
+<h2>1. Exporter depuis l’ancienne adresse</h2>
+<p>Ouvrez cette page avec l’adresse où vous aviez créé vos cartes, sur le même téléphone et dans le même navigateur. Si les données sont encore présentes, téléchargez le fichier de sauvegarde.</p>
+<div class="actions"><button id="exportBtn" type="button">Télécharger ma sauvegarde</button></div>
+</section>
+<section id="importPanel" class="hidden">
+<h2>2. Importer sur l’adresse principale</h2>
+<p>Sélectionnez le fichier JSON téléchargé à l’étape précédente. Les cartes seront fusionnées avec les données locales présentes, sans effacer les cartes différentes.</p>
+<input id="backupFile" type="file" accept=".json,application/json">
+<div class="actions"><button id="importBtn" type="button" disabled>Fusionner la sauvegarde</button><a class="button secondary" href="index.html">Retour à Aurore Mémoire</a></div>
+</section>
+<p id="message" role="status" aria-live="polite"></p>
+<p class="small">Important : ne videz pas les données du site et ne désinstallez pas le navigateur avant d’avoir exporté la sauvegarde. Si aucun contenu n’est trouvé sur l’ancienne adresse, cette page ne peut pas recréer les données qui n’y sont plus stockées.</p>
+</main>
+<script src="app.js?v=20261020-recovery"></script>
+<script>
+(function(){
+  "use strict";
+  var KEY="aurore-memory-cards-v1";
+  var OLD_HOST=location.hostname.toLowerCase()!=="aurore-memories-aurore9.vercel.app";
+  var notice=document.getElementById("modeNotice"),stats=document.getElementById("stats"),exportPanel=document.getElementById("exportPanel"),importPanel=document.getElementById("importPanel"),message=document.getElementById("message"),fileInput=document.getElementById("backupFile"),importBtn=document.getElementById("importBtn");
+  function parse(raw){var v=JSON.parse(raw);if(v&&v.app==="aurore-memory"&&v.data&&typeof v.data==="object")v=v.data;if(!v||typeof v!=="object"||!Array.isArray(v.cards))throw new Error("Le fichier ne contient pas une sauvegarde Aurore Mémoire reconnue.");return v}
+  function readLocal(){try{return parse(localStorage.getItem(KEY)||'{"cards":[]}')}catch(e){return {cards:[]}}}
+  function countText(data){var cards=Array.isArray(data.cards)?data.cards:[],mem=0;cards.forEach(function(c){if(c&&c.kind==="memory"||c&&/(?:·|—|-)\s*Morceau\s+\d+\s*$/i.test(String(c&&c.front||"")))mem++});return cards.length+" élément(s) détecté(s) : "+mem+" tranche(s) de mémoire et "+(cards.length-mem)+" carte(s) de révision."}
+  function stable(v){if(v===null||typeof v!=="object")return JSON.stringify(v);if(Array.isArray(v))return "["+v.map(stable).join(",")+"]";return "{"+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+":"+stable(v[k])}).join(",")+"}"}
+  function merge(local,backup){var out=Object.assign({},backup,local),cards=Array.isArray(local.cards)?local.cards.slice():[],byId=Object.create(null);cards.forEach(function(c){byId[String(c&&c.id)]=c});(Array.isArray(backup.cards)?backup.cards:[]).forEach(function(c){var id=String(c&&c.id),existing=byId[id];if(!existing){var copy=Object.assign({},c);cards.push(copy);byId[id]=copy;return}if(stable(existing)===stable(c))return;var same=existing.front===c.front&&existing.back===c.back&&existing.deck===c.deck&&existing.kind===c.kind;if(same){["reps","lapses","interval","ease","due"].forEach(function(k){if(typeof c[k]==="number"&&typeof existing[k]==="number")existing[k]=Math.max(existing[k],c[k])});return}var clone=Object.assign({},c,{id:Date.now()+Math.random(),recoveryCopy:true});cards.push(clone)});out.cards=cards;out.log=Object.assign({},backup.log||{},local.log||{});["performance","cardPerformance"].forEach(function(k){var all=(Array.isArray(backup[k])?backup[k]:[]).concat(Array.isArray(local[k])?local[k]:[]),seen=Object.create(null);out[k]=all.filter(function(v){var key=stable(v);if(seen[key])return false;seen[key]=true;return true})});out.deckSettings=Object.assign({},backup.deckSettings||{},local.deckSettings||{});out.deckStyles=Object.assign({},backup.deckStyles||{},local.deckStyles||{});return out}
+  var local=readLocal();
+  if(OLD_HOST){notice.textContent="Ancienne adresse détectée : recherche des cartes enregistrées dans ce navigateur.";stats.textContent=countText(local);exportPanel.classList.remove("hidden");importPanel.classList.add("hidden");document.getElementById("exportBtn").disabled=!local.cards.length;document.getElementById("exportBtn").addEventListener("click",function(){try{var raw=localStorage.getItem(KEY);if(!raw)throw new Error("Aucune sauvegarde locale trouvée.");parse(raw);var blob=new Blob([JSON.stringify({app:"aurore-memory",schema:1,exportedAt:new Date().toISOString(),data:parse(raw)},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="aurore-memoire-recuperation.json";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1500);message.textContent="Fichier exporté. Ouvrez ensuite la page de récupération sur l’adresse principale pour l’importer."}catch(e){message.textContent=e.message||"Export impossible."}})}else{notice.textContent="Adresse principale détectée : importez ici le fichier exporté depuis l’ancienne adresse.";stats.textContent=countText(local);exportPanel.classList.add("hidden");importPanel.classList.remove("hidden");}
+  fileInput.addEventListener("change",function(){importBtn.disabled=!(fileInput.files&&fileInput.files[0]);message.textContent=""});
+  importBtn.addEventListener("click",async function(){var file=fileInput.files&&fileInput.files[0];if(!file)return;importBtn.disabled=true;try{if(file.size>15*1024*1024)throw new Error("Fichier trop volumineux (limite 15 Mo).");var backup=parse(await file.text());if(!window.confirm("Fusionner "+backup.cards.length+" élément(s) avec les données de cet appareil ? Les cartes différentes seront conservées."))return;var before=readLocal(),combined=merge(before,backup);localStorage.setItem(KEY,JSON.stringify(combined));localStorage.removeItem("aurore-memory-home-stats-v1");stats.textContent=countText(combined);message.textContent="Fusion locale terminée. Ouvrez la bibliothèque : la synchronisation cloud vérifiera ensuite les données et signalera tout conflit avant remplacement.";importBtn.textContent="Importation terminée";}catch(e){message.textContent=e.message||"Importation impossible.";importBtn.disabled=false}});
+})();
+</script>
+</body>
+</html>
