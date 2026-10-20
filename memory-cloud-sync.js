@@ -214,6 +214,23 @@
         return;
       }
 
+      // Migration silencieuse depuis l'ancien domaine mu : conserver les deux
+      // versions dans R2, fusionner puis écrire avec contrôle ETag avant redirection.
+      if (window.location.hostname === "aurore-memories-mu.vercel.app" && hasData(local) && !sameData(local, remote.data)) {
+        await archiveSnapshot(local, "migration-mu-local");
+        await archiveSnapshot(remote.data, "migration-mu-cloud");
+        var migrated = mergeData(local, remote.data);
+        var migratedWrite = await writeMainVerified(migrated, { type: "match", etag: remoteEtag });
+        savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(migrated));
+        saveBase(migratedWrite.etag);
+        conflict = null;
+        status("Tes cartes de cet ancien domaine et ta sauvegarde cloud ont été fusionnées et archivées. Transfert vers le site principal…", "ok");
+        var targetUrl = new URL(window.location.href);
+        targetUrl.hostname = "aurore-memories-aurore9.vercel.app";
+        window.setTimeout(function () { window.location.replace(targetUrl.toString()); }, 900);
+        return;
+      }
+
       if (sameData(local, remote.data)) {
         saveBase(remoteEtag);
         conflict = null;
