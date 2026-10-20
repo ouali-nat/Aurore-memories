@@ -43,6 +43,10 @@ if (!fs.existsSync(supabaseUmd)) {
 }
 fs.copyFileSync(supabaseUmd, path.join(vendor, "supabase.js"));
 
+// Keep card PDF/image export functional without a network connection in the APK.
+fs.copyFileSync(path.join(androidRoot, "node_modules/html2pdf.js/dist/html2pdf.bundle.min.js"), path.join(vendor, "html2pdf.bundle.min.js"));
+fs.copyFileSync(path.join(androidRoot, "node_modules/html2canvas/dist/html2canvas.min.js"), path.join(vendor, "html2canvas.min.js"));
+
 for (const required of ["index.html", "memoire.js", "math-render.js", "style.css"]) {
   if (!fs.existsSync(path.join(webRoot, required))) {
     throw new Error("Ressource web obligatoire absente : " + required);
