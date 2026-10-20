@@ -1,0 +1,15 @@
+{
+  "appId": "app.aurore.memoire",
+  "appName": "Aurore Mémoire",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#09080F"
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DARK",
+      "backgroundColor": "#09080F"
+    }
+  }
+}
