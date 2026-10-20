@@ -83,51 +83,24 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="spa-router.js?v=20261019-nav-stable"></script>
   <script src="app.js?v=20261015-nav-final"></script>
+  <script src="auth.js?v=20261020-shared-auth"></script>
   <script>
-    (function () {
-      "use strict";
-      var sources = [
-        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
-        "https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
-        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
-        "https://unpkg.com/@supabase/supabase-js@2"
-      ];
-      var index = 0, loaded = false, timeoutId = null;
-      function startGroups() {
-        if (loaded) return;
-        loaded = true;
-        if (timeoutId) window.clearTimeout(timeoutId);
+    (async function () {
+      try {
+        if (window.auroreAuthReady) await window.auroreAuthReady;
+        if (!window.auroreAuth || !window.auroreAuth.client) throw new Error("Le client Aurore ID n’est pas prêt.");
         var script = document.createElement("script");
-        script.src = "groupes.js?v=20261019-nav-stable";
+        script.src = "groupes.js?v=20261020-shared-auth";
+        script.onerror = function () {
+          var grid = document.getElementById("groupsGrid");
+          if (grid) grid.innerHTML = '<div class="groups-error"><strong>Chargement impossible</strong><p>Le module des groupes n’a pas pu être chargé. Réessaie.</p><button class="groups-btn" type="button" onclick="location.reload()">Réessayer</button></div>';
+        };
         document.body.appendChild(script);
+      } catch (error) {
+        console.error("Aurore Mémoire — initialisation des groupes :", error);
+        var grid = document.getElementById("groupsGrid");
+        if (grid) grid.innerHTML = '<div class="groups-error"><strong>Connexion indisponible</strong><p>La session Aurore ID ou la bibliothèque de connexion n’a pas pu être initialisée. Réessaie avec une connexion Internet.</p><button class="groups-btn" type="button" onclick="location.reload()">Réessayer</button></div>';
       }
-      function tryNext() {
-        if (window.supabase && typeof window.supabase.createClient === "function") {
-          startGroups();
-          return;
-        }
-        if (index >= sources.length) {
-          console.error("Supabase JS n'a pu être chargé depuis les sources de secours.");
-          startGroups();
-          return;
-        }
-        var script = document.createElement("script");
-        script.src = sources[index++];
-        script.async = true;
-        var settled = false;
-        function nextOnce() {
-          if (settled) return;
-          settled = true;
-          if (timeoutId) window.clearTimeout(timeoutId);
-          if (window.supabase && typeof window.supabase.createClient === "function") startGroups();
-          else tryNext();
-        }
-        script.onload = nextOnce;
-        script.onerror = nextOnce;
-        document.head.appendChild(script);
-        timeoutId = window.setTimeout(nextOnce, 9000);
-      }
-      tryNext();
     })();
   </script>
 </body>
