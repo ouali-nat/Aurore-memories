@@ -1,0 +1,128 @@
+name: Android APK — Aurore Mémoire (Capacitor)
+
+on:
+  push:
+    paths:
+      - 'android-app/**'
+      - 'scripts/prepare-android-web.py'
+      - '.github/workflows/android-apk.yml'
+  pull_request:
+    paths:
+      - 'android-app/**'
+      - 'scripts/prepare-android-web.py'
+      - '.github/workflows/android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Préparer le bundle hors ligne et compiler l’APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: android-app/package.json
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer Android SDK
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Installer Capacitor et KaTeX
+        working-directory: android-app
+        run: npm install --no-audit --no-fund
+
+      - name: Préparer les pages locales et embarquer KaTeX
+        run: python3 scripts/prepare-android-web.py
+
+      - name: Vérifier les ressources indispensables
+        run: |
+          test -s android-app/www/index.html
+          test -s android-app/www/vendor/katex/katex.min.js
+          test -s android-app/www/vendor/katex/katex.min.css
+          if grep -R -n "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" android-app/www --include='*.html' --include='*.js'; then
+            echo "Une référence KaTeX distante a échappé à la préparation."
+            exit 1
+          fi
+
+      - name: Générer le projet Android Capacitor
+        working-directory: android-app
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Compiler l’APK release
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Signer l’APK de test
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          UNSIGNED="$(find android-app/android/app/build/outputs/apk/release -name '*-unsigned.apk' -o -name '*.apk' | head -1)"
+          test -n "$UNSIGNED"
+          if [ -n "${KS_B64:-}" ] && [ -n "${KS_PASS:-}" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/aurore-memoire.jks"
+            ALIAS="${KS_ALIAS:-aurore-memoire}"
+            PASS="$KS_PASS"
+            KEYPASS="${KS_KEY_PASS:-$KS_PASS}"
+            echo "SIGNATURE=stable" >> "$GITHUB_ENV"
+          else
+            ALIAS=aurore-memoire
+            PASS="$(openssl rand -hex 16)"
+            KEYPASS="$PASS"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/aurore-memoire.jks" -storetype PKCS12 -alias "$ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Aurore Memoire, O=Aurore, C=BF"
+            echo "SIGNATURE=temporaire" >> "$GITHUB_ENV"
+          fi
+          "$BT/zipalign" -p -f 4 "$UNSIGNED" "$RUNNER_TEMP/aurore-memoire-aligned.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/aurore-memoire.jks" --ks-key-alias "$ALIAS" \
+            --ks-pass "pass:$PASS" --key-pass "pass:$KEYPASS" \
+            --out Aurore-Memoire.apk "$RUNNER_TEMP/aurore-memoire-aligned.apk"
+          "$BT/apksigner" verify --print-certs Aurore-Memoire.apk | head -3
+          rm -f "$RUNNER_TEMP/aurore-memoire.jks"
+
+      - name: Résumé de la compilation
+        run: |
+          {
+            echo "## Aurore Mémoire — APK de test"
+            echo ""
+            echo "- Signature : **$SIGNATURE**"
+            echo "- Pages du site embarquées dans l’application."
+            echo "- KaTeX embarqué localement pour le rendu mathématique."
+            echo "- Cette compilation est un socle de test ; les parcours hors ligne doivent être validés sur appareil."
+            if [ "$SIGNATURE" = "temporaire" ]; then
+              echo "- Sans secrets de signature stables, il faudra désinstaller cet APK avant une compilation signée différemment."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publier l’APK comme artefact de test
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aurore-Memoire-APK
+          path: Aurore-Memoire.apk
+          retention-days: 14
