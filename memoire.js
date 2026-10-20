@@ -800,7 +800,7 @@
         var card = publicFeedCards.filter(function (item) { return item.sourcePublicKey === node.getAttribute("data-public-cache-key"); })[0];
         var side = node.getAttribute("data-public-cache-side") || "front";
         var cached = publicMathCache[cacheKey];
-        if (card && !(cached && cached.source === String(card[side] || "") && cached.version === PUBLIC_MATH_CACHE_VERSION)) {
+        if (card && !(cached && typeof cached.html === "string" && cached.html.length > 0 && cached.source === String(card[side] == null ? "" : card[side]) && cached.version === PUBLIC_MATH_CACHE_VERSION)) {
           window.renderAuroreMath(node);
         }
       });
