@@ -10,9 +10,11 @@ Le workflow `.github/workflows/android-apk.yml` se lance manuellement depuis Git
 
 - Les pages et ressources web suivies par Git sont copiées dans l'application.
 - KaTeX et le client navigateur Supabase sont embarqués localement afin de ne pas dépendre d'un CDN pour les charger.
-- Les cartes et la progression existantes utilisent déjà `localStorage`, ce qui permet une conservation sur l'appareil.
-- Aurore ID, les groupes, les fichiers R2 et la synchronisation cloud exigent encore une connexion.
-- Cette première étape ne constitue pas encore une validation complète du mode avion. Il reste à tester les parcours réels, la sauvegarde locale, les mémoires longues, les formules et la reprise de synchronisation avant toute diffusion.
+- Les cartes et la progression sont conservées dans `localStorage` et recopiées dans une base IndexedDB persistante. Sur « Mes mémorisations », le panneau « Stockage sur cet appareil » indique les contenus locaux et permet de préparer une copie hors ligne ou de télécharger une sauvegarde JSON.
+- À la première connexion sur une installation Android vide, si le compte connecté possède une sauvegarde R2 et que l'appareil ne contient aucune donnée, la sauvegarde cloud est restaurée automatiquement. Une copie locale non vide n'est jamais remplacée automatiquement.
+- Les pages, KaTeX, le client Supabase et les moteurs d'export PDF/images sont embarqués dans l'APK. Les exports de cartes essaient les ressources locales en premier sur Android.
+- Aurore ID, les groupes, les fichiers privés R2 et la synchronisation cloud exigent encore une connexion. Une sauvegarde JSON est une copie de secours exportable, pas un remplacement de la synchronisation.
+- La compilation ne suffit pas à prouver le mode avion : il faut encore tester une nouvelle installation, la récupération cloud, la création/révision sans réseau, la fermeture/réouverture, les exports PDF/images hors ligne et la synchronisation après reconnexion.
 
 ## Signature Android
 
