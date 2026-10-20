@@ -201,6 +201,19 @@
       var base = readBase();
       var remote = await readCloud();
       var remoteEtag = String(remoteMeta.etag || "").replace(/^"|"$/g, "");
+
+      // A new installation (especially the Android WebView) has an empty localStorage
+      // even when the signed-in account already has a cloud backup. Restore only when
+      // this device has no meaningful local data; never replace a non-empty local copy.
+      if (!hasData(local) && hasData(remote.data)) {
+        savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(normalizeData(remote.data)));
+        saveBase(remoteEtag);
+        conflict = null;
+        status("Sauvegarde récupérée depuis ton espace cloud. Réouverture de la bibliothèque…", "ok");
+        window.setTimeout(function () { window.location.reload(); }, 250);
+        return;
+      }
+
       if (sameData(local, remote.data)) {
         saveBase(remoteEtag);
         conflict = null;
