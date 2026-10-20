@@ -400,10 +400,13 @@
   window.addEventListener("storage", function (event) {
     if (event.key === DATA_KEY) queueSave();
   });
-  freshSession().then(function (session) {
-    if (session && session.user) runSync();
-    else status("Connecte-toi avec Aurore ID pour sauvegarder automatiquement cartes, mémoires et progression dans R2.", "info");
-  }).catch(function () {
+  window.auroreMemoryCloudInitialSync = freshSession().then(function (session) {
+    if (session && session.user) return runSync();
+    status("Connecte-toi avec Aurore ID pour sauvegarder automatiquement cartes, mémoires et progression dans R2.", "info");
+    return null;
+  }).catch(function (error) {
     status("La connexion Aurore ID sera vérifiée à l’ouverture de session. Tes données locales restent intactes.", "warn");
+    console.warn("Initialisation de la synchronisation cloud :", error);
+    return null;
   });
 })();
