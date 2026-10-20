@@ -46,44 +46,26 @@
 </main>
 <script src="spa-router.js?v=20261019-nav-stable"></script>
 <script src="app.js?v=20261015-nav-final"></script>
+<script src="auth.js?v=20261020-shared-auth"></script>
 <script>
-(function () {
-  var sources = [
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
-    "https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
-    "https://unpkg.com/@supabase/supabase-js@2"
-  ];
-  function loadApp() {
+(async function () {
+  try {
+    if (window.auroreAuthReady) await window.auroreAuthReady;
+    if (!window.auroreAuth || !window.auroreAuth.client) throw new Error("Le client Aurore ID n’est pas prêt.");
     var app = document.createElement("script");
-    app.src = "groupe.js?v=20261019-nav-stable";
+    app.src = "groupe.js?v=20261020-shared-auth";
     app.onerror = function () {
-      var title = document.getElementById("groupTitle");
-      var status = document.getElementById("groupStatus");
+      var title = document.getElementById("groupTitle"), status = document.getElementById("groupStatus");
       if (title) title.textContent = "Service indisponible";
-      if (status) status.textContent = "Le script de l’espace collectif n’a pas pu être chargé. Vérifie la connexion puis recharge la page.";
+      if (status) status.textContent = "Le module du groupe n’a pas pu être chargé. Vérifie la connexion puis réessaie.";
     };
     document.body.appendChild(app);
+  } catch (error) {
+    console.error("Aurore Mémoire — initialisation de l’espace groupe :", error);
+    var title = document.getElementById("groupTitle"), status = document.getElementById("groupStatus");
+    if (title) title.textContent = "Connexion indisponible";
+    if (status) status.textContent = "La session Aurore ID n’a pas pu être restaurée. Réessaie avec une connexion Internet.";
   }
-  function trySource(index) {
-    if (window.supabase && window.supabase.createClient) { loadApp(); return; }
-    if (index >= sources.length) {
-      var title = document.getElementById("groupTitle");
-      var status = document.getElementById("groupStatus");
-      if (title) title.textContent = "Service momentanément indisponible";
-      if (status) status.textContent = "La bibliothèque de connexion n’a pas pu être chargée depuis les serveurs disponibles. Vérifie la connexion puis appuie sur Actualiser.";
-      return;
-    }
-    var script = document.createElement("script");
-    script.src = sources[index];
-    script.onload = function () {
-      if (window.supabase && window.supabase.createClient) loadApp();
-      else trySource(index + 1);
-    };
-    script.onerror = function () { trySource(index + 1); };
-    document.head.appendChild(script);
-  }
-  trySource(0);
 })();
 </script>
 </body>
