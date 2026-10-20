@@ -198,8 +198,19 @@
   search.addEventListener("input",renderGroups);
   document.querySelectorAll("[data-filter]").forEach(function(button){button.addEventListener("click",function(){setFilter(button.dataset.filter);});});
 
-  if(window.supabase && window.supabase.createClient){
-    client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    loadSession().then(loadGroups).catch(function(error){console.error(error);loadGroups();});
-  } else { loadGroups(); }
+  (async function initializeGroups(){
+    try {
+      if (window.auroreAuthReady) await window.auroreAuthReady;
+      if (!window.auroreAuth || !window.auroreAuth.client) throw new Error("Le client Aurore ID n’est pas initialisé.");
+      client = window.auroreAuth.client;
+      await loadSession();
+      await loadGroups();
+    } catch (error) {
+      console.error("Initialisation des groupes:", error);
+      grid.setAttribute("aria-busy","false");
+      grid.innerHTML='<div class="groups-error"><strong>Connexion aux groupes indisponible</strong><p>La session Aurore ID n’a pas pu être restaurée. Vérifie ta connexion puis réessaie ; aucun groupe ni compte n’a été modifié.</p><button class="groups-btn" type="button" id="retryGroups">Réessayer</button></div>';
+      var retry=document.getElementById("retryGroups");
+      if(retry) retry.addEventListener("click", function(){ window.location.reload(); });
+    }
+  })();
 })();
