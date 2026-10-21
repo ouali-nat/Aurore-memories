@@ -134,7 +134,7 @@
       } catch (error) {
         button.disabled = false;
         button.textContent = "Connexion Aurore ID";
-        toast("Connexion impossible. Vérifiez votre connexion et réessayez.);
+        toast("Connexion impossible. Vérifiez votre connexion et réessayez.");
       }
     });
   }
