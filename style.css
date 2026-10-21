@@ -691,3 +691,62 @@ body[data-page="home"] .app-menu-panel {
   left: auto;
   right: max(12px, env(safe-area-inset-right, 0px));
 }
+
+
+/* Ajustements compacts : palette et menu restent près de leur déclencheur. */
+.color-theme-wrap { position: relative; }
+.color-theme-panel {
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  right: 0 !important;
+  left: auto !important;
+  width: min(220px, calc(100vw - 20px)) !important;
+  max-width: calc(100vw - 20px) !important;
+  max-height: min(230px, calc(100dvh - 90px));
+  padding: 8px !important;
+  border-radius: 15px !important;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.color-theme-head { display: none !important; }
+.color-theme-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-top: 0 !important;
+}
+.color-theme-choice {
+  min-width: 0;
+  width: 100%;
+  aspect-ratio: 1;
+  justify-content: center;
+  padding: 4px !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+}
+.color-theme-choice span {
+  width: 19px !important;
+  height: 19px !important;
+  flex: 0 0 19px !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border) 70%, transparent);
+}
+.color-theme-choice b { display: none !important; }
+.app-menu-wrap { position: relative; }
+.app-menu-panel {
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  right: 0 !important;
+  left: auto !important;
+  width: min(270px, calc(100vw - 20px)) !important;
+  max-width: calc(100vw - 20px) !important;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 94px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@supports not (height: 100dvh) {
+  .color-theme-panel { max-height: calc(100vh - 90px); }
+  .app-menu-panel { max-height: calc(100vh - 94px) !important; }
+}
