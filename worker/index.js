@@ -1,11 +1,17 @@
 const ROOT = "Aurore mémoires/";
 
 // Sites autorisés à appeler l'API de stockage depuis un navigateur.
-// L'ancien domaine "mu" doit rester autorisé : sans cela, la migration cloud est bloquée
-// par CORS et le navigateur affiche « Failed to fetch ».
+// - aurore9 : site principal Mémoire ; mu : ancien domaine (migration cloud).
+// - aurore-section-archivescom / aurore-section-archives.com : sites Archives, dont l'application Android
+//   (Capacitor) charge l'adresse ; https://localhost et capacitor://localhost : origines internes de la WebView.
+// Chaque requête exige de toute façon un jeton Supabase valide (Authorization: Bearer).
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://aurore-memories-aurore9.vercel.app",
-  "https://aurore-memories-mu.vercel.app"
+  "https://aurore-memories-mu.vercel.app",
+  "https://aurore-section-archivescom.vercel.app",
+  "https://aurore-section-archives.com",
+  "https://localhost",
+  "capacitor://localhost"
 ];
 
 function corsHeaders(request, env) {
@@ -77,7 +83,7 @@ export default {
         service: "aurore-memories",
         authConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY),
         storageConfigured: Boolean(env.MEMORIES_BUCKET),
-        memorySyncVersion: "2026-10-21-cors-mu-fix",
+        memorySyncVersion: "2026-10-21-cors-app-fix",
         conditionalWrites: true
       }, 200, corsHeaders(request, env));
     }
