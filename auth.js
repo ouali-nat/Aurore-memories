@@ -129,13 +129,12 @@
         });
         if (result.error) throw result.error;
         if (!result.data || !result.data.url) {
-          throw new Error("Aurore ID n’a pas renvoyé d’adresse de connexion. Vérifiez le fournisseur custom:aurore-id dans Supabase Mémoire.");
+          throw new Error("Aurore ID n’a pas pu démarrer la connexion. Réessayez dans quelques instants.");
         }
       } catch (error) {
         button.disabled = false;
         button.textContent = "Connexion Aurore ID";
-        toast("Connexion non configurée ou refusée : " + (error.message || "erreur inconnue") +
-          ". Vérifiez le fournisseur custom:aurore-id dans Supabase Mémoire.");
+        toast("Connexion impossible. Vérifiez votre connexion et réessayez.);
       }
     });
   }
