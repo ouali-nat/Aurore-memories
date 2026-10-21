@@ -122,6 +122,11 @@
     row._auroreAudioMeta = meta ? Object.assign({}, meta) : null;
     var pendingBlob = null;
     var recorder = null, stream = null, chunks = [];
+    panel.querySelector(".aurore-audio-language").addEventListener("change", function (event) {
+      if (!row._auroreAudioMeta || row._auroreAudioMeta.remove) row._auroreAudioMeta = { type: "speech", language: event.target.value };
+      else row._auroreAudioMeta.language = event.target.value;
+      setMessage(row, "Langue de synthèse enregistrée avec la carte à la prochaine sauvegarde.");
+    });
     var choose = makeButton("＋ Importer un audio", "secondary-btn", function () { picker.click(); });
     var record = makeButton("● Enregistrer ma voix", "secondary-btn", async function () {
       try {
