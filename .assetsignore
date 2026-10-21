@@ -3,3 +3,8 @@ worker/
 workers/
 wrangler.toml
 .assetsignore
+.git
+.wrangler
+node_modules
+.env
+.env.*
