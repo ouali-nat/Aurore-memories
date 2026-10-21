@@ -264,7 +264,7 @@
       await showConflict(local, remote.data, remoteEtag);
     } catch (error) {
       if (error.status === 401) status("La session a expiré. Reconnecte-toi avec Aurore ID ; les données locales sont intactes.", "warn");
-      else status("Enregistrement non confirmé : " + (error.message || "erreur inconnue") + ". Les données locales restent intactes.", "warn");
+      else status("Enregistrement non confirmé. Vos contenus restent sur cet appareil ; vérifiez votre connexion et réessayez.", "warn");
     } finally {
       busy = false;
       if (syncAgain) {
