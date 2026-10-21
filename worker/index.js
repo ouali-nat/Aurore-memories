@@ -1,9 +1,17 @@
 const ROOT = "Aurore mémoires/";
 
+// Sites autorisés à appeler l'API de stockage depuis un navigateur.
+// L'ancien domaine "mu" doit rester autorisé : sans cela, la migration cloud est bloquée
+// par CORS et le navigateur affiche « Failed to fetch ».
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://aurore-memories-aurore9.vercel.app",
+  "https://aurore-memories-mu.vercel.app"
+];
+
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin");
   const allowed = [...new Set([
-    "https://aurore-memories-aurore9.vercel.app",
+    ...DEFAULT_ALLOWED_ORIGINS,
     ...(env.ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)
   ])];
   const sameOrigin = origin && new URL(request.url).origin === origin;
@@ -11,6 +19,7 @@ function corsHeaders(request, env) {
     "Vary": "Origin",
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type, If-Match, If-None-Match",
+    "Access-Control-Expose-Headers": "ETag",
     "Access-Control-Max-Age": "86400"
   });
   if (origin && (sameOrigin || allowed.includes(origin))) {
@@ -68,7 +77,7 @@ export default {
         service: "aurore-memories",
         authConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY),
         storageConfigured: Boolean(env.MEMORIES_BUCKET),
-        memorySyncVersion: "2026-10-17-r2-memory-sync",
+        memorySyncVersion: "2026-10-21-cors-mu-fix",
         conditionalWrites: true
       }, 200, corsHeaders(request, env));
     }
