@@ -542,7 +542,7 @@
       (validImage(style.backgroundImage) ? style.backgroundImage : "");
     var value = side === "front" ? card.front : card.back;
     return '<article class="deck-export-card" data-card-index="' + index + '" data-side="' + side + '" style="--card-bg:' + background + ';' + (image ? 'background-image:linear-gradient(0deg,rgba(0,0,0,.12),rgba(0,0,0,.12)),url(&quot;' + escapeHtml(image) + '&quot;);' : '') + '">' +
-      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span><span class="deck-export-provenance">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || card.authorName || (card.deck && deckSettingsFor(card.deck).authorName) || "Aurore Mémoire") + '</span></article>';
+      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span><span class="deck-export-provenance" style="position:absolute;left:2mm;bottom:1mm;max-width:78%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:4.5pt/1.1 Arial,sans-serif;letter-spacing:.01em;text-align:left;opacity:.58;color:rgba(255,255,255,.86)">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || card.authorName || (card.deck && deckSettingsFor(card.deck).authorName) || "Aurore Mémoire") + '</span></article>';
   }
 
   function deckExportDocument(deck, cards, imageMode) {
@@ -851,6 +851,12 @@
     var visible = [];
     publicFeedCards.forEach(function (card, index) {
       card._feedIndex = index;
+      // Une carte communautaire déjà ajoutée à la bibliothèque personnelle ne doit
+      // plus encombrer le flux public de cet utilisateur.
+      var alreadySaved = state.cards.some(function (saved) {
+        return String(saved.sourcePublicKey || "") === String(card.sourcePublicKey || "");
+      });
+      if (alreadySaved) return;
       if (selectedSeries && card.seriesId !== selectedSeries) return;
       var haystack = normalizeSearch([card.seriesName, card.authorName, card.domain, card.description, card.front, card.back].join(" "));
       if (search && !(haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
