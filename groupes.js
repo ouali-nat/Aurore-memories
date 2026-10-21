@@ -2,7 +2,7 @@
   "use strict";
   var SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co";
   var SUPABASE_KEY = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
-  var client = null, session = null, activeFilter = "public", groups = [], joinedGroupIds = Object.create(null), loadToken = 0;
+  var client = null, publicClient = null, session = null, activeFilter = "public", groups = [], joinedGroupIds = Object.create(null), loadToken = 0;
   var grid = document.getElementById("groupsGrid");
   var search = document.getElementById("groupSearch");
   var modal = document.getElementById("createGroupModal");
@@ -69,9 +69,11 @@
     grid.setAttribute("aria-busy","true");
     grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
     try {
-      var query = client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
-      // La liste publique est une lecture anonyme : ne jamais la faire dépendre du retour de session.
-      if (activeFilter === "public" || !signedIn()) query = query.eq("visibility", "public");
+      var usePublicRead = activeFilter === "public" || !signedIn();
+      var sourceClient = usePublicRead ? (publicClient || client) : client;
+      var query = sourceClient.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
+      // Le catalogue public utilise un client sans session persistée, même si Aurore ID a expiré.
+      if (usePublicRead) query = query.eq("visibility", "public");
       var result = await query;
       if (result.error) throw result.error;
       if (requestId !== loadToken) return;
@@ -207,8 +209,8 @@
 
   if(window.supabase && window.supabase.createClient){
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    // Afficher d'abord le catalogue public. La restauration OAuth ne doit pas retarder
-    // les groupes accessibles aux visiteurs ni les masquer si la session a expiré.
+    publicClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"aurore-public-groups-read-v1"}});
+    // Afficher d'abord le catalogue public avec un client anonyme indépendant de la session locale.
     loadGroups();
     loadSession().then(function(){
       updateAuthButtons();
