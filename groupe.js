@@ -63,21 +63,98 @@ memberBox.innerHTML=(members.data||[]).length?(members.data||[]).map(function(m)
 })();
 
 async function loadGroup(){
-if(!id){title.textContent="Invitation ou groupe introuvable";message("Aucun groupe n’a été sélectionné.");if(inviteToken&&!session){message("Connecte-toi avec Aurore ID pour accepter cette invitation privée.");joinButton.hidden=false;joinButton.textContent="Connexion Aurore ID";}return;}
+if(!id){
+ title.textContent="Invitation ou groupe introuvable";
+ message("Aucun groupe n’a été sélectionné.");
+ if(inviteToken&&!session){message("Connectez-vous avec Aurore ID pour accepter cette invitation privée.");joinButton.hidden=false;joinButton.textContent="Connexion Aurore ID";}
+ return;
+}
 if(!client){title.textContent="Service indisponible";message("Le service des groupes n’a pas pu être initialisé.");return;}
 try{
-var sr=await client.auth.getSession();session=sr.data.session;
-if(inviteToken){if(!session){title.textContent="Invitation à un groupe privé";message("Connecte-toi avec Aurore ID pour accepter l’invitation et accéder au groupe.");joinButton.hidden=false;joinButton.textContent="Connexion Aurore ID";return;}await redeemInvitation();}
-var result=await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,cover_url").eq("id",id).maybeSingle();
-if(result.error||!result.data){title.textContent="Groupe inaccessible";message("Ce groupe n’existe pas ou tu n’as pas l’autorisation d’y accéder.");return;}
-currentGroup=result.data;title.textContent=currentGroup.name;description.textContent=[currentGroup.description,currentGroup.subject,currentGroup.level].filter(Boolean).join(" · ")||"Un espace pour apprendre ensemble.";var cover=document.getElementById("groupCover");if(currentGroup.cover_url){cover.innerHTML='<img src="'+escapeHtml(currentGroup.cover_url)+'" alt="Couverture de '+escapeHtml(currentGroup.name)+'">';cover.hidden=false;}else{cover.hidden=true;cover.innerHTML="";}
-var isOwner=!!(session&&session.user.id===currentGroup.created_by),isMember=false;
-if(session){var membership=await client.from("study_group_members").select("group_id").eq("group_id",id).eq("user_id",session.user.id).maybeSingle();isMember=!!membership.data||isOwner;}
-if(currentGroup.visibility==="public"&&!isMember){joinButton.hidden=false;joinButton.textContent=!session?"Connexion Aurore ID":currentGroup.join_policy==="open"?"Rejoindre le groupe":"Demander à rejoindre";}
-else{joinButton.hidden=true;}
-message(currentGroup.visibility==="private"?"Groupe privé · accès réservé à son propriétaire et aux membres autorisés.":(isMember?"Tu fais partie de ce groupe.":currentGroup.join_policy==="open"?"Groupe public · adhésion libre jusqu’à la capacité maximale.":"Groupe public · l’adhésion nécessite l’approbation du propriétaire."));
-await loadSeries();await loadOwnerTools();
-}catch(error){console.error("Loading group space:",error);message("Impossible de charger les informations du groupe. Réessaie.");}
+ // Les liens d’invitation privée restent protégés par la connexion.
+ if(inviteToken){
+  try{
+   var invitationSession=await client.auth.getSession();
+   session=invitationSession.data&&invitationSession.data.session||null;
+  }catch(authError){session=null;}
+  if(!session){
+   title.textContent="Invitation à un groupe privé";
+   message("Connectez-vous avec Aurore ID pour accepter cette invitation et accéder au groupe.");
+   joinButton.hidden=false;
+   joinButton.textContent="Connexion Aurore ID";
+   return;
+  }
+  await redeemInvitation();
+ }
+ // Charger les informations publiques sans attendre la restauration de la session.
+ var result=await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,cover_url").eq("id",id).maybeSingle();
+ if(result.error||!result.data){
+  title.textContent="Groupe inaccessible";
+  message("Ce groupe n’existe pas ou vous n’avez pas l’autorisation d’y accéder.");
+  joinButton.hidden=true;
+  return;
+ }
+ currentGroup=result.data;
+ title.textContent=currentGroup.name;
+ description.textContent=[currentGroup.description,currentGroup.subject,currentGroup.level].filter(Boolean).join(" · ")||"Un espace pour apprendre ensemble.";
+ var cover=document.getElementById("groupCover");
+ if(currentGroup.cover_url){cover.innerHTML='<img src="'+escapeHtml(currentGroup.cover_url)+'" alt="Couverture de '+escapeHtml(currentGroup.name)+'">';cover.hidden=false;}
+ else{cover.hidden=true;cover.innerHTML="";}
+ // État visiteur immédiat : les détails publics sont visibles sans compte.
+ if(currentGroup.visibility==="public"){
+  joinButton.hidden=false;
+  joinButton.disabled=false;
+  joinButton.textContent="Connexion Aurore ID";
+  message("Groupe public · connectez-vous pour rejoindre le groupe ou envoyer une demande.");
+ }else{
+  joinButton.hidden=true;
+  message("Groupe privé · accès réservé à son propriétaire et aux membres autorisés.");
+ }
+ // Les séries publiques se chargent indépendamment de l’état de connexion.
+ loadSeries().catch(function(seriesError){
+  console.error("Loading shared study series:",seriesError);
+  seriesGrid.innerHTML='<div class="groups-empty"><strong>Les cartes partagées ne sont pas disponibles</strong><p>Les informations du groupe restent consultables. Réessayez pour afficher les séries partagées.</p></div>';
+ });
+ // La lecture de session affine les actions ; son échec ne masque jamais le groupe public.
+ try{
+  var sr=await client.auth.getSession();
+  if(sr.error)throw sr.error;
+  session=sr.data.session||null;
+ }catch(sessionError){
+  session=null;
+  console.warn("Session Aurore ID indisponible ; affichage du groupe public en mode visiteur.",sessionError);
+ }
+ var isOwner=!!(session&&session.user&&session.user.id===currentGroup.created_by),isMember=false;
+ if(session&&session.user){
+  try{
+   var membership=await client.from("study_group_members").select("group_id").eq("group_id",id).eq("user_id",session.user.id).maybeSingle();
+   if(membership.error)throw membership.error;
+   isMember=!!membership.data||isOwner;
+  }catch(membershipError){
+   console.warn("Statut de membre indisponible ; les informations publiques restent visibles.",membershipError);
+   isMember=isOwner;
+  }
+ }
+ if(currentGroup.visibility==="public"){
+  if(isMember){
+   joinButton.hidden=true;
+   message("Vous faites partie de ce groupe.");
+  }else{
+   joinButton.hidden=false;
+   joinButton.disabled=false;
+   joinButton.textContent=!session?"Connexion Aurore ID":currentGroup.join_policy==="open"?"Rejoindre le groupe":"Demander à rejoindre";
+   message(!session?"Groupe public · connectez-vous avec Aurore ID pour participer.":currentGroup.join_policy==="open"?"Groupe public · adhésion libre jusqu’à la capacité maximale.":"Groupe public · l’adhésion nécessite l’approbation du propriétaire.");
+  }
+ }else{
+  joinButton.hidden=true;
+  message("Groupe privé · accès réservé à son propriétaire et aux membres autorisés.");
+ }
+ await loadOwnerTools();
+}catch(error){
+ console.error("Loading group space:",error);
+ if(!currentGroup){title.textContent="Impossible de charger ce groupe";message("Le service est momentanément indisponible. Les groupes publics restent visibles depuis la liste. Réessayez.");}
+ else message("Les informations du groupe sont affichées, mais certaines données complémentaires n’ont pas pu être chargées.");
+}
 }
 async function joinGroup(){
 if(!client||!currentGroup)return;if(!session){await signIn();return;}
@@ -108,6 +185,13 @@ document.getElementById("createInviteButton").addEventListener("click",createInv
 document.getElementById("copyInviteButton").addEventListener("click",async function(){if(!createdInviteUrl)return;try{await navigator.clipboard.writeText(createdInviteUrl);toast("Lien copié.");}catch(e){inviteStatus.textContent=createdInviteUrl;toast("Copie automatique indisponible : sélectionne le lien affiché.");}});
 document.getElementById("shareInviteButton").addEventListener("click",function(){if(!createdInviteUrl)return;var text="Je t’invite à rejoindre le groupe privé « "+currentGroup.name+" » sur Aurore Mémoire : "+createdInviteUrl;if(navigator.share){navigator.share({title:"Invitation au groupe "+currentGroup.name,text:text,url:createdInviteUrl}).catch(function(e){if(e&&e.name!=="AbortError")window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");});}else{window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");}});
 joinButton.addEventListener("click",function(){if(inviteToken&&!session){signIn();return;}joinGroup();});
-if(window.supabase&&window.supabase.createClient){client=window.supabase.createClient(URL_BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});loadGroup();client.auth.onAuthStateChange(function(_event,next){session=next;if(next)loadGroup();});}
+if(window.supabase&&window.supabase.createClient){
+ client=window.supabase.createClient(URL_BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ client.auth.onAuthStateChange(function(event,next){
+  session=next||null;
+  if(event==="SIGNED_IN"||event==="SIGNED_OUT"||event==="USER_UPDATED")window.setTimeout(loadGroup,0);
+ });
+ loadGroup();
+}
 else{title.textContent="Service indisponible";message("Le service des groupes n’a pas pu être initialisé.");}
 })();
