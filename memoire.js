@@ -760,10 +760,14 @@
     var card = publicFeedCards[Number(index)];
     if (!card) return;
     var licenseLabel = card.license || (card.allowVariants ? "Variantes autorisées par l’auteur" : "Non précisée — variante non autorisée");
+    var certificateCode = auroreCardIdentifier(card, index);
+    var certificateLink = /^AUR-MEM-[0-9A-F]{16}$/i.test(certificateCode)
+      ? '<p><a class="secondary-btn" href="https://aurore-id.vercel.app/verification.html?code=' + encodeURIComponent(certificateCode) + '" target="_blank" rel="noopener noreferrer">Vérifier dans Aurore ID ↗</a></p>'
+      : '';
     openSharingDialog("Informations sur la carte", 
       '<div class="public-card-user-content">' +
-      '<dl class="public-card-details"><div><dt>Identifiant Aurore</dt><dd>' + escapeHtml(auroreCardIdentifier(card, index)) + '</dd></div>' +
-      '<div><dt>Statut du registre</dt><dd>Identifiée · non certifiée</dd></div>' +
+      '<dl class="public-card-details"><div><dt>Identifiant Aurore</dt><dd>' + escapeHtml(certificateCode) + '</dd></div>' +
+      '<div><dt>Statut du registre</dt><dd>Consultez le registre pour connaître le statut actuel</dd></div>' +
       '<div><dt>Série</dt><dd>' + escapeHtml(card.seriesName) + '</dd></div>' +
       '<div><dt>Auteur</dt><dd>' + escapeHtml(card.authorName) + '</dd></div>' +
       '<div><dt>Domaine</dt><dd>' + escapeHtml(card.domain) + '</dd></div>' +
@@ -775,6 +779,7 @@
       (card.allowVariants ? '<p>Tu peux créer une variante indépendante. Le lien vers l’auteur d’origine sera conservé.</p>' : '<p>La création de variantes n’est pas autorisée tant que l’auteur n’a pas explicitement activé cette possibilité.</p>') +
       '</details>' +
       '<h3>À propos</h3><p>' + escapeHtml(card.description || "Aucune description ajoutée.") + '</p>' +
+      certificateLink +
       '<div class="sharing-modal-actions">' +
       (card.allowVariants ? '<button type="button" class="secondary-btn" data-act="public-variant" data-index="' + Number(index) + '">Créer ma variante</button>' : '') +
       '<button type="button" class="primary-btn" data-act="close-sharing-modal">Fermer</button></div></div>');
