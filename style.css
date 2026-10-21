@@ -686,3 +686,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+body[data-page="home"] .app-menu-panel {
+  left: auto;
+  right: max(12px, env(safe-area-inset-right, 0px));
+}
