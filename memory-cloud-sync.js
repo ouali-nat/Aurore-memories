@@ -188,7 +188,7 @@
       var remoteMeta = await listCloud();
       if (!remoteMeta) {
         if (!hasData(local)) {
-          status("Aurore ID est connecté. La sauvegarde cloud sera créée dès que tu ajoutes ou modifies une carte ou une mémoire.", "info");
+          status("Connexion active. Vos prochaines modifications seront enregistrées automatiquement.", "info");
           return;
         }
         status("Première sauvegarde des cartes et mémoires vers ton espace privé…", "info");
@@ -232,7 +232,7 @@
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(migrated));
         saveBase(migratedWrite.etag);
         conflict = null;
-        status("Tes cartes de cet ancien domaine et ta sauvegarde cloud ont été fusionnées et archivées. Transfert vers le site principal…", "ok");
+        status("Vos contenus ont été réunis en toute sécurité. Ouverture du site principal…", "ok");
         var targetUrl = new URL(window.location.href);
         targetUrl.hostname = "aurore-memories-aurore9.vercel.app";
         window.setTimeout(function () { window.location.replace(targetUrl.toString()); }, 900);
@@ -264,7 +264,7 @@
       await showConflict(local, remote.data, remoteEtag);
     } catch (error) {
       if (error.status === 401) status("La session a expiré. Reconnecte-toi avec Aurore ID ; les données locales sont intactes.", "warn");
-      else status("Sauvegarde cloud non confirmée : " + (error.message || "erreur inconnue") + ". Les données locales restent intactes.", "warn");
+      else status("Enregistrement non confirmé : " + (error.message || "erreur inconnue") + ". Les données locales restent intactes.", "warn");
     } finally {
       busy = false;
       if (syncAgain) {
@@ -281,7 +281,7 @@
   }
   async function showConflict(local, remote, etag) {
     conflict = { local: local, remote: remote, etag: etag };
-    status("Une sauvegarde cloud existe et diffère de cet appareil. Choisis une action : aucune version ne sera écrasée sans confirmation.", "warn", true);
+    status("Une autre version de vos contenus existe en ligne. Choisissez comment réunir les deux versions ; rien ne sera remplacé sans votre accord.", "warn", true);
   }
   function newCardId() { return Date.now() + Math.random(); }
   function mergeData(localValue, remoteValue) {
@@ -373,13 +373,13 @@
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(normalizeData(selected.remote)));
         saveBase(selected.etag);
         conflict = null;
-        status("Sauvegarde cloud restaurée. La page va se recharger pour afficher les mémorisations récupérées.", "ok");
+        status("Vos contenus ont été restaurés. La page va s’actualiser.", "ok");
         window.setTimeout(function () { window.location.reload(); }, 700);
       }
     } catch (error) {
       if (error.status === 412) {
         conflict = null;
-        status("La sauvegarde cloud a changé pendant cette opération. Actualise la page pour comparer à nouveau ; aucune écriture concurrente n’a été acceptée.", "warn");
+        status("Les contenus en ligne ont changé entre-temps. Actualisez la page avant de réessayer.", "warn");
       } else status("Opération inachevée : " + (error.message || "erreur inconnue") + ". Les données locales n’ont pas été supprimées.", "warn", true);
     } finally {
       busy = false;
@@ -393,7 +393,7 @@
       if (!active) {
         freshSession().then(function (session) {
           if (session && session.user) runSync();
-          else status("Modifications conservées sur cet appareil. Connecte-toi avec Aurore ID pour la sauvegarde cloud.", "info");
+          else status("Modifications conservées sur cet appareil. Connectez-vous avec Aurore ID pour les retrouver sur vos autres appareils.", "info");
         }).catch(function () {});
         return;
       }
@@ -420,7 +420,7 @@
     if (event.detail && event.detail.session && event.detail.session.user) runSync();
     else {
       active = false;
-      status("Déconnecté : cartes et mémoires restent sur cet appareil ; rien n’a été supprimé du cloud.", "info");
+      status("Vous êtes hors ligne : vos cartes et mémoires restent sur cet appareil.", "info");
     }
   });
   window.addEventListener("storage", function (event) {
