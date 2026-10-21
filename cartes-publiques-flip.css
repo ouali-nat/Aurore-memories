@@ -1,5 +1,5 @@
 /* Cartes publiques — design flottant, texte dans le cadre, rotation au clic */
-.public-card-feed-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,284px),1fr))!important;gap:38px 24px!important;padding:14px 4px 44px!important;align-items:stretch!important}
+.public-card-feed-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:24px 16px!important;padding:14px 4px 44px!important;align-items:stretch!important}
 .public-flashcard.pf-ready{position:relative!important;display:block!important;width:100%!important;height:auto!important;min-height:0!important;aspect-ratio:4/5!important;margin:0!important;padding:0!important;border:0!important;border-radius:28px!important;background:none!important;box-shadow:none!important;overflow:visible!important;transform:none!important;filter:none!important;transition:none!important;isolation:isolate;perspective:1200px;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
 .public-flashcard.pf-ready::before{content:none!important}
 .public-flashcard.pf-ready::after{content:""!important;position:absolute!important;left:14%!important;right:14%!important;bottom:-16px!important;top:auto!important;height:22px!important;border-radius:50%!important;background:radial-gradient(closest-side,color-mix(in srgb,var(--card-art-color,#4937a6) 65%,#000),transparent)!important;opacity:.5;z-index:-1;pointer-events:none}
@@ -47,3 +47,6 @@
 .public-flashcard.pf-ready .pf-add{border-color:transparent;background:rgba(255,255,255,.94);color:#1a1530}
 
 @media (prefers-reduced-motion:reduce){.public-flashcard.pf-ready.pf-live .pf-float,.public-flashcard.pf-ready.pf-live::after{animation:none!important}.pf-flip{transition-duration:.01s}.pf-tilt{transition:none}}
+
+/* Deux cartes par ligne, y compris sur téléphone, avec une taille adaptée. */
+@media(max-width:520px){.public-card-feed-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px 10px!important;padding-inline:0!important}.public-flashcard.pf-ready{border-radius:18px!important}.pf-face{padding:10px 9px 9px;border-radius:18px}.pf-chip{max-width:100%;font-size:.56rem;padding:4px 6px}.public-flashcard.pf-ready .pf-q,.public-flashcard.pf-ready .pf-a{font-size:clamp(.76rem,3.1vw,1rem)!important}.public-flashcard.pf-ready .pf-btn{width:30px;height:30px}.public-flashcard.pf-ready .pf-hint{font-size:.58rem!important}.pf-foot{gap:4px;padding-top:6px}}
