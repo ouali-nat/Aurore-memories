@@ -20,6 +20,16 @@
     return String(value == null ? "" : value).replace(/[&<>"']/g,function(ch){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch];});
   }
   function signedIn() { return !!(session && session.user); }
+  function withTimeout(promise, milliseconds, message) {
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { reject(new Error(message)); }, milliseconds);
+      Promise.resolve(promise).then(function (value) {
+        clearTimeout(timer); resolve(value);
+      }, function (error) {
+        clearTimeout(timer); reject(error);
+      });
+    });
+  }
   function openModal() {
     if (!signedIn()) { toast("Connecte-toi avec Aurore ID pour créer un groupe."); startAuroreIdSignIn(); return; }
     status.textContent = "";
@@ -74,22 +84,34 @@
       var query = sourceClient.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
       // Le catalogue public utilise un client sans session persistée, même si Aurore ID a expiré.
       if (usePublicRead) query = query.eq("visibility", "public");
-      var result = await query;
+      var result = await withTimeout(query, 12000, "La récupération des groupes prend trop de temps.");
       if (result.error) throw result.error;
       if (requestId !== loadToken) return;
       groups = result.data || [];
       joinedGroupIds = Object.create(null);
+      // Afficher le catalogue public immédiatement : une requête de session ou
+      // d'adhésions lente ne doit jamais laisser la page bloquée sur le chargement.
+      renderGroups();
       if (signedIn()) {
-        var memberships = await client.from("study_group_members").select("group_id").eq("user_id", session.user.id);
-        if (requestId !== loadToken) return;
-        if (memberships.error) {
-          // Ne bloque pas les groupes publics si la lecture des adhésions privées échoue.
-          console.warn("Les adhésions aux groupes n’ont pas pu être chargées.", memberships.error);
-        } else {
-          (memberships.data || []).forEach(function (row) { joinedGroupIds[row.group_id] = true; });
+        var membershipUserId = session.user.id;
+        try {
+          var memberships = await withTimeout(
+            client.from("study_group_members").select("group_id").eq("user_id", membershipUserId),
+            7000,
+            "Le chargement des adhésions prend trop de temps."
+          );
+          if (requestId !== loadToken || !signedIn() || session.user.id !== membershipUserId) return;
+          if (memberships.error) {
+            console.warn("Les adhésions aux groupes n’ont pas pu être chargées.", memberships.error);
+          } else {
+            (memberships.data || []).forEach(function (row) { joinedGroupIds[row.group_id] = true; });
+            renderGroups();
+          }
+        } catch (membershipError) {
+          // Le catalogue public reste visible même si la requête des adhésions échoue.
+          console.warn("Adhésions indisponibles ; catalogue public conservé.", membershipError);
         }
       }
-      renderGroups();
     } catch (error) {
       if (requestId !== loadToken) return;
       console.error("Loading study groups:",error);
