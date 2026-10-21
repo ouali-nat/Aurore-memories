@@ -1,0 +1,145 @@
+name: Android APK — Aurore Mémoire (Capacitor)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurore-memoire-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compiler l’APK Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer les composants Android
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses >/dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Installer Capacitor et les bibliothèques locales
+        working-directory: android-app
+        run: npm install --no-audit --no-fund
+
+      - name: Préparer les pages et embarquer les dépendances
+        working-directory: android-app
+        run: npm run build:web
+
+      - name: Générer le projet Android Capacitor
+        working-directory: android-app
+        run: |
+          npx cap add android
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          xml = manifest.read_text()
+          if "app.aurore.memoire" not in xml:
+              activity_start = xml.find('android:name=".MainActivity"')
+              activity_end = xml.find("</activity>", activity_start)
+              if activity_start < 0 or activity_end < 0:
+                  raise SystemExit("Impossible de trouver MainActivity pour le retour Aurore ID.")
+              link = """
+                      <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="app.aurore.memoire" android:host="auth" android:pathPrefix="/callback" />
+                      </intent-filter>
+              """
+              xml = xml[:activity_end] + link + xml[activity_end:]
+              manifest.write_text(xml)
+          print("Lien profond Aurore ID configuré.")
+          PY
+          if [ -f assets/icon.png ]; then
+            npx capacitor-assets generate
+          else
+            echo "::warning::Logo absent : ajoutez android-app/assets/icon.png pour générer les icônes de l’application."
+          fi
+          npx cap sync android
+
+      - name: Définir le numéro de version
+        working-directory: android-app
+        run: |
+          CODE=$((100 + VERSION_CODE))
+          sed -i "s/versionCode 1/versionCode $CODE/; s/versionName \"1.0\"/versionName \"0.$CODE\"/" android/app/build.gradle
+          grep -n "versionCode\|versionName" android/app/build.gradle
+
+      - name: Compiler l’APK de test
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Signer l’APK de test
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          UNSIGNED="$(find android-app/android/app/build/outputs/apk/release -name '*.apk' | head -1)"
+          test -n "$UNSIGNED" || { echo "APK de sortie introuvable"; exit 1; }
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/aurore-memoire.jks"
+            ALIAS="${KS_ALIAS:-aurore-memoire}"
+            PASS="$KS_PASS"
+            KEYPASS="${KS_KEY_PASS:-$KS_PASS}"
+            echo "Signature stable détectée."
+          else
+            ALIAS=aurore-memoire
+            PASS="$(openssl rand -hex 16)"
+            KEYPASS="$PASS"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/aurore-memoire.jks" -storetype PKCS12 -alias "$ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Aurore Memoire, O=Aurore, C=BF"
+            echo "::warning::Clé temporaire : cet APK est uniquement destiné aux tests et ne pourra pas être mis à jour par une prochaine compilation."
+          fi
+          "$BT/zipalign" -p -f 4 "$UNSIGNED" "$RUNNER_TEMP/aurore-memoire-aligned.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/aurore-memoire.jks" --ks-key-alias "$ALIAS" \
+            --ks-pass "pass:$PASS" --key-pass "pass:$KEYPASS" --out Aurore-Memoire.apk "$RUNNER_TEMP/aurore-memoire-aligned.apk"
+          "$BT/apksigner" verify --verbose Aurore-Memoire.apk
+          rm -f "$RUNNER_TEMP/aurore-memoire.jks"
+
+      - name: Vérifier le fichier livré
+        run: |
+          test -s Aurore-Memoire.apk
+          sha256sum Aurore-Memoire.apk
+          {
+            echo "## Aurore Mémoire — APK de test"
+            echo ""
+            echo "- Compilation Capacitor : réussie."
+            echo "- Les pages et les dépendances KaTeX/Supabase sont embarquées."
+            echo "- Cette compilation n’est pas encore une validation du mode avion."
+            echo "- Vérifiez la signature stable dans les secrets avant de distribuer des mises à jour."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Déposer l’APK en artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aurore-Memoire-APK
+          path: Aurore-Memoire.apk
+          if-no-files-found: error
+          retention-days: 14
