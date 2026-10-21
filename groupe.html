@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
-  <link rel="prefetch" href="groupe.js?v=20261019-nav-stable" as="script">
+  <link rel="prefetch" href="groupe.js?v=20261021-public-groups-eager" as="script">
 </head>
 <body data-page="group-detail">
 <div class="ambient-bg" aria-hidden="true"></div>
@@ -45,45 +45,66 @@
 </section>
 </main>
 <script src="spa-router.js?v=20261019-nav-stable"></script>
-<script src="app.js?v=20261021-ui-polish"></script>
+<script src="app.js?v=20261021-compact-popovers"></script>
 <script>
 (function () {
+  "use strict";
   var sources = [
     "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
     "https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
     "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
     "https://unpkg.com/@supabase/supabase-js@2"
   ];
+  var index = 0, appStarted = false, timeoutId = null;
+
+  function showFailure(titleText, statusText) {
+    var title = document.getElementById("groupTitle");
+    var status = document.getElementById("groupStatus");
+    if (title) title.textContent = titleText;
+    if (status) status.textContent = statusText;
+  }
+
   function loadApp() {
+    if (appStarted) return;
+    appStarted = true;
+    if (timeoutId) window.clearTimeout(timeoutId);
     var app = document.createElement("script");
-    app.src = "groupe.js?v=20261019-nav-stable";
+    app.src = "groupe.js?v=20261021-public-groups-eager";
     app.onerror = function () {
-      var title = document.getElementById("groupTitle");
-      var status = document.getElementById("groupStatus");
-      if (title) title.textContent = "Service indisponible";
-      if (status) status.textContent = "Le script de l’espace collectif n’a pas pu être chargé. Vérifie la connexion puis recharge la page.";
+      showFailure("Service indisponible", "Le script de l’espace collectif n’a pas pu être chargé. Vérifiez la connexion puis rechargez la page.");
     };
     document.body.appendChild(app);
   }
-  function trySource(index) {
-    if (window.supabase && window.supabase.createClient) { loadApp(); return; }
-    if (index >= sources.length) {
-      var title = document.getElementById("groupTitle");
-      var status = document.getElementById("groupStatus");
-      if (title) title.textContent = "Service momentanément indisponible";
-      if (status) status.textContent = "La bibliothèque de connexion n’a pas pu être chargée depuis les serveurs disponibles. Vérifie la connexion puis appuie sur Actualiser.";
+
+  function trySource() {
+    if (window.supabase && typeof window.supabase.createClient === "function") {
+      loadApp();
       return;
     }
+    if (index >= sources.length) {
+      showFailure("Service momentanément indisponible", "La bibliothèque nécessaire n’a pas pu être chargée. Vérifiez la connexion puis réessayez ; les groupes publics restent accessibles depuis la liste.");
+      return;
+    }
+
     var script = document.createElement("script");
-    script.src = sources[index];
-    script.onload = function () {
-      if (window.supabase && window.supabase.createClient) loadApp();
-      else trySource(index + 1);
-    };
-    script.onerror = function () { trySource(index + 1); };
+    script.src = sources[index++];
+    script.async = true;
+    var settled = false;
+    function nextOnce() {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = null;
+      if (window.supabase && typeof window.supabase.createClient === "function") loadApp();
+      else trySource();
+    }
+    script.onload = nextOnce;
+    script.onerror = nextOnce;
     document.head.appendChild(script);
+    timeoutId = window.setTimeout(nextOnce, 6500);
   }
-  trySource(0);
+
+  trySource();
 })();
 </script>
 </body>
