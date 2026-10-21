@@ -146,6 +146,7 @@
       if (!blob || !blob.size) { setMessage(row, "Le fichier audio est vide.", true); return; }
       if (blob.size > MAX_AUDIO_BYTES) { setMessage(row, "L’audio dépasse 10 Mo. Choisissez un fichier plus léger.", true); return; }
       pendingBlob = blob;
+      row._auroreAudioPendingBlob = blob;
       var key = "audio/" + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)) + "." + ((blob.type.split("/")[1] || "audio").split(";")[0].replace(/[^a-z0-9]/gi, "") || "audio");
       row._auroreAudioMeta = { type: "recording", key: key, name: name || "audio", mime: blob.type || "application/octet-stream", language: panel.querySelector(".aurore-audio-language").value, pending: true };
       await cacheBlob(key, blob, name, blob.type).catch(function (error) { setMessage(row, error.message || "Mise en cache hors ligne impossible.", true); });
@@ -234,7 +235,9 @@
   // The review page uses the same card data; attach players without changing review scheduling.
   function mountReviewAudio() {
     var active = document.getElementById("activeFlashcard");
-    if (!active || active.dataset.audioMounted === "true") return;
+    if (!active) return;
+    var oldControls = document.querySelector(".aurore-audio-review"); if (oldControls) oldControls.remove();
+    if (active.dataset.audioMounted === "true") return;
     active.dataset.audioMounted = "true";
     var state;
     try { state = JSON.parse(localStorage.getItem("aurore-memory-cards-v1") || "{}"); } catch (_) { state = {}; }
@@ -263,9 +266,30 @@
   }
   window.addEventListener("pagehide", function () { objectUrls.forEach(function (url) { try { URL.revokeObjectURL(url); } catch (_) {} }); });
   window.addEventListener("online", function () {
-    // The audio remains local until its card is edited/saved again if upload previously failed.
-    // This avoids silently overwriting the user's card backup from a background task.
+    retryPendingUploads().catch(function () {});
   });
+  async function retryPendingUploads() {
+    var state;
+    try { state = JSON.parse(localStorage.getItem("aurore-memory-cards-v1") || "{}"); } catch (_) { return; }
+    if (!Array.isArray(state.cards)) return;
+    var changed = false;
+    for (var i = 0; i < state.cards.length; i += 1) {
+      var card = state.cards[i], meta = card && card.audio;
+      if (!meta || !meta.pending || !meta.key) continue;
+      var cached = await getCached(meta.key).catch(function () { return null; });
+      if (!cached || !cached.blob) continue;
+      try {
+        await upload(meta.key, cached.blob);
+        meta.pending = false;
+        await cacheBlob(meta.key, cached.blob, meta.name, meta.mime);
+        changed = true;
+      } catch (_) { /* keep local audio and retry on the next connection */ }
+    }
+    if (changed) {
+      try { localStorage.setItem("aurore-memory-cards-v1", JSON.stringify(state)); } catch (_) {}
+      window.dispatchEvent(new CustomEvent("aurore:audio-sync-complete"));
+    }
+  }
   var style = document.createElement("style");
   style.textContent = '.aurore-audio-editor{margin-top:14px;padding:14px;border:1px solid var(--border,rgba(150,140,190,.3));border-radius:16px;background:var(--surface-raised,rgba(24,21,35,.7))}.aurore-audio-heading{display:flex;justify-content:space-between;gap:10px;align-items:center}.aurore-audio-heading span{font-size:12px;color:var(--muted,#aaa)}.aurore-audio-editor p{color:var(--muted,#aaa);font-size:13px;line-height:1.5}.aurore-audio-actions,.aurore-audio-review{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.aurore-audio-status{font-size:12px;line-height:1.45;color:var(--muted,#aaa);margin:8px 0}.aurore-audio-status[data-error="true"]{color:var(--danger,#ff9797)}.aurore-audio-language-label{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted,#aaa)}.aurore-audio-language{background:var(--surface,#12101a);color:var(--text,#eee);border:1px solid var(--border,#2a2438);border-radius:8px;padding:7px}.aurore-audio-review{justify-content:center;padding:0 8px}.aurore-audio-file{display:none}';
   document.head.appendChild(style);
