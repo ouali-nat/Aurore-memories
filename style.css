@@ -510,3 +510,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Navigation mobile : chaque lien garde sa propre tuile et ne se chevauche pas. */
+@media(max-width:760px){.topbar-inner{align-items:center;flex-wrap:wrap;row-gap:9px}.header-right{flex:1 1 100%;min-width:0;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}.top-actions{display:flex;flex:1 1 100%;min-width:0;gap:6px;flex-wrap:wrap;align-items:stretch;order:1}.top-actions .nav-link{flex:1 1 auto;justify-content:center;min-width:0;text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.2;padding:8px 7px;font-size:.74rem}.appearance{flex:1 1 100%;order:2;justify-content:flex-end;flex-wrap:wrap;gap:5px}.theme-mode-choices{display:flex;flex-wrap:wrap;gap:4px;max-width:100%}.theme-mode-choices button{white-space:nowrap}}
+@media(max-width:560px){.topbar-inner{gap:8px}.header-right{flex-basis:100%;margin:0}.top-actions{display:flex!important;gap:5px}.top-actions .nav-link{font-size:.72rem;padding:8px 5px;min-height:36px;border-radius:10px}.appearance{justify-content:flex-start}.theme-mode-choices{width:100%;justify-content:flex-start}}
