@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
-  <link rel="prefetch" href="groupes.js?v=20261019-nav-stable" as="script">
+  <link rel="prefetch" href="groupes.js?v=20261021-group-load-fix" as="script">
 </head>
 <body data-page="groups">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -82,7 +82,7 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="spa-router.js?v=20261019-nav-stable"></script>
-  <script src="app.js?v=20261015-nav-final"></script>
+  <script src="app.js?v=20261021-ui-polish"></script>
   <script>
     (function () {
       "use strict";
@@ -98,7 +98,7 @@
         loaded = true;
         if (timeoutId) window.clearTimeout(timeoutId);
         var script = document.createElement("script");
-        script.src = "groupes.js?v=20261019-nav-stable";
+        script.src = "groupes.js?v=20261021-group-load-fix";
         document.body.appendChild(script);
       }
       function tryNext() {
