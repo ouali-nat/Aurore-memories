@@ -1121,3 +1121,12 @@ body[data-page="library"] .memory-series-card .series-sharing-status{display:fle
 .public-card-rights p{margin:9px 0 0;color:var(--muted);font-size:.73rem;line-height:1.5}
 .public-card-details dd{font-weight:650}
 .public-card-details>div:last-child{border-bottom:0;padding-bottom:0}
+
+
+/* Certification Aurore — identifiant et attribution discrets sur la carte et ses exports. */
+.public-card-attribution{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:70%;font-size:.61rem;line-height:1.25;opacity:.82;overflow-wrap:anywhere}
+.public-card-attribution span:last-child{font-size:.53rem;letter-spacing:.035em;opacity:.78}
+.public-flashcard-bottom{align-items:flex-end}
+.deck-export-provenance{position:absolute;left:2mm;right:12mm;bottom:1mm;font:5pt Arial,sans-serif;opacity:.8;text-align:left;overflow-wrap:anywhere;line-height:1.1}
+.deck-export-number{z-index:1}
+@media(max-width:560px){.public-card-attribution{font-size:.56rem;max-width:66%}.public-card-attribution span:last-child{font-size:.48rem}}
