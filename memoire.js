@@ -47,6 +47,12 @@
   if (!Array.isArray(state.cardPerformance)) state.cardPerformance = [];
   if (!state.deckSettings || typeof state.deckSettings !== "object") state.deckSettings = {};
   if (["courbe", "diagramme", "batonnets"].indexOf(state.chartType) < 0) state.chartType = "courbe";
+  function auroreCertificateCodeFromId(value) {
+    var id = String(value || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return "";
+    return "AUR-MEM-" + id.replace(/-/g, "").slice(0, 16).toUpperCase();
+  }
+  var cardIdentityChanged = false;
   var legacyModes = { "Rappel actif": "Toucher pour révéler", "Texte à trous": "Trous", "Premières lettres": "Première lettre", "QCM": "Choix multiple", "Association": "Toucher pour révéler", "Palais mental": "Toucher pour révéler" };
   if (legacyModes[state.mode]) state.mode = legacyModes[state.mode];
   if (MODES.indexOf(state.mode) < 0) state.mode = "Toucher pour révéler";
@@ -62,6 +68,9 @@
     if (typeof card.interval !== "number" || !isFinite(card.interval)) card.interval = 0;
     if (typeof card.reps !== "number" || !isFinite(card.reps)) card.reps = 0;
     if (typeof card.lapses !== "number" || !isFinite(card.lapses)) card.lapses = 0;
+    if (!auroreCertificateCodeFromId(card.certificateId)) { card.certificateId = randomUuid(); cardIdentityChanged = true; }
+    var expectedCertificateCode = auroreCertificateCodeFromId(card.certificateId);
+    if (card.certificateCode !== expectedCertificateCode) { card.certificateCode = expectedCertificateCode; cardIdentityChanged = true; }
     return card;
   });
 
@@ -81,6 +90,8 @@
       return false;
     }
   }
+
+  if (cardIdentityChanged) save();
 
   function deckNames(cards) {
     var seen = Object.create(null);
@@ -106,6 +117,8 @@
   function makeCard(front, back, deck, index) {
     return {
       id: Date.now() + Math.random() + (index || 0) / 1000,
+      certificateId: randomUuid(),
+      certificateCode: "",
       deck: deck,
       kind: "flashcard",
       front: String(front || "").trim(),
@@ -368,7 +381,11 @@
     var seriesBackgroundColor = /^#[0-9a-f]{6}$/i.test(deckStyle.backgroundColor || "") ? deckStyle.backgroundColor : "#4937a6";
     var seriesBackgroundImage = typeof deckStyle.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(deckStyle.backgroundImage) ? deckStyle.backgroundImage : "";
     var payloadCards = cards.map(function (card) {
+      if (!auroreCertificateCodeFromId(card.certificateId)) card.certificateId = randomUuid();
+      card.certificateCode = auroreCertificateCodeFromId(card.certificateId);
       return {
+        certificateId: card.certificateId,
+        certificateCode: card.certificateCode,
         front: card.front,
         back: card.back,
         cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
@@ -525,7 +542,7 @@
       (validImage(style.backgroundImage) ? style.backgroundImage : "");
     var value = side === "front" ? card.front : card.back;
     return '<article class="deck-export-card" data-card-index="' + index + '" data-side="' + side + '" style="--card-bg:' + background + ';' + (image ? 'background-image:linear-gradient(0deg,rgba(0,0,0,.12),rgba(0,0,0,.12)),url(&quot;' + escapeHtml(image) + '&quot;);' : '') + '">' +
-      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span><span class="deck-export-provenance">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || settings.authorName || "Aurore Mémoire") + '</span></article>';
+      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span><span class="deck-export-provenance">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || card.authorName || "Aurore Mémoire") + '</span></article>';
   }
 
   function deckExportDocument(deck, cards, imageMode) {
@@ -714,6 +731,9 @@
 
   function auroreCardIdentifier(card, fallbackIndex) {
     card = card || {};
+    if (card.certificateCode && /^AUR-MEM-[0-9A-F]{16}$/i.test(String(card.certificateCode))) return String(card.certificateCode).toUpperCase();
+    var fromId = auroreCertificateCodeFromId(card.certificateId);
+    if (fromId) return fromId;
     var source = String(card.sourcePublicKey || card.id || card.originalCardId || "");
     var seriesPart = "";
     var cardPart = "";
@@ -743,6 +763,7 @@
     openSharingDialog("Informations sur la carte", 
       '<div class="public-card-user-content">' +
       '<dl class="public-card-details"><div><dt>Identifiant Aurore</dt><dd>' + escapeHtml(auroreCardIdentifier(card, index)) + '</dd></div>' +
+      '<div><dt>Statut du registre</dt><dd>Identifiée · non certifiée</dd></div>' +
       '<div><dt>Série</dt><dd>' + escapeHtml(card.seriesName) + '</dd></div>' +
       '<div><dt>Auteur</dt><dd>' + escapeHtml(card.authorName) + '</dd></div>' +
       '<div><dt>Domaine</dt><dd>' + escapeHtml(card.domain) + '</dd></div>' +
@@ -897,6 +918,8 @@
             description: String(series.description || ""),
             createdAt: series.created_at,
             license: String(card.license || ""),
+            certificateId: String(card.certificateId || ""),
+            certificateCode: String(card.certificateCode || ""),
             allowVariants: card.allowVariants === true,
             originalCardId: String(card.originalCardId || ""),
             front: card.front,
