@@ -526,24 +526,20 @@
   }
 
   function deckExportDocument(deck, cards, imageMode) {
-    var batches = [];
-    for (var i = 0; i < cards.length; i += 8) batches.push(cards.slice(i, i + 8));
-    var pages = batches.map(function (batch, batchIndex) {
-      var offset = batchIndex * 8;
-      var fronts = batch.map(function (card, i) { return exportCardMarkup(card, offset + i, "front"); }).join("");
-      var backs = "";
-      for (var row = 0; row < batch.length; row += 2) {
-        batch.slice(row, row + 2).reverse().forEach(function (card) {
-          backs += exportCardMarkup(card, cards.indexOf(card), "back");
-        });
-      }
-      return '<section class="deck-export-page"><div class="deck-export-grid">' + fronts + '</div><p class="deck-export-footer">' + escapeHtml(deck) + ' · RECTOS · PLANCHE ' + (batchIndex + 1) + '</p></section>' +
-        '<section class="deck-export-page"><div class="deck-export-grid">' + backs + '</div><p class="deck-export-footer">' + escapeHtml(deck) + ' · VERSOS · PLANCHE ' + (batchIndex + 1) + '</p></section>';
-    }).join("");
+    var count = Math.max(1, cards.length);
+    // Une seule planche recto et une seule planche verso, quel que soit le nombre de cartes.
+    var columns = Math.max(1, Math.ceil(Math.sqrt(count * 184 / 270)));
+    var pageStyle = 'height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;';
+    var gridStyle = 'height:270mm;grid-template-columns:repeat(' + columns + ',minmax(0,1fr));grid-template-rows:repeat(' + Math.ceil(count / columns) + ',minmax(0,1fr));gap:2mm;';
+    var fronts = cards.map(function (card, i) { return exportCardMarkup(card, i, "front"); }).join("");
+    var backs = cards.map(function (card, i) { return exportCardMarkup(card, i, "back"); }).join("");
+    var pages = '<section class="deck-export-page" style="' + pageStyle + '"><div class="deck-export-grid" style="' + gridStyle + '">' + fronts + '</div><p class="deck-export-footer">' + escapeHtml(deck) + ' · RECTOS</p></section>' +
+      '<section class="deck-export-page" style="' + pageStyle + '"><div class="deck-export-grid" style="' + gridStyle + '">' + backs + '</div><p class="deck-export-footer">' + escapeHtml(deck) + ' · VERSOS</p></section>';
     var imageCards = imageMode ? cards.map(function (card, i) {
-      return exportCardMarkup(card, i, "front") + exportCardMarkup(card, i, "back");
+      return '<section class="deck-export-pair" data-card-index="' + i + '">' +
+        exportCardMarkup(card, i, "front") + exportCardMarkup(card, i, "back") + '</section>';
     }).join("") : "";
-    var css = 'html,body{margin:0;padding:0;color:#171421;font-family:Georgia,"Times New Roman",serif;background:#fff}*{box-sizing:border-box}.deck-export-page{width:210mm;height:297mm;padding:10mm 13mm 12mm;position:relative;page-break-after:always;break-after:page;background:#fff}.deck-export-grid{display:grid;grid-template-columns:repeat(2,85mm);grid-auto-rows:55mm;gap:4mm;justify-content:center;align-content:start}.deck-export-card{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;width:85mm;height:55mm;flex:0 0 85mm;overflow:hidden;padding:6mm 5mm;border:.35mm solid #bdb9c8;border-radius:3mm;background-color:var(--card-bg,#4937a6);background-size:cover;background-position:center;color:#fff;text-align:center}.deck-export-label{position:absolute;top:3mm;left:4mm;right:4mm;font:700 7pt Arial,sans-serif;letter-spacing:.12em;opacity:.9}.deck-export-content{width:100%;max-height:43mm;overflow:hidden;font-size:12pt;line-height:1.35;overflow-wrap:anywhere}.deck-export-content .katex-display{margin:.18em 0}.deck-export-content .katex{font-size:1em}.deck-export-number{position:absolute;right:3mm;bottom:2mm;font:7pt Arial,sans-serif;opacity:.85}.deck-export-footer{margin:5mm 0 0;text-align:center;color:#777;font:7pt Arial,sans-serif}.deck-export-card .katex,.deck-export-card .katex *{color:inherit}.deck-export-stage{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;padding:18px}.deck-export-stage .deck-export-card{margin:0;box-shadow:0 2px 8px #0002}@page{size:A4 portrait;margin:0}@media screen{body{background:#eceaf1}.deck-export-page{margin:12px auto;box-shadow:0 4px 22px #0002}}@media print{.deck-export-page{margin:0;box-shadow:none}.deck-export-footer{margin-top:5mm}}';
+    var css = 'html,body{margin:0;padding:0;color:#171421;font-family:Georgia,"Times New Roman",serif;background:#fff}*{box-sizing:border-box}.deck-export-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;padding:10mm 13mm 12mm;position:relative;page-break-after:always;break-after:page;background:#fff;overflow:hidden}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{display:grid;width:100%;justify-content:stretch;align-content:stretch}.deck-export-card{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;width:auto;height:auto;min-width:0;min-height:0;overflow:hidden;padding:2mm;border:.35mm solid #bdb9c8;border-radius:2mm;background-color:var(--card-bg,#4937a6);background-size:cover;background-position:center;color:#fff;text-align:center;break-inside:avoid}.deck-export-label{position:absolute;top:1.5mm;left:2mm;right:2mm;font:700 6pt Arial,sans-serif;letter-spacing:.08em;opacity:.9}.deck-export-content{width:100%;max-height:100%;overflow:hidden;font-size:clamp(5pt,1.2vw,12pt);line-height:1.2;overflow-wrap:anywhere}.deck-export-content .katex-display{margin:.1em 0}.deck-export-content .katex{font-size:1em}.deck-export-number{position:absolute;right:1.5mm;bottom:1mm;font:6pt Arial,sans-serif;opacity:.85}.deck-export-footer{position:absolute;bottom:4mm;left:0;right:0;margin:0;text-align:center;color:#777;font:7pt Arial,sans-serif}.deck-export-card .katex,.deck-export-card .katex *{color:inherit}.deck-export-stage{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;padding:18px}.deck-export-pair{display:flex;flex-direction:column;gap:8px;margin:0 0 18px;break-inside:avoid}.deck-export-pair .deck-export-card{width:320px;height:210px;flex:0 0 auto;padding:22px}.deck-export-pair .deck-export-content{font-size:16px;line-height:1.35}.deck-export-stage .deck-export-card{margin:0;box-shadow:0 2px 8px #0002}@page{size:A4 portrait;margin:0}@media screen{body{background:#eceaf1}.deck-export-page{margin:12px auto;box-shadow:0 4px 22px #0002}}@media print{.deck-export-page{margin:0;box-shadow:none}.deck-export-footer{margin-top:0}}';
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(deck) + ' — cartes</title><style>' + css + '</style></head><body>' +
       (imageMode ? '<p style="padding:12px;font:14px Arial">Préparation des images recto-verso… Gardez cette fenêtre ouverte.</p><div class="deck-export-stage">' + imageCards + '</div>' : pages) + '</body></html>';
   }
@@ -628,7 +624,7 @@
       w.document.body.innerHTML = "";
       w.document.body.appendChild(stage);
       var css = w.document.createElement("style");
-      css.textContent = ".deck-export-page{width:210mm;height:297mm;min-height:297mm;margin:0;padding:10mm 13mm 12mm;box-sizing:border-box;overflow:hidden;page-break-after:always;break-after:page;background:#fff}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{grid-template-columns:repeat(2,85mm);grid-auto-rows:55mm;gap:4mm}.deck-export-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck-export-content{overflow:hidden}.deck-export-footer{margin-top:5mm}";
+      css.textContent = ".deck-export-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;margin:0;padding:10mm 13mm 12mm;box-sizing:border-box;overflow:hidden;page-break-after:always;break-after:page;background:#fff}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{width:100%;height:270mm;gap:2mm}.deck-export-card{width:auto;height:auto;min-width:0;min-height:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck-export-content{overflow:hidden}.deck-export-footer{position:absolute;bottom:4mm;left:0;right:0;margin:0}";
       w.document.head.appendChild(css);
       var filename = deck.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "") || "aurore-cartes";
       await w.html2pdf().set({
@@ -637,7 +633,7 @@
         image: {type:"jpeg",quality:0.98},
         html2canvas: {scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false,windowWidth:794},
         jsPDF: {unit:"mm",format:"a4",orientation:"portrait",compress:true},
-        pagebreak: {mode:["css","legacy"],before:".deck-export-page:not(:first-child)"},
+        pagebreak: {mode:["css"],before:".deck-export-page:nth-child(2)"},
         enableLinks: true
       }).from(stage).save();
       w.setTimeout(function(){if(w&&!w.closed)w.close();},1200);
@@ -682,27 +678,31 @@
       var link = w.document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
-      w.document.head.appendChild(link);
+      await new Promise(function (resolve, reject) {
+        link.onload = resolve;
+        link.onerror = function () { reject(new Error("La feuille de style LaTeX n’a pas pu être chargée.")); };
+        w.document.head.appendChild(link);
+      });
       renderDeckExportMath(w);
-      await new Promise(function (resolve) { w.setTimeout(resolve, 800); });
-      var nodes = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-card"));
-      for (var i = 0; i < nodes.length; i++) {
-        var node = nodes[i];
-        var canvas = await w.html2canvas(node, {scale: 3, backgroundColor: null, useCORS: true, logging: false});
+      await new Promise(function (resolve) { w.setTimeout(resolve, 500); });
+      var pairs = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-pair"));
+      for (var i = 0; i < pairs.length; i++) {
+        var pair = pairs[i];
+        var canvas = await w.html2canvas(pair, {scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false});
         var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, "image/png"); });
-        if (!blob) continue;
+        if (!blob) throw new Error("Une image recto-verso n’a pas pu être créée.");
         var url = w.URL.createObjectURL(blob);
         var anchor = w.document.createElement("a");
         anchor.href = url;
-        anchor.download = deck.replace(/[^a-z0-9_-]+/gi, "-") + "-carte-" + (Number(node.dataset.cardIndex) + 1) + "-" + node.dataset.side + ".png";
+        anchor.download = (deck.replace(/[^a-z0-9_-]+/gi, "-") || "aurore-cartes") + "-carte-" + (i + 1) + "-recto-verso.png";
         w.document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
-        await new Promise(function (resolve) { w.setTimeout(resolve, 350); });
+        await new Promise(function (resolve) { w.setTimeout(resolve, 500); });
         w.URL.revokeObjectURL(url);
       }
       var note = w.document.createElement("p");
-      note.textContent = "Export terminé : recto et verso téléchargés séparément pour chaque carte.";
+      note.textContent = "Export terminé : chaque image contient le recto et le verso associés.";
       note.style.cssText = "padding:16px;font:14px Arial;color:#333";
       w.document.body.insertBefore(note, w.document.body.firstChild);
     } catch (error) {
