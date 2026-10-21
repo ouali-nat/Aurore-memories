@@ -750,3 +750,41 @@ body[data-page="home"] .app-menu-panel {
   .color-theme-panel { max-height: calc(100vh - 90px); }
   .app-menu-panel { max-height: calc(100vh - 94px) !important; }
 }
+
+
+/* Aurore Mémoire — notification réseau : copie du composant Archives. */
+.aurore-network-status{
+  position:fixed!important;top:max(10px,calc(10px + env(safe-area-inset-top,0px)))!important;
+  left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;
+  z-index:2147483000!important;width:min(620px,calc(100vw - 24px))!important;
+  box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:10px!important;
+  padding:11px 12px!important;border:1px solid var(--soft-border,color-mix(in srgb,var(--accent) 30%,#777))!important;
+  border-radius:15px!important;background:color-mix(in srgb,var(--surface,#fff) 96%,var(--accent) 4%)!important;
+  color:var(--text,#211d28)!important;box-shadow:0 12px 34px rgba(0,0,0,.18)!important;
+  backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;font:inherit!important;
+}
+.aurore-network-status[hidden]{display:none!important}
+.aurore-network-status-icon{width:30px!important;height:30px!important;min-width:30px!important;display:grid!important;place-items:center!important;border-radius:10px!important;background:var(--soft)!important;color:var(--accent)!important}
+.aurore-network-status-icon svg{width:18px!important;height:18px!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+.aurore-network-status-icon svg path{fill:none!important}
+.aurore-network-icon-online{display:none!important}
+.aurore-network-status.is-online .aurore-network-icon-offline{display:none!important}
+.aurore-network-status.is-online .aurore-network-icon-online{display:block!important}
+.aurore-network-status-copy{min-width:0!important;display:flex!important;flex:1!important;flex-direction:column!important;gap:2px!important}
+.aurore-network-status-copy strong{font-size:.78rem!important;line-height:1.15!important;font-weight:800!important;color:var(--accent)!important}
+.aurore-network-status-copy span{font-size:.69rem!important;line-height:1.4!important;color:var(--muted)!important}
+.aurore-network-status-close{width:30px!important;height:30px!important;min-width:30px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:var(--muted)!important;font:inherit!important;font-size:1.2rem!important;line-height:1!important;cursor:pointer!important}
+.aurore-network-status-close:hover{background:var(--soft)!important;color:var(--accent)!important}
+html[data-theme="dark"] .aurore-network-status{background:color-mix(in srgb,var(--surface,#12101a) 96%,var(--accent) 4%)!important;color:var(--text,#f7f5ff)!important;box-shadow:0 14px 38px rgba(0,0,0,.42)!important}
+html[data-theme="dark"] .aurore-network-status-copy span{color:var(--muted,#b8b2c9)!important}
+@media(max-width:640px){.aurore-network-status{width:calc(100vw - 18px)!important;padding:10px!important;border-radius:14px!important}.aurore-network-status-copy span{font-size:.67rem!important}}
+
+/* Le menu s'ouvre à droite du bouton, et non vers le bord gauche de l'écran. */
+.app-menu-panel{
+  position:absolute!important;left:calc(100% + 8px)!important;right:auto!important;top:0!important;
+  width:min(270px,calc(100vw - 64px))!important;max-width:calc(100vw - 64px)!important;
+  max-height:calc(100dvh - env(safe-area-inset-top,0px) - 28px)!important;
+  overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+@supports not (height:100dvh){.app-menu-panel{max-height:calc(100vh - 28px)!important}}
