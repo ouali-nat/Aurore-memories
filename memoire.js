@@ -720,14 +720,56 @@
   function showPublicCardInfo(index) {
     var card = publicFeedCards[Number(index)];
     if (!card) return;
+    var licenseLabel = card.license || (card.allowVariants ? "Variantes autorisées par l’auteur" : "Non précisée — variante non autorisée");
     openSharingDialog("Informations sur la carte", 
       '<div class="public-card-user-content">' +
       '<dl class="public-card-details"><div><dt>Série</dt><dd>' + escapeHtml(card.seriesName) + '</dd></div>' +
-      '<div><dt>Auteur déclaré</dt><dd>' + escapeHtml(card.authorName) + '</dd></div>' +
+      '<div><dt>Auteur</dt><dd>' + escapeHtml(card.authorName) + '</dd></div>' +
       '<div><dt>Domaine</dt><dd>' + escapeHtml(card.domain) + '</dd></div>' +
-      '<div><dt>Date de publication</dt><dd>' + escapeHtml(formatPublicDate(card.createdAt)) + '</dd></div></dl>' +
+      '<div><dt>Publication</dt><dd>' + escapeHtml(formatPublicDate(card.createdAt)) + '</dd></div>' +
+      '<div><dt>Réutilisation</dt><dd>' + escapeHtml(licenseLabel) + '</dd></div>' +
+      (card.originalCardId ? '<div><dt>Carte d’origine</dt><dd>Variante liée à une carte source</dd></div>' : '') +
+      '</dl>' +
+      '<details class="public-card-rights"><summary>Attribution et droits</summary><p>L’original reste la propriété de son auteur. L’ajout à ta bibliothèque crée une copie personnelle ; il ne permet pas de modifier la publication d’origine.</p>' +
+      (card.allowVariants ? '<p>Tu peux créer une variante indépendante. Le lien vers l’auteur d’origine sera conservé.</p>' : '<p>La création de variantes n’est pas autorisée tant que l’auteur n’a pas explicitement activé cette possibilité.</p>') +
+      '</details>' +
       '<h3>À propos</h3><p>' + escapeHtml(card.description || "Aucune description ajoutée.") + '</p>' +
-      '<div class="sharing-modal-actions"><button type="button" class="primary-btn" data-act="close-sharing-modal">Fermer</button></div></div>');
+      '<div class="sharing-modal-actions">' +
+      (card.allowVariants ? '<button type="button" class="secondary-btn" data-act="public-variant" data-index="' + Number(index) + '">Créer ma variante</button>' : '') +
+      '<button type="button" class="primary-btn" data-act="close-sharing-modal">Fermer</button></div></div>');
+  }
+
+  function createPublicVariant(index) {
+    var card = publicFeedCards[Number(index)];
+    if (!card || card.allowVariants !== true) {
+      notify("L’auteur n’a pas autorisé la création de variantes pour cette carte.");
+      return;
+    }
+    var newCard = makeCard(card.front, card.back, "Variante · " + card.seriesName);
+    newCard.cardMode = card.cardMode === "scientific" ? "scientific" : "simple";
+    newCard.backgroundMode = card.backgroundMode === "image" ? "image" : "color";
+    newCard.sourcePublicKey = card.sourcePublicKey;
+    newCard.sourcePublicSeriesId = card.seriesId;
+    newCard.sourceAuthor = card.authorName;
+    newCard.originalCardId = card.originalCardId || card.sourcePublicKey;
+    newCard.isVariant = true;
+    newCard.variantLicense = card.license || "";
+    if (/^#[0-9a-f]{6}$/i.test(card.backgroundColor || "")) newCard.backgroundColor = card.backgroundColor;
+    if (newCard.backgroundMode === "image") {
+      if (typeof card.backgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage)) newCard.backgroundImage = card.backgroundImage;
+      else if (typeof card.seriesBackgroundImage === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.seriesBackgroundImage)) newCard.backgroundImage = card.seriesBackgroundImage;
+    } else {
+      delete newCard.backgroundImage;
+    }
+    state.cards.push(newCard);
+    if (!save()) {
+      state.cards = state.cards.filter(function (item) { return item.id !== newCard.id; });
+      notify("La variante n’a pas pu être enregistrée. Vérifie l’espace de stockage.");
+      return;
+    }
+    closeSharingDialog();
+    notify("Ta variante indépendante a été créée. L’original n’a pas été modifié.");
+    updateHome();
   }
 
   function addPublicCard(index) {
@@ -834,6 +876,9 @@
             domain: String(series.domain || "Domaine non précisé"),
             description: String(series.description || ""),
             createdAt: series.created_at,
+            license: String(card.license || ""),
+            allowVariants: card.allowVariants === true,
+            originalCardId: String(card.originalCardId || ""),
             front: card.front,
             back: card.back,
             cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
@@ -1769,6 +1814,8 @@
       showPublicCardInfo(button.dataset.index);
     } else if (action === "public-add") {
       addPublicCard(button.dataset.index);
+    } else if (action === "public-variant") {
+      createPublicVariant(button.dataset.index);
     } else if (action === "refresh-public-cards") {
       loadPublicCards();
     } else if (action === "export") {
