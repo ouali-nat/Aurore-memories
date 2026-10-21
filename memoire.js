@@ -525,7 +525,7 @@
       (validImage(style.backgroundImage) ? style.backgroundImage : "");
     var value = side === "front" ? card.front : card.back;
     return '<article class="deck-export-card" data-card-index="' + index + '" data-side="' + side + '" style="--card-bg:' + background + ';' + (image ? 'background-image:linear-gradient(0deg,rgba(0,0,0,.12),rgba(0,0,0,.12)),url(&quot;' + escapeHtml(image) + '&quot;);' : '') + '">' +
-      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span></article>';
+      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span><span class="deck-export-provenance">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || settings.authorName || "Aurore Mémoire") + '</span></article>';
   }
 
   function deckExportDocument(deck, cards, imageMode) {
@@ -712,6 +712,25 @@
     }
   }
 
+  function auroreCardIdentifier(card, fallbackIndex) {
+    card = card || {};
+    var source = String(card.sourcePublicKey || card.id || card.originalCardId || "");
+    var seriesPart = "";
+    var cardPart = "";
+    if (source.indexOf(":") !== -1) {
+      var pieces = source.split(":");
+      seriesPart = String(pieces[0] || "").replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 6);
+      var parsed = Number(pieces[1]);
+      cardPart = String(Number.isFinite(parsed) ? parsed + 1 : (Number(fallbackIndex) || 0) + 1).padStart(4, "0");
+    } else {
+      var compact = source.replace(/[^a-z0-9]/gi, "").toUpperCase();
+      seriesPart = compact.slice(0, 6);
+      cardPart = String((Number(fallbackIndex) || 0) + 1).padStart(4, "0");
+    }
+    if (!seriesPart) seriesPart = "LOCAL";
+    return "AUR-MEM-" + seriesPart + "-" + cardPart;
+  }
+
   function formatPublicDate(value) {
     var date = new Date(value);
     return isNaN(date.getTime()) ? "Date non disponible" : date.toLocaleDateString("fr-FR");
@@ -723,7 +742,8 @@
     var licenseLabel = card.license || (card.allowVariants ? "Variantes autorisées par l’auteur" : "Non précisée — variante non autorisée");
     openSharingDialog("Informations sur la carte", 
       '<div class="public-card-user-content">' +
-      '<dl class="public-card-details"><div><dt>Série</dt><dd>' + escapeHtml(card.seriesName) + '</dd></div>' +
+      '<dl class="public-card-details"><div><dt>Identifiant Aurore</dt><dd>' + escapeHtml(auroreCardIdentifier(card, index)) + '</dd></div>' +
+      '<div><dt>Série</dt><dd>' + escapeHtml(card.seriesName) + '</dd></div>' +
       '<div><dt>Auteur</dt><dd>' + escapeHtml(card.authorName) + '</dd></div>' +
       '<div><dt>Domaine</dt><dd>' + escapeHtml(card.domain) + '</dd></div>' +
       '<div><dt>Publication</dt><dd>' + escapeHtml(formatPublicDate(card.createdAt)) + '</dd></div>' +
@@ -832,7 +852,7 @@
         '<div class="public-flashcard-content"><div class="public-flashcard-meta"><span class="public-series-name">' + escapeHtml(card.seriesName) + '</span><span class="public-domain-chip">' + escapeHtml(card.domain) + '</span></div>' +
         '<p class="public-card-eyebrow">QUESTION</p><h2 class="public-card-math" data-public-cache-key="' + escapeHtml(card.sourcePublicKey) + '" data-public-cache-side="front">' + publicCardMathHtml(card, "front") + '</h2>' +
         '<div class="public-card-answer" id="' + answerId + '" hidden><p class="public-card-eyebrow">RÉPONSE</p><p class="public-card-math" data-public-cache-key="' + escapeHtml(card.sourcePublicKey) + '" data-public-cache-side="back">' + publicCardMathHtml(card, "back") + '</p></div>' +
-        '<div class="public-flashcard-bottom"><span class="public-card-hint" aria-hidden="true">Toucher pour révéler</span>' +
+        '<div class="public-flashcard-bottom"><div class="public-card-attribution"><span>par ' + escapeHtml(card.authorName || "Auteur non renseigné") + '</span><span>' + escapeHtml(auroreCardIdentifier(card, index)) + '</span></div><span class="public-card-hint" aria-hidden="true">Toucher pour révéler</span>' +
         '<div class="public-flashcard-actions"><button class="public-icon-button" type="button" data-act="public-info" data-index="' + index + '" aria-label="Informations sur la carte" title="Informations sur la carte"><span aria-hidden="true">i</span></button><button class="public-icon-button public-add-button" type="button" data-act="public-add" data-index="' + index + '" aria-label="Ajouter cette carte à ma bibliothèque" title="Ajouter cette carte à ma bibliothèque"><span aria-hidden="true">＋</span></button></div></div>' +
         '</div></article>';
     }).join("") + '</div>';
