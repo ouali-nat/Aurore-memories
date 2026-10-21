@@ -125,6 +125,7 @@
     var choose = makeButton("＋ Importer un audio", "secondary-btn", function () { picker.click(); });
     var record = makeButton("● Enregistrer ma voix", "secondary-btn", async function () {
       try {
+        if (recorder && recorder.state === "recording") { recorder.stop(); return; }
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) throw new Error("L’enregistrement vocal n’est pas pris en charge ici. Importez un fichier audio à la place.");
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];
