@@ -519,7 +519,10 @@
     var style = state.deckStyles && state.deckStyles["flashcard:" + card.deck] || {};
     var background = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor :
       (/^#[0-9a-f]{6}$/i.test(style.backgroundColor || "") ? style.backgroundColor : "#4937a6");
-    var image = card.backgroundMode === "image" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(card.backgroundImage || "") ? card.backgroundImage : "";
+    var validImage = function (value) { return typeof value === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(value); };
+    // Priorité à l'image propre à la carte ; sinon, reprendre la couverture de sa série.
+    var image = card.backgroundMode === "image" && validImage(card.backgroundImage) ? card.backgroundImage :
+      (validImage(style.backgroundImage) ? style.backgroundImage : "");
     var value = side === "front" ? card.front : card.back;
     return '<article class="deck-export-card" data-card-index="' + index + '" data-side="' + side + '" style="--card-bg:' + background + ';' + (image ? 'background-image:linear-gradient(0deg,rgba(0,0,0,.12),rgba(0,0,0,.12)),url(&quot;' + escapeHtml(image) + '&quot;);' : '') + '">' +
       '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span></article>';
