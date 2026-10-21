@@ -540,7 +540,7 @@
       return '<section class="deck-export-pair" data-card-index="' + i + '">' +
         exportCardMarkup(card, i, "front") + exportCardMarkup(card, i, "back") + '</section>';
     }).join("") : "";
-    var css = 'html,body{margin:0;padding:0;color:#171421;font-family:Georgia,"Times New Roman",serif;background:#fff}*{box-sizing:border-box}.deck-export-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;padding:10mm 13mm 12mm;position:relative;page-break-after:always;break-after:page;background:#fff;overflow:hidden}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{display:grid;width:100%;justify-content:stretch;align-content:stretch}.deck-export-card{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;width:auto;height:auto;min-width:0;min-height:0;overflow:hidden;padding:2mm;border:.35mm solid #bdb9c8;border-radius:2mm;background-color:var(--card-bg,#4937a6);background-size:cover;background-position:center;color:#fff;text-align:center;break-inside:avoid}.deck-export-label{position:absolute;top:1.5mm;left:2mm;right:2mm;font:700 6pt Arial,sans-serif;letter-spacing:.08em;opacity:.9}.deck-export-content{width:100%;max-height:100%;overflow:hidden;font-size:clamp(5pt,1.2vw,12pt);line-height:1.2;overflow-wrap:anywhere}.deck-export-content .katex-display{margin:.1em 0}.deck-export-content .katex{font-size:1em}.deck-export-number{position:absolute;right:1.5mm;bottom:1mm;font:6pt Arial,sans-serif;opacity:.85}.deck-export-footer{position:absolute;bottom:4mm;left:0;right:0;margin:0;text-align:center;color:#777;font:7pt Arial,sans-serif}.deck-export-card .katex,.deck-export-card .katex *{color:inherit}.deck-export-stage{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;padding:18px}.deck-export-pair{display:flex;flex-direction:column;gap:8px;margin:0 0 18px;break-inside:avoid}.deck-export-pair .deck-export-card{width:320px;height:210px;flex:0 0 auto;padding:22px}.deck-export-pair .deck-export-content{font-size:16px;line-height:1.35}.deck-export-stage .deck-export-card{margin:0;box-shadow:0 2px 8px #0002}@page{size:A4 portrait;margin:0}@media screen{body{background:#eceaf1}.deck-export-page{margin:12px auto;box-shadow:0 4px 22px #0002}}@media print{.deck-export-page{margin:0;box-shadow:none}.deck-export-footer{margin-top:0}}';
+    var css = 'html,body{margin:0;padding:0;color:#171421;font-family:Georgia,"Times New Roman",serif;background:#fff}*{box-sizing:border-box}.deck-export-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;padding:10mm 13mm 12mm;position:relative;page-break-after:always;break-after:page;background:#fff;overflow:hidden}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{display:grid;width:100%;justify-content:stretch;align-content:stretch}.deck-export-card{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;width:auto;height:auto;min-width:0;min-height:0;overflow:hidden;padding:3mm;border:.4mm solid rgba(255,255,255,.38);border-radius:5mm;background-color:var(--card-bg,#4937a6);background-size:cover;background-position:center;color:#fff;text-align:center;break-inside:avoid;box-shadow:0 1.5mm 4mm rgba(20,15,45,.18);-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck-export-label{position:absolute;top:1.5mm;left:2mm;right:2mm;font:700 6pt Arial,sans-serif;letter-spacing:.08em;opacity:.9}.deck-export-content{width:100%;max-height:100%;overflow:hidden;font-size:clamp(5pt,1.2vw,12pt);line-height:1.2;overflow-wrap:anywhere}.deck-export-content .katex-display{margin:.1em 0}.deck-export-content .katex{font-size:1em}.deck-export-number{position:absolute;right:1.5mm;bottom:1mm;font:6pt Arial,sans-serif;opacity:.85}.deck-export-footer{position:absolute;bottom:4mm;left:0;right:0;margin:0;text-align:center;color:#777;font:7pt Arial,sans-serif}.deck-export-card .katex,.deck-export-card .katex *{color:inherit}.deck-export-stage{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;padding:18px}.deck-export-pair{display:flex;flex-direction:column;gap:8px;margin:0 0 18px;break-inside:avoid}.deck-export-pair .deck-export-card{width:320px;height:210px;flex:0 0 auto;padding:22px}.deck-export-pair .deck-export-content{font-size:16px;line-height:1.35}.deck-export-stage .deck-export-card{margin:0;box-shadow:0 2px 8px #0002}@page{size:A4 portrait;margin:0}@media screen{body{background:#eceaf1}.deck-export-page{margin:12px auto;box-shadow:0 4px 22px #0002}}@media print{.deck-export-page{margin:0;box-shadow:none}.deck-export-footer{margin-top:0}}';
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(deck) + ' — cartes</title><style>' + css + '</style></head><body>' +
       (imageMode ? '<p style="padding:12px;font:14px Arial">Préparation des images recto-verso… Gardez cette fenêtre ouverte.</p><div class="deck-export-stage">' + imageCards + '</div>' : pages) + '</body></html>';
   }
@@ -647,39 +647,34 @@
     var w = null;
     try {
       w = await prepareDeckExportWindow(deck, cards, false);
-      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js");
+      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
       var pages = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-page"));
-      if (!pages.length) throw new Error("Aucune page de cartes n’a été préparée.");
-      var stage = w.document.createElement("main");
-      stage.id = "deck-pdf-download";
-      stage.style.cssText = "width:210mm;margin:0;padding:0;background:#fff";
-      pages.forEach(function (page) { stage.appendChild(page.cloneNode(true)); });
-      w.document.body.innerHTML = "";
-      w.document.body.appendChild(stage);
-      var css = w.document.createElement("style");
-      css.textContent = ".deck-export-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;margin:0;padding:10mm 13mm 12mm;box-sizing:border-box;overflow:hidden;page-break-after:always;break-after:page;background:#fff}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-grid{width:100%;height:270mm;gap:2mm}.deck-export-card{width:auto;height:auto;min-width:0;min-height:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck-export-content{overflow:hidden}.deck-export-footer{position:absolute;bottom:4mm;left:0;right:0;margin:0}";
-      w.document.head.appendChild(css);
-      var filename = deck.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "") || "aurore-cartes";
-      await w.html2pdf().set({
-        margin: 0,
-        filename: filename + "-recto-verso.pdf",
-        image: {type:"jpeg",quality:0.98},
-        html2canvas: {scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false,windowWidth:794},
-        jsPDF: {unit:"mm",format:"a4",orientation:"portrait",compress:true},
-        pagebreak: {mode:["css"],before:".deck-export-page:nth-child(2)"},
-        enableLinks: true
-      }).from(stage).save();
+      if (pages.length !== 2) throw new Error("L’export doit contenir exactement deux pages : rectos et versos.");
+      var PDF = w.jspdf && w.jspdf.jsPDF;
+      if (!PDF) throw new Error("Le moteur PDF n’a pas pu être chargé.");
+      var doc = new PDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+      for (var i = 0; i < pages.length; i++) {
+        var page = pages[i];
+        page.style.cssText += ";width:210mm;height:297mm;min-height:297mm;max-height:297mm;margin:0;box-sizing:border-box;overflow:hidden;background:#fff;break-after:auto;page-break-after:auto";
+        var canvas = await w.html2canvas(page, {scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false,windowWidth:794,windowHeight:1123});
+        var image = canvas.toDataURL("image/jpeg",0.98);
+        if (i > 0) doc.addPage("a4","portrait");
+        doc.addImage(image,"JPEG",0,0,210,297,undefined,"FAST");
+      }
+      var filename = deck.replace(/[^a-z0-9_-]+/gi,"-").replace(/^-|-$/g,"") || "aurore-cartes";
+      doc.save(filename + "-recto-verso.pdf");
       w.setTimeout(function(){if(w&&!w.closed)w.close();},1200);
-      notify("Téléchargement du PDF lancé.");
+      notify("PDF prêt : 2 pages, rectos puis versos.");
     } catch (error) {
-      console.error("Échec du téléchargement PDF :", error);
+      console.error("Échec du téléchargement PDF :",error);
       if (w && !w.closed) {
         var note = w.document.createElement("p");
-        note.textContent = "Le téléchargement automatique n’a pas abouti. Vous pouvez réessayer ou utiliser Imprimer les cartes.";
+        note.textContent = "Le téléchargement automatique n’a pas abouti. Réessayez après avoir vérifié la connexion.";
         note.style.cssText = "padding:18px;font:16px Arial;color:#a21d35";
         w.document.body.appendChild(note);
       }
-      notify("Le PDF n’a pas pu être téléchargé. Réessayez ou utilisez Imprimer les cartes.");
+      notify("Le PDF n’a pas pu être téléchargé. Réessayez.");
     }
   }
 
@@ -700,38 +695,51 @@
     var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
     if (!cards.length) { notify("Cette série ne contient aucune carte."); return; }
     var w = window.open("", "_blank");
-    if (!w) { notify("Autorisez l’ouverture de la fenêtre pour créer les images."); return; }
+    if (!w) { notify("Autorisez l’ouverture de la fenêtre pour préparer les images."); return; }
     w.document.open();
-    w.document.write(deckExportDocument(deck, cards, true));
+    w.document.write(deckExportDocument(deck,cards,true));
     w.document.close();
     try {
-      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js");
-      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js");
-      await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+      await loadDeckExportScript(w,"https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js");
+      await loadDeckExportScript(w,"https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js");
+      await loadDeckExportScript(w,"https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+      await loadDeckExportScript(w,"https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js");
       var link = w.document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css";
-      await new Promise(function (resolve, reject) { link.onload = resolve; link.onerror = function () { reject(new Error("La feuille de style LaTeX n’a pas pu être chargée.")); }; w.document.head.appendChild(link); });
+      await new Promise(function(resolve,reject){link.onload=resolve;link.onerror=function(){reject(new Error("La feuille de style LaTeX n’a pas pu être chargée."));};w.document.head.appendChild(link);});
       renderDeckExportMath(w);
-      await new Promise(function (resolve) { w.setTimeout(resolve, 500); });
+      await new Promise(function(resolve){w.setTimeout(resolve,350);});
       var pairs = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-pair"));
-      for (var i = 0; i < pairs.length; i++) {
-        var canvas = await w.html2canvas(pairs[i], {scale:3,backgroundColor:"#ffffff",useCORS:true,logging:false});
-        var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, "image/png"); });
+      if (pairs.length !== cards.length) throw new Error("Toutes les cartes n’ont pas été préparées pour l’export.");
+      if (!w.JSZip) throw new Error("Le moteur de compression ZIP n’a pas été chargé.");
+      var zip = new w.JSZip();
+      for (var i=0;i<pairs.length;i++) {
+        var pair=pairs[i];
+        var canvas=await w.html2canvas(pair,{scale:3,backgroundColor:"#ffffff",useCORS:true,logging:false});
+        var blob=await new Promise(function(resolve){canvas.toBlob(resolve,"image/png");});
         if (!blob) throw new Error("Une image recto-verso n’a pas pu être créée.");
-        var url = w.URL.createObjectURL(blob);
-        var anchor = w.document.createElement("a");
-        anchor.href = url;
-        anchor.download = (deck.replace(/[^a-z0-9_-]+/gi, "-") || "aurore-cartes") + "-carte-" + (i + 1) + "-recto-verso.png";
-        w.document.body.appendChild(anchor); anchor.click(); anchor.remove();
-        await new Promise(function (resolve) { w.setTimeout(resolve, 500); });
-        w.URL.revokeObjectURL(url);
+        var num=String(i+1).padStart(3,"0");
+        zip.file(num+"-carte-recto-verso.png",blob);
       }
-      var note = w.document.createElement("p");
-      note.textContent = "Export terminé : chaque image contient le recto et le verso associés.";
-      note.style.cssText = "padding:16px;font:14px Arial;color:#333";
-      w.document.body.insertBefore(note, w.document.body.firstChild);
-    } catch (error) { console.error(error); notify("L’export image a échoué. Vérifiez la connexion Internet puis réessayez."); }
+      var archive=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+      var url=w.URL.createObjectURL(archive);
+      var anchor=w.document.createElement("a");
+      anchor.href=url;
+      anchor.download=(deck.replace(/[^a-z0-9_-]+/gi,"-").replace(/^-|-$/g,"")||"aurore-cartes")+"-toutes-les-cartes.zip";
+      w.document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      w.setTimeout(function(){w.URL.revokeObjectURL(url);},3000);
+      var note=w.document.createElement("p");
+      note.textContent="Export terminé : "+pairs.length+" image(s) recto-verso regroupée(s) dans une seule archive ZIP.";
+      note.style.cssText="padding:16px;font:14px Arial;color:#333";
+      w.document.body.insertBefore(note,w.document.body.firstChild);
+      notify("Toutes les cartes sont regroupées dans un fichier ZIP.");
+    } catch(error) {
+      console.error("Échec de l’export des images :",error);
+      notify("L’export des images a échoué. Vérifiez la connexion Internet puis réessayez.");
+    }
   }
 
   function formatPublicDate(value) {
