@@ -171,7 +171,7 @@
           } catch (error) { setMessage(row, error.message || "Lecture impossible.", true); }
         }));
         actions.appendChild(makeButton("Retirer l’audio", "secondary-btn", function () {
-          row._auroreAudioMeta = { remove: true }; pendingBlob = null; setMessage(row, "L’audio sera retiré de cette carte à l’enregistrement."); refreshActions();
+          row._auroreAudioMeta = Object.assign({}, row._auroreAudioMeta || {}, { remove: true }); pendingBlob = null; setMessage(row, "L’audio sera retiré de cette carte à l’enregistrement."); refreshActions();
         }));
       }
     }
