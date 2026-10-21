@@ -76,15 +76,19 @@
       joinedGroupIds = Object.create(null);
       if (signedIn()) {
         var memberships = await client.from("study_group_members").select("group_id").eq("user_id", session.user.id);
-        if (memberships.error) throw memberships.error;
         if (requestId !== loadToken) return;
-        (memberships.data || []).forEach(function (row) { joinedGroupIds[row.group_id] = true; });
+        if (memberships.error) {
+          // Ne bloque pas les groupes publics si la lecture des adhésions privées échoue.
+          console.warn("Les adhésions aux groupes n’ont pas pu être chargées.", memberships.error);
+        } else {
+          (memberships.data || []).forEach(function (row) { joinedGroupIds[row.group_id] = true; });
+        }
       }
       renderGroups();
     } catch (error) {
       if (requestId !== loadToken) return;
       console.error("Loading study groups:",error);
-      grid.innerHTML='<div class="groups-error"><strong>Impossible de charger les groupes</strong><p>Vérifie ta connexion puis réessaie. Aucun groupe fictif n’est affiché.</p><button class="groups-btn" type="button" id="retryGroups">Réessayer</button></div>';
+      grid.innerHTML='<div class="groups-error"><strong>Les groupes ne sont pas disponibles pour le moment</strong><p>Vérifiez votre connexion, puis réessayez.</p><button class="groups-btn" type="button" id="retryGroups">Réessayer</button></div>';
       var retry=document.getElementById("retryGroups"); if(retry)retry.addEventListener("click",loadGroups);
     } finally { if (requestId === loadToken) grid.setAttribute("aria-busy","false"); }
   }
@@ -97,8 +101,8 @@
       return !term || text.includes(term);
     });
     if(!visible.length) {
-      var title=activeFilter==="mine"?"Tes groupes apparaîtront ici":"Aucun groupe public pour le moment";
-      var desc=activeFilter==="mine"?(signedIn()?"Tu n’as pas encore créé de groupe. Tu peux en créer un avec le bouton ci-dessus.":"Connecte-toi avec Aurore ID pour retrouver et créer tes groupes."):"La liste se remplira dès que des groupes publics auront été créés. Tu peux être le premier à en créer un après la connexion Aurore ID.";
+      var title=activeFilter==="mine"?"Aucun groupe à afficher":"Aucun groupe public pour le moment";
+      var desc=activeFilter==="mine"?(signedIn()?"Créez un groupe pour commencer à apprendre à plusieurs.":"Connectez-vous avec Aurore ID pour retrouver vos groupes."):"Les groupes publics apparaîtront ici dès leur publication.";
       grid.innerHTML='<div class="groups-empty"><strong>'+escapeHtml(title)+'</strong><p>'+escapeHtml(desc)+'</p><button class="groups-btn primary" type="button" id="emptyCreateGroup">＋ Créer un groupe</button></div>';
       var create=document.getElementById("emptyCreateGroup"); if(create)create.addEventListener("click",openModal);
       return;
@@ -128,14 +132,14 @@
       if (group.join_policy !== "open") {
         var request = await client.from("study_group_join_requests").insert({group_id:groupId,user_id:session.user.id});
         if (request.error && request.error.code !== "23505") throw request.error;
-        toast("Demande envoyée. Le propriétaire doit l’approuver.");
+        toast("Votre demande a été envoyée.");
         button.textContent="Demande envoyée";
         return;
       }
       var result=await client.rpc("join_open_study_group",{p_group_id:groupId});
       if(result.error) throw result.error;
       joinedGroupIds[groupId]=true;
-      toast("Tu as rejoint le groupe.");
+      toast("Vous avez rejoint le groupe.");
       renderGroups();
     } catch(error) {
       console.error("Joining public group:",error);
@@ -181,7 +185,7 @@
     }catch(error){
       console.error("Creating study group:",error);
       var detail = [error && error.message, error && error.details, error && error.hint, error && error.code].filter(Boolean).join(" · ");
-      status.textContent = detail ? "Échec : " + detail : "La création a échoué. Vérifie ta connexion et réessaie.";
+      status.textContent = "La création du groupe a échoué. Vérifiez votre connexion et réessayez.";
     }finally{submit.disabled=false;}
   }
   function setFilter(value) {
