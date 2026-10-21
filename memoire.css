@@ -1113,3 +1113,11 @@ body[data-page="library"] .memory-series-card .series-sharing-status{display:fle
 .series-group-choice span{display:flex;flex-direction:column;gap:3px;min-width:0}.series-group-choice strong{font-size:.82rem;overflow-wrap:anywhere}.series-group-choice small{font-size:.69rem;color:var(--muted)}
 .sharing-empty{padding:14px;border:1px dashed var(--border);border-radius:12px}.sharing-empty strong{display:block;margin-bottom:5px}.sharing-empty p{margin:0 0 10px;color:var(--muted);font-size:.78rem;line-height:1.5}
 @media(max-width:560px){body[data-page="library"] .memory-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}body[data-page="library"] .memory-series-card{padding:10px;gap:9px;border-radius:13px}body[data-page="library"] .memory-series-card .memory-row-main{padding-right:25px}body[data-page="library"] .memory-series-card .memory-row-main h3{font-size:.85rem}body[data-page="library"] .memory-series-card .memory-row-main small{font-size:.67rem}body[data-page="library"] .memory-series-card .memory-row-actions>*{font-size:.63rem;padding:7px 5px}.series-export-options{grid-template-columns:1fr}.series-export-choice{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;column-gap:10px}.series-export-choice>span{grid-row:span 2}.series-export-choice small{grid-column:2}}
+
+
+/* Provenance et droits : détails discrets, affichés uniquement dans le panneau d’information. */
+.public-card-rights{margin-top:13px;padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:var(--soft)}
+.public-card-rights summary{cursor:pointer;color:var(--muted);font-size:.74rem;font-weight:750}
+.public-card-rights p{margin:9px 0 0;color:var(--muted);font-size:.73rem;line-height:1.5}
+.public-card-details dd{font-weight:650}
+.public-card-details>div:last-child{border-bottom:0;padding-bottom:0}
