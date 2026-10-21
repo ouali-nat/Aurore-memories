@@ -178,7 +178,7 @@
     if (!session || !session.user) {
       active = false;
       conflict = null;
-      status("Tes cartes et mémoires sont conservées sur cet appareil. Connecte-toi avec Aurore ID pour les sauvegarder dans R2.", "info");
+      status("Vos cartes et mémoires sont conservées sur cet appareil. Connectez-vous avec Aurore ID pour les enregistrer dans votre espace privé en ligne.", "info");
       return;
     }
     active = true;
@@ -196,7 +196,7 @@
           var created = await writeMainVerified(local, { type: "none" });
           saveBase(created.etag);
           conflict = null;
-          status("Cartes et mémoires sauvegardées dans ton espace privé R2.", "ok");
+          status("Cartes et mémoires enregistrées dans votre espace privé.", "ok");
           finishLegacyMigration();
         } catch (error) {
           if (error.status === 412) {
@@ -242,18 +242,18 @@
       if (sameData(local, remote.data)) {
         saveBase(remoteEtag);
         conflict = null;
-        status("Cartes et mémoires synchronisées avec R2.", "ok");
+        status("Cartes et mémoires à jour.", "ok");
         finishLegacyMigration();
         return;
       }
 
       if (base && remoteEtag && base === remoteEtag) {
-        status("Enregistrement des dernières modifications dans R2…", "info");
+        status("Enregistrement des dernières modifications…", "info");
         try {
           var updated = await writeMainVerified(local, { type: "match", etag: remoteEtag });
           saveBase(updated.etag);
           conflict = null;
-          status("Modifications des cartes et mémoires sauvegardées dans R2.", "ok");
+          status("Modifications enregistrées.", "ok");
         } catch (error) {
           if (error.status === 412) await findConflict(local);
           else throw error;
@@ -359,16 +359,16 @@
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(merged));
         saveBase(result.etag);
         conflict = null;
-        status("Fusion terminée : les cartes, mémoires et historiques des deux sauvegardes ont été conservés. La version locale précédente est archivée dans R2.", "ok");
+        status("Fusion terminée : vos cartes, mémoires et historiques ont été conservés. La version précédente est conservée en sécurité.", "ok");
       } else if (action === "local") {
-        if (!window.confirm("Conserver les données de cet appareil dans la sauvegarde principale ? La version cloud actuelle sera d’abord archivée dans R2.")) return;
+        if (!window.confirm("Conserver les données de cet appareil dans la sauvegarde principale ? La version en ligne actuelle sera d’abord conservée en sécurité.")) return;
         await archiveSnapshot(selected.remote, "avant-remplacement-cloud");
         var resultLocal = await writeMainVerified(selected.local, { type: "match", etag: selected.etag });
         saveBase(resultLocal.etag);
         conflict = null;
-        status("Sauvegarde de cet appareil devenue la version principale. L’ancienne version cloud est conservée dans les archives R2.", "ok");
+        status("Les données de cet appareil sont maintenant la version principale. L’ancienne version est conservée en sécurité.", "ok");
       } else if (action === "remote") {
-        if (!window.confirm("Restaurer la sauvegarde cloud sur cet appareil ? Les données locales seront archivées dans R2 avant remplacement.")) return;
+        if (!window.confirm("Restaurer la sauvegarde cloud sur cet appareil ? Les données de cet appareil seront conservées avant le remplacement.")) return;
         await archiveSnapshot(selected.local, "avant-restauration-locale");
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(normalizeData(selected.remote)));
         saveBase(selected.etag);
@@ -428,7 +428,7 @@
   });
   freshSession().then(function (session) {
     if (session && session.user) runSync();
-    else status("Connecte-toi avec Aurore ID pour sauvegarder automatiquement cartes, mémoires et progression dans R2.", "info");
+    else status("Connectez-vous avec Aurore ID pour enregistrer automatiquement vos cartes, mémoires et progrès.", "info");
   }).catch(function () {
     status("La connexion Aurore ID sera vérifiée à l’ouverture de session. Tes données locales restent intactes.", "warn");
   });
