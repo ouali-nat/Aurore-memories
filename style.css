@@ -663,3 +663,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 520px) {
   .color-theme-panel { right: max(10px, env(safe-area-inset-right, 0px)); width: calc(100vw - 20px); max-width: calc(100vw - 20px); }
 }
+
+
+/* Menu principal : ancré à la fenêtre, jamais hors écran sur mobile. */
+.app-menu-panel {
+  position: fixed;
+  left: auto;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  top: calc(env(safe-area-inset-top, 0px) + 78px);
+  width: min(290px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 94px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@supports not (height: 100dvh) {
+  .app-menu-panel { max-height: calc(100vh - 94px); }
+}
+.app-menu-panel .app-menu-item {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
