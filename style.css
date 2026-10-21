@@ -640,3 +640,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
     margin-inline: 0 !important;
   }
 }
+
+
+/* Aurore Mémoire — ajustements de finition : palette contenue et compte discret. */
+.color-theme-panel {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 76px);
+  right: max(12px, env(safe-area-inset-right, 0px));
+  left: auto;
+  width: min(360px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: min(68dvh, 430px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.color-theme-grid { min-width: 0; }
+.color-theme-choice { min-width: 0; }
+.color-theme-choice b { min-width: 0; }
+.aurore-auth-button { display: none !important; }
+.aurore-auth-controls { min-width: 0; }
+.aurore-auth-user { overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .color-theme-panel { right: max(10px, env(safe-area-inset-right, 0px)); width: calc(100vw - 20px); max-width: calc(100vw - 20px); }
+}
