@@ -69,7 +69,10 @@
     grid.setAttribute("aria-busy","true");
     grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
     try {
-      var result = await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
+      var query = client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
+      // La liste publique est une lecture anonyme : ne jamais la faire dépendre du retour de session.
+      if (activeFilter === "public" || !signedIn()) query = query.eq("visibility", "public");
+      var result = await query;
       if (result.error) throw result.error;
       if (requestId !== loadToken) return;
       groups = result.data || [];
@@ -204,6 +207,18 @@
 
   if(window.supabase && window.supabase.createClient){
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    loadSession().then(loadGroups).catch(function(error){console.error(error);loadGroups();});
+    // Afficher d'abord le catalogue public. La restauration OAuth ne doit pas retarder
+    // les groupes accessibles aux visiteurs ni les masquer si la session a expiré.
+    loadGroups();
+    loadSession().then(function(){
+      updateAuthButtons();
+      if (signedIn()) loadGroups();
+    }).catch(function(error){
+      console.warn("Restauration de session indisponible ; les groupes publics restent consultables.",error);
+      session = null;
+      updateAuthButtons();
+      // Relancer la requête publique sans dépendre d'une session invalide ou expirée.
+      loadGroups();
+    });
   } else { loadGroups(); }
 })();
