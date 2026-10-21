@@ -1009,9 +1009,12 @@
       if (!search) return true; var haystack = normalizeSearch([card.deck, card.front, card.back].join(" ")); return haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; });
     });
     var memoryGroupsByDeck = memoryGroups(searched.filter(isMemoryCard));
-    var flashGroupsByDeck = memoryGroups(searched.filter(isFlashcard));
+    var flashCards = searched.filter(isFlashcard);
+    var personalFlashGroups = memoryGroups(flashCards.filter(function (card) { return !card.sourcePublicKey; }));
+    var communityFlashGroups = memoryGroups(flashCards.filter(function (card) { return Boolean(card.sourcePublicKey); }));
     var memoryNames = Object.keys(memoryGroupsByDeck).sort(function (a,b) { return a.localeCompare(b,"fr"); });
-    var flashNames = Object.keys(flashGroupsByDeck).sort(function (a,b) { return a.localeCompare(b,"fr"); });
+    var personalFlashNames = Object.keys(personalFlashGroups).sort(function (a,b) { return a.localeCompare(b,"fr"); });
+    var communityFlashNames = Object.keys(communityFlashGroups).sort(function (a,b) { return a.localeCompare(b,"fr"); });
 
     function rows(names, groups, kind) {
       if (!names.length) {
@@ -1047,7 +1050,9 @@
     var memoryAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=memories">Toutes les mémoires <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="editer-memoire.html">＋ Créer une mémoire</a>';
     var cardsAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=cards">Toutes les séries <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a>';
     var memorySection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À MÉMORISER</p><h2>' + (view === "memories" ? "Tous les textes" : "Mes mémoires") + '</h2><p>Des textes organisés en passages avec un suivi individuel.</p></div>' + memoryAction + '</div>' + rows(memoryNames,memoryGroupsByDeck,"memory") + '</section>';
-    var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Des séries de questions-réponses pour consolider les notions essentielles.</p></div>' + cardsAction + '</div>' + rows(flashNames,flashGroupsByDeck,"flashcard") + '</section>';
+    var cardRows = '<section class="library-subsection"><h3>Mes cartes créées</h3><p>Les séries que vous avez composées vous-même.</p>' + rows(personalFlashNames,personalFlashGroups,"flashcard") + '</section>';
+    if (communityFlashNames.length) cardRows += '<section class="library-subsection"><h3>Cartes de la communauté enregistrées</h3><p>Les cartes publiques que vous avez ajoutées à votre bibliothèque personnelle.</p>' + rows(communityFlashNames,communityFlashGroups,"flashcard") + '</section>';
+    var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Vos cartes personnelles et vos cartes communautaires sont désormais séparées.</p></div>' + cardsAction + '</div>' + cardRows + '</section>';
     target.innerHTML = (view === "cards" ? "" : memorySection) + (view === "memories" ? "" : cardSection);
   }
 
