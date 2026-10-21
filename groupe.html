@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
-  <link rel="prefetch" href="groupe.js?v=20261021-public-groups-eager" as="script">
+  <link rel="prefetch" href="groupe.js?v=20261021-public-catalog-anon" as="script">
 </head>
 <body data-page="group-detail">
 <div class="ambient-bg" aria-hidden="true"></div>
@@ -69,7 +69,7 @@
     appStarted = true;
     if (timeoutId) window.clearTimeout(timeoutId);
     var app = document.createElement("script");
-    app.src = "groupe.js?v=20261021-public-groups-eager";
+    app.src = "groupe.js?v=20261021-public-catalog-anon";
     app.onerror = function () {
       showFailure("Service indisponible", "Le script de l’espace collectif n’a pas pu être chargé. Vérifiez la connexion puis rechargez la page.");
     };
