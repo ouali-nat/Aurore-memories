@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="style.css?v=20261021-compact-popovers">
   <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
-  <link rel="prefetch" href="groupes.js?v=20261021-public-groups-eager" as="script">
+  <link rel="prefetch" href="groupes.js?v=20261021-public-catalog-anon" as="script">
 </head>
 <body data-page="groups">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -98,7 +98,7 @@
         loaded = true;
         if (timeoutId) window.clearTimeout(timeoutId);
         var script = document.createElement("script");
-        script.src = "groupes.js?v=20261021-public-groups-eager";
+        script.src = "groupes.js?v=20261021-public-catalog-anon";
         document.body.appendChild(script);
       }
       function tryNext() {
