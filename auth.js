@@ -150,12 +150,14 @@
       user.title = "Session Aurore Mémoire active";
       button.textContent = "Se déconnecter";
       button.dataset.action = "signout";
+      button.hidden = true;
       button.disabled = false;
     } else {
       user.textContent = "Non connecté";
       user.title = "Connexion nécessaire pour le stockage privé";
       button.textContent = "Connexion Aurore ID";
       button.dataset.action = "signin";
+      button.hidden = true;
       button.disabled = false;
     }
   }
