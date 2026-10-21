@@ -198,7 +198,7 @@
   }
   if (form) {
     mountEditors();
-    var originalMetaForRow = function (row) { return row._auroreAudioMeta || null; };
+    var originalMetaForRow = function (row) { if (row._auroreAudioMeta && !row._auroreAudioMeta.remove) { var lang = row.querySelector(".aurore-audio-language"); if (lang) row._auroreAudioMeta.language = lang.value; } return row._auroreAudioMeta || null; };
     window.auroreAudioCardMeta = originalMetaForRow;
     var bypass = false;
     form.addEventListener("submit", function (event) {
@@ -265,9 +265,8 @@
     mountReviewAudio();
   }
   window.addEventListener("pagehide", function () { objectUrls.forEach(function (url) { try { URL.revokeObjectURL(url); } catch (_) {} }); });
-  window.addEventListener("online", function () {
-    retryPendingUploads().catch(function () {});
-  });
+  window.addEventListener("online", function () { retryPendingUploads().catch(function () {}); });
+  window.addEventListener("aurore:auth-changed", function () { retryPendingUploads().catch(function () {}); });
   async function retryPendingUploads() {
     var state;
     try { state = JSON.parse(localStorage.getItem("aurore-memory-cards-v1") || "{}"); } catch (_) { return; }
