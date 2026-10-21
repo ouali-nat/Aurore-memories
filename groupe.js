@@ -5,7 +5,7 @@ var KEY="sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
 var title=document.getElementById("groupTitle"),description=document.getElementById("groupDescription"),status=document.getElementById("groupStatus");
 var seriesGrid=document.getElementById("sharedSeriesGrid"),joinButton=document.getElementById("joinCurrentGroup");
 var ownerTools=document.getElementById("groupOwnerTools"),inviteStatus=document.getElementById("inviteStatus"),inviteActions=document.getElementById("inviteActions");
-var id=new URLSearchParams(window.location.search).get("id"),inviteToken=new URLSearchParams(window.location.search).get("invite"),client=null,session=null,currentGroup=null,createdInviteUrl="";
+var id=new URLSearchParams(window.location.search).get("id"),inviteToken=new URLSearchParams(window.location.search).get("invite"),client=null,publicClient=null,session=null,currentGroup=null,createdInviteUrl="";
 function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"']/g,function(ch){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch];});}
 function message(t){status.textContent=t;}
 function toast(t){if(window.auroreToast)window.auroreToast(t);else message(t);}
@@ -22,7 +22,8 @@ toast("Invitation acceptée. Bienvenue dans le groupe !");
 return true;
 }
 async function loadSeries(){
-var result=await client.from("study_group_shared_series").select("id,title,description,subject,cards,shared_by,created_at").eq("group_id",id).order("created_at",{ascending:false}).limit(100);
+var reader=currentGroup&&currentGroup.visibility==="public"?(publicClient||client):client;
+var result=await reader.from("study_group_shared_series").select("id,title,description,subject,cards,shared_by,created_at").eq("group_id",id).order("created_at",{ascending:false}).limit(100);
 if(result.error)throw result.error;
 var rows=result.data||[];
 if(!rows.length){seriesGrid.innerHTML='<div class="groups-empty"><strong>Pas encore de cartes partagées</strong><p>Les séries de révision partagées avec le groupe apparaîtront ici.</p></div>';return;}
@@ -71,7 +72,7 @@ if(!id){
 }
 if(!client){title.textContent="Service indisponible";message("Le service des groupes n’a pas pu être initialisé.");return;}
 try{
- // Les liens d’invitation privée restent protégés par la connexion.
+ // Les invitations privées exigent une session avant de révéler le groupe ou de consommer le lien.
  if(inviteToken){
   try{
    var invitationSession=await client.auth.getSession();
@@ -86,11 +87,25 @@ try{
   }
   await redeemInvitation();
  }
- // Charger les informations publiques sans attendre la restauration de la session.
- var result=await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,cover_url").eq("id",id).maybeSingle();
+ // Étape 1 : tentative anonyme isolée. Une ancienne session expirée ne peut pas bloquer la lecture publique.
+ var publicRead=await (publicClient||client).from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,cover_url").eq("id",id).maybeSingle();
+ var result=publicRead;
+ // Si le groupe n'est pas public, la lecture privée n'est tentée qu'après restauration de la session.
+ if((publicRead.error||!publicRead.data)&&!session){
+  try{
+   var sessionResult=await client.auth.getSession();
+   if(sessionResult.error)throw sessionResult.error;
+   session=sessionResult.data.session||null;
+  }catch(sessionError){session=null;console.warn("Session indisponible pendant la vérification d'un groupe privé.",sessionError);}
+ }
+ if((publicRead.error||!publicRead.data)&&session){
+  var authenticatedRead=await client.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,created_by,cover_url").eq("id",id).maybeSingle();
+  if(!authenticatedRead.error&&authenticatedRead.data)result=authenticatedRead;
+  else if(publicRead.error)result=authenticatedRead;
+ }
  if(result.error||!result.data){
   title.textContent="Groupe inaccessible";
-  message("Ce groupe n’existe pas ou vous n’avez pas l’autorisation d’y accéder.");
+  message("Ce groupe n’existe pas, est privé, ou nécessite une connexion Aurore ID.");
   joinButton.hidden=true;
   return;
  }
@@ -100,7 +115,7 @@ try{
  var cover=document.getElementById("groupCover");
  if(currentGroup.cover_url){cover.innerHTML='<img src="'+escapeHtml(currentGroup.cover_url)+'" alt="Couverture de '+escapeHtml(currentGroup.name)+'">';cover.hidden=false;}
  else{cover.hidden=true;cover.innerHTML="";}
- // État visiteur immédiat : les détails publics sont visibles sans compte.
+ // État visiteur immédiatement exploitable, avant la lecture facultative de la session.
  if(currentGroup.visibility==="public"){
   joinButton.hidden=false;
   joinButton.disabled=false;
@@ -110,12 +125,12 @@ try{
   joinButton.hidden=true;
   message("Groupe privé · accès réservé à son propriétaire et aux membres autorisés.");
  }
- // Les séries publiques se chargent indépendamment de l’état de connexion.
+ // Les cartes d'un groupe public utilisent le client anonyme indépendant.
  loadSeries().catch(function(seriesError){
   console.error("Loading shared study series:",seriesError);
   seriesGrid.innerHTML='<div class="groups-empty"><strong>Les cartes partagées ne sont pas disponibles</strong><p>Les informations du groupe restent consultables. Réessayez pour afficher les séries partagées.</p></div>';
  });
- // La lecture de session affine les actions ; son échec ne masque jamais le groupe public.
+ // La lecture de session affine les actions mais ne conditionne jamais l'affichage public.
  try{
   var sr=await client.auth.getSession();
   if(sr.error)throw sr.error;
@@ -187,6 +202,7 @@ document.getElementById("shareInviteButton").addEventListener("click",function()
 joinButton.addEventListener("click",function(){if(inviteToken&&!session){signIn();return;}joinGroup();});
 if(window.supabase&&window.supabase.createClient){
  client=window.supabase.createClient(URL_BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ publicClient=window.supabase.createClient(URL_BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"aurore-public-groups-read-v1"}});
  client.auth.onAuthStateChange(function(event,next){
   session=next||null;
   if(event==="SIGNED_IN"||event==="SIGNED_OUT"||event==="USER_UPDATED")window.setTimeout(loadGroup,0);
