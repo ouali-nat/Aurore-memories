@@ -782,7 +782,7 @@ html[data-theme="dark"] .aurore-network-status-copy span{color:var(--muted,#b8b2
 /* Le menu s'ouvre à droite du bouton, et non vers le bord gauche de l'écran. */
 .app-menu-panel{
   position:absolute!important;left:calc(100% + 8px)!important;right:auto!important;top:0!important;
-  width:min(270px,calc(100vw - 64px))!important;max-width:calc(100vw - 64px)!important;
+  width:min(270px,calc(100vw - 76px))!important;max-width:calc(100vw - 76px)!important;
   max-height:calc(100dvh - env(safe-area-inset-top,0px) - 28px)!important;
   overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;
   -webkit-overflow-scrolling:touch!important;
