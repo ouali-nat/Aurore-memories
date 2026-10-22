@@ -191,8 +191,9 @@ async function checkHealth() {
     const response = await fetch(new URL("/health", workerUrl()).toString(), {cache:"no-store"});
     if (!response.ok) throw Error("Le service vocal est momentanément indisponible.");
     const health = await response.json();
-    if (!health || health.ok !== true || health.authConfigured !== true || health.aiConfigured !== true) {
-      throw Error("La génération de voix est momentanément indisponible. Réessaie plus tard.");
+    if (!health || health.ok !== true || health.authConfigured !== true ||
+        health.aiConfigured !== true || health.ttsVersion !== "2026-10-22-daily-audio-quota-v2") {
+      throw Error("Le service vocal doit être mis à jour avant de pouvoir générer un audio. Réessaie plus tard.");
     }
     healthReady = true;
     setStatus("Service vocal prêt. Ton compteur quotidien est affiché avant chaque génération.");
