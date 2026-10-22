@@ -87,6 +87,20 @@ function quotaTime(seconds) {
   if (minutes) return minutes + " min";
   return rest + " s";
 }
+function refreshVoiceEstimate() {
+  const target = $("audioCloudflareEstimate");
+  const field = $("audioCloudflareText");
+  if (!target || !field) return;
+  const text = field.value.trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const estimate = text ? Math.ceil(words / 2.2) : 0;
+  if (!text) target.textContent = "La durée estimée apparaîtra ici.";
+  else if (quotaSnapshot && estimate > quotaSnapshot.remainingSeconds) {
+    target.textContent = "Durée estimée : " + quotaTime(estimate) + ". Il ne reste que " + quotaTime(quotaSnapshot.remainingSeconds) + " ; raccourcis le texte pour éviter un refus.";
+  } else {
+    target.textContent = "Durée indicative : " + quotaTime(estimate) + ". Le compteur final utilise la durée réelle du fichier.";
+  }
+}
 function updateQuotaView(data, message, requiresLogin) {
   quotaSnapshot = data && data.ok ? data : null;
   quotaRequiresLogin = !!requiresLogin;
@@ -115,6 +129,7 @@ function updateQuotaView(data, message, requiresLogin) {
     const button = $(id);
     if (button) button.hidden = !quotaRequiresLogin;
   });
+  refreshVoiceEstimate();
   const generate = $("audioCloudflareGenerate");
   if (generate) {
     generate.disabled = !healthReady || generationInProgress || !quotaSnapshot ||
@@ -205,7 +220,7 @@ function cloudflareDialog() {
     '<div class="cloudflare-dialog-head"><div><p class="section-kicker">CHOIX DE LA VOIX</p><h2 id="audioCloudflareTitle">Utiliser une autre voix</h2></div><button type="button" class="secondary-btn cloudflare-close" aria-label="Fermer la fenêtre">✕</button></div>' +
     '<p class="cloudflare-intro">Choisis une voix complémentaire à celle de ton téléphone. Tu vois le temps disponible avant chaque génération.</p>' +
     '<label class="field-label" for="audioCloudflareName">Nom de la piste</label><input class="text-field" id="audioCloudflareName" maxlength="100" value="Voix alternative" placeholder="Ex. : Révision de biologie">' +
-    '<label class="field-label" for="audioCloudflareText">Texte d’essai</label><textarea class="text-area" id="audioCloudflareText" rows="5" maxlength="5000">Bonjour et bienvenue dans Aurore Mémoire. Apprendre, répéter et mémoriser devient plus simple avec une voix claire et naturelle.</textarea>' +
+    '<label class="field-label" for="audioCloudflareText">Texte d’essai</label><textarea class="text-area" id="audioCloudflareText" rows="5" maxlength="5000">Bonjour et bienvenue dans Aurore Mémoire. Apprendre, répéter et mémoriser devient plus simple avec une voix claire et naturelle.</textarea><p id="audioCloudflareEstimate" class="form-help">La durée estimée apparaîtra ici.</p>' +
     '<div class="voice-choice-section"><p class="voice-choice-title">Style de voix</p><div id="audioCloudflareModelChoices" class="voice-choice-grid" role="group" aria-label="Choisir un style de voix">' +
     '<button type="button" class="voice-choice-card" data-voice-model="melotts" aria-pressed="true"><strong>Voix multilingue</strong><small>Français, anglais et plusieurs langues</small></button>' +
     '<button type="button" class="voice-choice-card" data-voice-model="aura-1" aria-pressed="false"><strong>Voix anglaise expressive</strong><small>Pour les textes en anglais</small></button>' +
@@ -221,7 +236,7 @@ function cloudflareDialog() {
     '<p class="form-help" id="audioCloudflareVoiceNote">La voix multilingue est celle à choisir pour le français.</p>' +
     '<div class="cloudflare-actions"><button type="button" class="secondary-btn" id="audioCloudflareBrowserPreview">▶ Écouter avec le téléphone</button><button type="button" class="primary-btn" id="audioCloudflareGenerate" disabled>Générer la voix</button><button type="button" class="secondary-btn" id="audioCloudflareRetry">↻ Actualiser le compteur</button><button type="button" class="secondary-btn" id="audioCloudflareStop" disabled>■ Arrêter</button></div>' +
     '<audio id="audioCloudflarePlayer" controls hidden></audio><p id="audioCloudflareStatus" class="audio-status" role="status" aria-live="polite">Prêt à générer une voix.</p>' +
-    '<div class="cloudflare-dialog-foot"><span class="form-help">L’essai reste privé. Il n’est pas ajouté automatiquement à ta bibliothèque.</span><button type="button" class="secondary-btn" id="audioCloudflareSave" disabled>＋ Ajouter à ma bibliothèque</button></div>';
+    '<div class="cloudflare-dialog-foot"><span class="form-help">La piste reste privée. Elle n’est pas ajoutée automatiquement à ta bibliothèque.</span><button type="button" class="secondary-btn" id="audioCloudflareSave" disabled>＋ Ajouter à ma bibliothèque</button></div>';
   document.body.appendChild(dialog);
 
   const player = $("audioCloudflarePlayer");
@@ -348,10 +363,12 @@ function cloudflareDialog() {
   });
   refreshCloudflareVoices();
   refreshVoiceQuota();
+  refreshVoiceEstimate();
   checkHealth();
   $("audioCloudflareQuotaConnect").addEventListener("click", event => connectVoiceAccount(event.currentTarget));
   $("audioCloudflareRetry").addEventListener("click", async () => {
     await Promise.all([checkHealth(), refreshVoiceQuota()]);
+    refreshVoiceEstimate();
   });
   dialog.querySelector(".cloudflare-close").addEventListener("click", () => { player.pause(); dialog.close(); });
   dialog.addEventListener("click", event => { if (event.target === dialog) { player.pause(); dialog.close(); } });
@@ -361,20 +378,7 @@ function cloudflareDialog() {
   });
   $("audioCloudflareStop").addEventListener("click", () => { player.pause(); $("audioCloudflareStop").disabled = true; });
 
-  $("audioCloudflareText").addEventListener("input", updateVoiceEstimate);
-  function updateVoiceEstimate() {
-    const text = $("audioCloudflareText").value.trim();
-    const words = text.split(/\s+/).filter(Boolean).length;
-    const estimate = text ? Math.ceil(words / 2.2) : 0;
-    const target = $("audioCloudflareEstimate");
-    if (!target) return;
-    if (!text) target.textContent = "La durée estimée apparaîtra ici.";
-    else if (quotaSnapshot && estimate > quotaSnapshot.remainingSeconds) {
-      target.textContent = "Durée estimée : " + quotaTime(estimate) + ". Il ne reste que " + quotaTime(quotaSnapshot.remainingSeconds) + " ; raccourcis le texte pour éviter un refus.";
-    } else {
-      target.textContent = "Durée indicative : " + quotaTime(estimate) + ". Le compteur final utilise la durée réelle du fichier.";
-    }
-  }
+  $("audioCloudflareText").addEventListener("input", refreshVoiceEstimate);
   generateButton.addEventListener("click", async () => {
     const prompt = $("audioCloudflareText").value.trim();
     const words = prompt.split(/\s+/).filter(Boolean).length;
@@ -481,7 +485,6 @@ function cloudflareDialog() {
     player.hidden = true;
   });
   dialog.showModal();
-  checkHealth();
 }
 function addControls() {
   const staticButton = $("audioCloudflareEntry");
