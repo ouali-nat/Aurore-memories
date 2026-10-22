@@ -66,6 +66,10 @@
 .cloudflare-test-dialog .text-area{width:100%;box-sizing:border-box;resize:vertical}
 .cloudflare-options{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .cloudflare-options>div{min-width:0}
+.cloudflare-pitch-control{display:block!important;visibility:visible!important;opacity:1!important;margin:14px 0 8px;padding:14px 15px;border:1px solid var(--border,rgba(255,255,255,.25));border-radius:16px;background:var(--surface,rgba(127,127,127,.08))}
+.cloudflare-pitch-control .field-label{margin-top:0!important}
+.cloudflare-pitch-control select{display:block!important;visibility:visible!important;opacity:1!important;width:100%;min-height:44px}
+.cloudflare-pitch-control .form-help{margin-top:8px}
 .cloudflare-options input[type=range]{width:100%;accent-color:var(--accent)}
 .cloudflare-actions,.cloudflare-dialog-foot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px}
 .cloudflare-test-dialog .primary-btn,.cloudflare-test-dialog .secondary-btn{min-height:40px}
