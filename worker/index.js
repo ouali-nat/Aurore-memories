@@ -115,19 +115,51 @@ export default {
         const lang = languageMap[input.language] || "fr";
         if (!prompt) return json({ error: "Text is required." }, 400, cors);
         if (prompt.length > 5000) return json({ error: "Maximum 5,000 characters per generated audio." }, 413, cors);
-        const output = await env.AI.run("@cf/myshell-ai/melotts", { prompt, lang });
-        if (!output || typeof output.audio !== "string" || !output.audio) {
-          return json({ error: "Workers AI returned no audio." }, 502, cors);
+        const models = {
+          melotts: { id: "@cf/myshell-ai/melotts", kind: "multi" },
+          "aura-1": { id: "@cf/deepgram/aura-1", kind: "en", speakers: ["angus","asteria","arcas","orion","orpheus","athena","luna","zeus","perseus","helios","hera","stella"] },
+          "aura-2-en": { id: "@cf/deepgram/aura-2-en", kind: "en", speakers: ["amalthea","andromeda","apollo","arcas","aries","asteria","athena","atlas","aurora","callista","cora","cordelia","delia","draco","electra","harmonia","helena","hera","hermes","hyperion","iris","janus","juno","jupiter","luna","mars","minerva","neptune","odysseus","ophelia","orion","orpheus","pandora","phoebe","pluto","saturn","thalia","theia","vesta","zeus"] },
+          "aura-2-es": { id: "@cf/deepgram/aura-2-es", kind: "es", speakers: ["sirio","nestor","carina","celeste","alvaro","diana","aquila","selena","estrella","javier"] }
+        };
+        const selected = models[input.model] || models.melotts;
+        const voice = typeof input.voice === "string" ? input.voice.toLowerCase() : "";
+        if (selected.speakers && voice && !selected.speakers.includes(voice)) {
+          return json({ error: "Voix non autorisée pour ce modèle." }, 400, cors);
         }
-        const binary = atob(output.audio);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        if (selected.kind === "en" && !["en","en-US"].includes(input.language)) {
+          return json({ error: "Ce modèle vocal ne prend en charge que l’anglais." }, 400, cors);
+        }
+        if (selected.kind === "es" && !["es","es-ES"].includes(input.language)) {
+          return json({ error: "Ce modèle vocal ne prend en charge que l’espagnol." }, 400, cors);
+        }
+        const modelInput = selected.kind === "multi"
+          ? { prompt, lang }
+          : { text: prompt, speaker: voice || (selected.kind === "es" ? "aquila" : "luna"), encoding: "mp3" };
+        if (selected.kind === "multi") {
+          const output = await env.AI.run(selected.id, modelInput);
+          if (!output || typeof output.audio !== "string" || !output.audio) {
+            return json({ error: "Workers AI returned no audio." }, 502, cors);
+          }
+          const binary = atob(output.audio);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const headers = new Headers(cors);
+          headers.set("Content-Type", "audio/mpeg");
+          headers.set("Cache-Control", "no-store");
+          headers.set("X-Content-Type-Options", "nosniff");
+          headers.set("Content-Length", String(bytes.byteLength));
+          return new Response(bytes, { status: 200, headers });
+        }
+        const raw = await env.AI.run(selected.id, modelInput, { returnRawResponse: true });
+        if (!(raw instanceof Response) || !raw.ok) {
+          const detail = raw instanceof Response ? await raw.text() : "";
+          return json({ error: "Le moteur vocal Deepgram a échoué." + (detail ? " " + detail.slice(0, 300) : "") }, 502, cors);
+        }
         const headers = new Headers(cors);
-        headers.set("Content-Type", "audio/mpeg");
+        headers.set("Content-Type", raw.headers.get("Content-Type") || "audio/mpeg");
         headers.set("Cache-Control", "no-store");
         headers.set("X-Content-Type-Options", "nosniff");
-        headers.set("Content-Length", String(bytes.byteLength));
-        return new Response(bytes, { status: 200, headers });
+        return new Response(raw.body, { status: 200, headers });
       } catch (error) {
         return json({ error: error instanceof Error ? error.message : "Audio generation failed." }, 502, cors);
       }
