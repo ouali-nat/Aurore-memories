@@ -294,7 +294,7 @@ export default {
         if (selected.kind === "en" && !["en","en-US"].includes(input.language)) return json({ error: "Ce style de voix est disponible en anglais uniquement." }, 400, cors);
         if (selected.kind === "es" && !["es","es-ES"].includes(input.language)) return json({ error: "Ce style de voix est disponible en espagnol uniquement." }, 400, cors);
         // Préfiltre prudent pour ne pas lancer un texte manifestement plus long que le quota restant.
-        const words = prompt.split(/\\s+/).filter(Boolean).length;
+        const words = prompt.split(/\s+/).filter(Boolean).length;
         const minimumEstimate = Math.ceil(words / 3);
         const day = ttsDay();
         const currentQuota = await getTtsQuota(env, user.id);
