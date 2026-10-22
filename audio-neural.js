@@ -171,21 +171,24 @@ async function checkHealth() {
   const button = $("audioCloudflareGenerate");
   if (button) button.disabled = true;
   healthReady = false;
-  setStatus("Vérification du service Cloudflare…");
+  setStatus("Vérification de la disponibilité des voix…");
   try {
     const response = await fetch(new URL("/health", workerUrl()).toString(), {cache:"no-store"});
-    if (!response.ok) throw Error("Le Worker Cloudflare répond avec le statut " + response.status + ".");
+    if (!response.ok) throw Error("Le service vocal est momentanément indisponible.");
     const health = await response.json();
-    if (!health || health.ok !== true) throw Error("La réponse du Worker Cloudflare est inattendue.");
-    if (health.authConfigured !== true) throw Error("Le Worker répond, mais sa configuration d’authentification Supabase est incomplète.");
-    if (health.aiConfigured !== true) throw Error("Le Worker répond, mais la version Cloudflare AI nécessaire à la voix HD n’est pas encore déployée.");
+    if (!health || health.ok !== true || health.authConfigured !== true || health.aiConfigured !== true) {
+      throw Error("La génération de voix est momentanément indisponible. Réessaie plus tard.");
+    }
     healthReady = true;
-    if (button) button.disabled = false;
-    setStatus("Service Cloudflare opérationnel. Connecte-toi avec Aurore ID pour générer une piste de test.");
+    setStatus("Service vocal prêt. Ton compteur quotidien est affiché avant chaque génération.");
+    updateQuotaView(quotaSnapshot);
   } catch (error) {
-    setStatus(error.message || "Le service Cloudflare est inaccessible.", true);
+    healthReady = false;
+    updateQuotaView(quotaSnapshot);
+    setStatus(error.message || "Le service vocal est momentanément indisponible.", true);
   }
 }
+
 function cloudflareDialog() {
   let dialog = $("audioCloudflareDialog");
   if (dialog) {
