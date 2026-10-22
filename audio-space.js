@@ -450,18 +450,6 @@ function bind() {
   window.addEventListener("online", onOnline);
   if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = fillVoices; }
 }
-if (!window.__auroreAudioPreviewDelegated) {
-  window.__auroreAudioPreviewDelegated = true;
-  document.addEventListener("click", function (event) {
-    var button = event.target && event.target.closest ? event.target.closest("#audioTextPreview") : null;
-    if (!button || button.dataset.previewHandled === "1") return;
-    button.dataset.previewHandled = "1";
-    event.preventDefault();
-    previewText().catch(function (error) {
-      status("audioTextStatus", "L’aperçu n’a pas pu démarrer : " + (error && error.message ? error.message : "erreur inattendue") + ".", true);
-    }).finally(function () { button.dataset.previewHandled = "0"; });
-  }, true);
-}
 window.__auroreAudioCleanup = function () {
   stopPlayback();
   if (recorder && recorder.state === "recording") { recorder.onstop = null; try { recorder.stop(); } catch (_) {} }
