@@ -72,9 +72,7 @@ async function generate() {
   const player = new Audio(URL.createObjectURL(blob));
   player.playbackRate = rate;
   try { await player.play(); } catch (_) {}
-  if (typeof window.auroreAudioRefresh === "function") window.auroreAudioRefresh();
-  const refresh = $("audioRefresh");
-  if (refresh) refresh.click();
+  window.dispatchEvent(new CustomEvent("aurore-neural-audio-created", { detail: { record } }));
   status("Voix HD créée. " + cloudMessage, false);
   return record;
 }
