@@ -73,11 +73,152 @@ function normalizedEtag(value) {
 }
 
 function relativeKey(value) {
-  if (!value || value.length > 512 || value.startsWith("/") || value.includes("\\") ||
-      /[\u0000-\u001f\u007f]/.test(value)) return null;
+  if (!value || value.length > 512 || value.startsWith("/") || value.includes("\\\\") ||
+      /[\\u0000-\\u001f\\u007f]/.test(value)) return null;
   const parts = value.split("/");
   if (parts.some((part) => !part || part === "." || part === "..")) return null;
   return value;
+}
+
+const TTS_LIMIT_SECONDS = 180;
+const TTS_LOCK_STALE_MS = 5 * 60 * 1000;
+
+function ttsDay() {
+  // Le fuseau Africa/Ouagadougou est UTC+0 : le compteur repart à minuit local.
+  return new Date().toISOString().slice(0, 10);
+}
+function ttsLedgerKey(userId, day) {
+  // Préfixe interne distinct des fichiers privés affichés dans la bibliothèque.
+  return "Aurore quota audio/" + userId + "/" + day + ".json";
+}
+async function readTtsLedger(env, key) {
+  const object = await env.MEMORIES_BUCKET.get(key);
+  if (!object) return { object: null, state: { usedSeconds: 0, inFlight: null } };
+  let state;
+  try { state = await object.json(); }
+  catch (_) { throw new Error("Le compteur vocal est temporairement illisible. Réessaie plus tard."); }
+  if (!state || !Number.isFinite(Number(state.usedSeconds)) || Number(state.usedSeconds) < 0) {
+    throw new Error("Le compteur vocal nécessite une vérification. Aucune génération n’a été lancée.");
+  }
+  return { object, state: { usedSeconds: Math.min(TTS_LIMIT_SECONDS, Math.floor(Number(state.usedSeconds))), inFlight: state.inFlight || null } };
+}
+async function writeTtsLedger(env, key, current, state) {
+  const onlyIf = current && current.object
+    ? { etagMatches: current.object.etag }
+    : { etagDoesNotMatch: "*" };
+  return env.MEMORIES_BUCKET.put(key, JSON.stringify(state), {
+    onlyIf,
+    httpMetadata: { contentType: "application/json; charset=utf-8", cacheControl: "private, no-store" }
+  });
+}
+function quotaSummary(day, state) {
+  const usedSeconds = Math.min(TTS_LIMIT_SECONDS, Math.max(0, Math.floor(Number(state.usedSeconds) || 0)));
+  const remainingSeconds = Math.max(0, TTS_LIMIT_SECONDS - usedSeconds);
+  const resetsAt = new Date(Date.parse(day + "T00:00:00.000Z") + 86400000).toISOString();
+  const lockAge = state.inFlight ? Date.now() - Number(state.inFlight.startedAt || 0) : Infinity;
+  return {
+    ok: true,
+    day,
+    limitSeconds: TTS_LIMIT_SECONDS,
+    usedSeconds,
+    remainingSeconds,
+    inProgress: Boolean(state.inFlight && lockAge < TTS_LOCK_STALE_MS),
+    resetsAt
+  };
+}
+async function getTtsQuota(env, userId) {
+  const day = ttsDay();
+  const current = await readTtsLedger(env, ttsLedgerKey(userId, day));
+  return quotaSummary(day, current.state);
+}
+async function reserveTtsQuota(env, userId, day) {
+  const key = ttsLedgerKey(userId, day);
+  const token = crypto.randomUUID();
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const current = await readTtsLedger(env, key);
+    const state = current.state;
+    const lockAge = state.inFlight ? Date.now() - Number(state.inFlight.startedAt || 0) : Infinity;
+    if (state.usedSeconds >= TTS_LIMIT_SECONDS) {
+      return { error: "quota", quota: quotaSummary(day, state) };
+    }
+    if (state.inFlight && lockAge < TTS_LOCK_STALE_MS) {
+      return { error: "busy", quota: quotaSummary(day, state) };
+    }
+    const next = {
+      version: 1,
+      day,
+      limitSeconds: TTS_LIMIT_SECONDS,
+      usedSeconds: state.usedSeconds,
+      inFlight: { id: token, startedAt: Date.now() }
+    };
+    const written = await writeTtsLedger(env, key, current, next);
+    if (written) return { token, key, day, userId };
+  }
+  return { error: "busy", quota: await getTtsQuota(env, userId) };
+}
+async function settleTtsQuota(env, reservation, audioSeconds) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const current = await readTtsLedger(env, reservation.key);
+    const state = current.state;
+    if (!state.inFlight || state.inFlight.id !== reservation.token) {
+      return { ok: false, conflict: true, quota: quotaSummary(reservation.day, state) };
+    }
+    const duration = Math.max(1, Math.ceil(audioSeconds));
+    const remaining = Math.max(0, TTS_LIMIT_SECONDS - state.usedSeconds);
+    if (duration > remaining) {
+      const next = { version: 1, day: reservation.day, limitSeconds: TTS_LIMIT_SECONDS, usedSeconds: state.usedSeconds, inFlight: null };
+      const written = await writeTtsLedger(env, reservation.key, current, next);
+      if (written) return { ok: false, overLimit: true, durationSeconds: duration, quota: quotaSummary(reservation.day, next) };
+      continue;
+    }
+    const next = { version: 1, day: reservation.day, limitSeconds: TTS_LIMIT_SECONDS, usedSeconds: state.usedSeconds + duration, inFlight: null };
+    const written = await writeTtsLedger(env, reservation.key, current, next);
+    if (written) return { ok: true, durationSeconds: duration, quota: quotaSummary(reservation.day, next) };
+  }
+  return { ok: false, conflict: true, quota: await getTtsQuota(env, reservation.userId) };
+}
+async function releaseTtsQuota(env, reservation) {
+  if (!reservation) return;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const current = await readTtsLedger(env, reservation.key);
+    const state = current.state;
+    if (!state.inFlight || state.inFlight.id !== reservation.token) return;
+    const next = { version: 1, day: reservation.day, limitSeconds: TTS_LIMIT_SECONDS, usedSeconds: state.usedSeconds, inFlight: null };
+    if (await writeTtsLedger(env, reservation.key, current, next)) return;
+  }
+}
+function mp3DurationSeconds(input) {
+  const data = input instanceof Uint8Array ? input : new Uint8Array(input);
+  let offset = 0;
+  if (data.length >= 10 && data[0] === 0x49 && data[1] === 0x44 && data[2] === 0x33) {
+    const tagSize = ((data[6] & 0x7f) << 21) | ((data[7] & 0x7f) << 14) | ((data[8] & 0x7f) << 7) | (data[9] & 0x7f);
+    offset = 10 + tagSize + ((data[5] & 0x10) ? 10 : 0);
+  }
+  const mpeg1Layer3Bitrate = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
+  const mpeg2Layer3Bitrate = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0];
+  const baseSampleRates = [44100, 48000, 32000];
+  let seconds = 0;
+  let frames = 0;
+  while (offset + 4 <= data.length) {
+    if (data[offset] !== 0xff || (data[offset + 1] & 0xe0) !== 0xe0) { offset++; continue; }
+    const version = (data[offset + 1] >> 3) & 3;
+    const layer = (data[offset + 1] >> 1) & 3;
+    const bitrateIndex = (data[offset + 2] >> 4) & 15;
+    const sampleRateIndex = (data[offset + 2] >> 2) & 3;
+    if (version === 1 || layer !== 1 || bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) { offset++; continue; }
+    const mpeg1 = version === 3;
+    const bitrate = (mpeg1 ? mpeg1Layer3Bitrate : mpeg2Layer3Bitrate)[bitrateIndex] * 1000;
+    let sampleRate = baseSampleRates[sampleRateIndex];
+    if (version === 2) sampleRate /= 2;
+    if (version === 0) sampleRate /= 4;
+    const padding = (data[offset + 2] >> 1) & 1;
+    const frameLength = Math.floor((mpeg1 ? 144 : 72) * bitrate / sampleRate) + padding;
+    if (!Number.isFinite(frameLength) || frameLength < 24 || offset + frameLength > data.length) { offset++; continue; }
+    seconds += (mpeg1 ? 1152 : 576) / sampleRate;
+    frames++;
+    offset += frameLength;
+  }
+  return frames >= 2 && seconds > 0 ? seconds : null;
 }
 
 export default {
@@ -98,78 +239,108 @@ export default {
       }, 200, corsHeaders(request, env));
     }
 
-    // Neural TTS: accessible only to an authenticated Aurore ID user.
-    if (url.pathname === "/api/tts") {
+    // Compteur vocal quotidien : authentification obligatoire, un compte = un quota.
+    if (url.pathname === "/api/tts/quota") {
       const cors = corsHeaders(request, env);
       if (request.method === "OPTIONS") {
-        if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) {
-          return new Response("Origin not allowed", { status: 403, headers: { "Vary": "Origin" } });
-        }
+        if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) return new Response("Origin not allowed", { status: 403, headers: { "Vary": "Origin" } });
         return new Response(null, { status: 204, headers: cors });
       }
-      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, cors);
-      if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) {
-        return json({ error: "Origin not allowed" }, 403, cors);
-      }
+      if (request.method !== "GET") return json({ error: "Method not allowed" }, 405, cors);
+      if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) return json({ error: "Origin not allowed" }, 403, cors);
       try {
         const user = await authenticatedUser(request, env);
         if (!user) return json({ error: "Authentication required" }, 401, cors);
-        if (!env.AI) return json({ error: "Workers AI is not configured on this Worker." }, 503, cors);
+        if (!env.MEMORIES_BUCKET) return json({ error: "Le compteur vocal est indisponible." }, 503, cors);
+        return json(await getTtsQuota(env, user.id), 200, cors);
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : "Impossible de lire le quota vocal." }, 503, cors);
+      }
+    }
+
+    // Voix alternatives : le quota est vérifié côté serveur et décompté sur la durée réelle du MP3.
+    if (url.pathname === "/api/tts") {
+      const cors = corsHeaders(request, env);
+      if (request.method === "OPTIONS") {
+        if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) return new Response("Origin not allowed", { status: 403, headers: { "Vary": "Origin" } });
+        return new Response(null, { status: 204, headers: cors });
+      }
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, cors);
+      if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) return json({ error: "Origin not allowed" }, 403, cors);
+      let reservation = null;
+      try {
+        const user = await authenticatedUser(request, env);
+        if (!user) return json({ error: "Authentication required" }, 401, cors);
+        if (!env.AI) return json({ error: "Le service de voix est momentanément indisponible." }, 503, cors);
+        if (!env.MEMORIES_BUCKET) return json({ error: "Le compteur vocal est indisponible." }, 503, cors);
         const length = Number(request.headers.get("Content-Length") || 0);
         if (length > 24000) return json({ error: "Text payload too large." }, 413, cors);
         const input = await request.json();
         const prompt = typeof input.text === "string" ? input.text.trim() : "";
         const languageMap = { "fr-FR": "fr", fr: "fr", "en-US": "en", en: "en", "es-ES": "es", es: "es", "zh-CN": "zh", zh: "zh", "ja-JP": "jp", ja: "jp", "ko-KR": "kr", ko: "kr" };
         const lang = languageMap[input.language] || "fr";
-        if (!prompt) return json({ error: "Text is required." }, 400, cors);
-        if (prompt.length > 5000) return json({ error: "Maximum 5,000 characters per generated audio." }, 413, cors);
+        if (!prompt) return json({ error: "Écris un texte avant de générer la voix." }, 400, cors);
+        if (prompt.length > 5000) return json({ error: "Le texte ne doit pas dépasser 5 000 caractères." }, 413, cors);
         const models = {
           melotts: { id: "@cf/myshell-ai/melotts", kind: "multi" },
           "aura-1": { id: "@cf/deepgram/aura-1", kind: "en", speakers: ["angus","asteria","arcas","orion","orpheus","athena","luna","zeus","perseus","helios","hera","stella"] },
           "aura-2-en": { id: "@cf/deepgram/aura-2-en", kind: "en", speakers: ["amalthea","andromeda","apollo","arcas","aries","asteria","athena","atlas","aurora","callista","cora","cordelia","delia","draco","electra","harmonia","helena","hera","hermes","hyperion","iris","janus","juno","jupiter","luna","mars","minerva","neptune","odysseus","ophelia","orion","orpheus","pandora","phoebe","pluto","saturn","thalia","theia","vesta","zeus"] },
           "aura-2-es": { id: "@cf/deepgram/aura-2-es", kind: "es", speakers: ["sirio","nestor","carina","celeste","alvaro","diana","aquila","selena","estrella","javier"] }
         };
-        const selected = models[input.model] || models.melotts;
+        if (!models[input.model]) return json({ error: "Choisis un style de voix disponible." }, 400, cors);
+        const selected = models[input.model];
         const voice = typeof input.voice === "string" ? input.voice.toLowerCase() : "";
-        if (selected.speakers && voice && !selected.speakers.includes(voice)) {
-          return json({ error: "Voix non autorisée pour ce modèle." }, 400, cors);
-        }
-        if (selected.kind === "en" && !["en","en-US"].includes(input.language)) {
-          return json({ error: "Ce modèle vocal ne prend en charge que l’anglais." }, 400, cors);
-        }
-        if (selected.kind === "es" && !["es","es-ES"].includes(input.language)) {
-          return json({ error: "Ce modèle vocal ne prend en charge que l’espagnol." }, 400, cors);
-        }
-        const modelInput = selected.kind === "multi"
-          ? { prompt, lang }
-          : { text: prompt, speaker: voice || (selected.kind === "es" ? "aquila" : "luna"), encoding: "mp3" };
+        if (selected.speakers && voice && !selected.speakers.includes(voice)) return json({ error: "Cette voix n’est pas disponible pour ce style." }, 400, cors);
+        if (selected.kind === "en" && !["en","en-US"].includes(input.language)) return json({ error: "Ce style de voix est disponible en anglais uniquement." }, 400, cors);
+        if (selected.kind === "es" && !["es","es-ES"].includes(input.language)) return json({ error: "Ce style de voix est disponible en espagnol uniquement." }, 400, cors);
+        // Préfiltre prudent pour ne pas lancer un texte manifestement plus long que le quota restant.
+        const words = prompt.split(/\\s+/).filter(Boolean).length;
+        const minimumEstimate = Math.ceil(words / 3);
+        const day = ttsDay();
+        const currentQuota = await getTtsQuota(env, user.id);
+        if (currentQuota.inProgress) return json({ error: "Une génération est déjà en cours sur ce compte. Attends sa fin puis réessaie.", quota: currentQuota }, 429, cors);
+        if (minimumEstimate > currentQuota.remainingSeconds) return json({ error: "Ce texte semble trop long pour le temps vocal restant. Raccourcis-le puis réessaie.", quota: currentQuota }, 429, cors);
+        reservation = await reserveTtsQuota(env, user.id, day);
+        if (reservation.error === "quota") return json({ error: "Tu as atteint les 3 minutes de voix disponibles aujourd’hui. Le compteur sera renouvelé à minuit.", quota: reservation.quota }, 429, cors);
+        if (reservation.error === "busy") return json({ error: "Une génération est déjà en cours sur ce compte. Attends sa fin puis réessaie.", quota: reservation.quota }, 429, cors);
+        const modelInput = selected.kind === "multi" ? { prompt, lang } : { text: prompt, speaker: voice || (selected.kind === "es" ? "aquila" : "luna"), encoding: "mp3" };
+        let audioBytes;
         if (selected.kind === "multi") {
           const output = await env.AI.run(selected.id, modelInput);
-          if (!output || typeof output.audio !== "string" || !output.audio) {
-            return json({ error: "Workers AI returned no audio." }, 502, cors);
-          }
+          if (!output || typeof output.audio !== "string" || !output.audio) throw new Error("La voix n’a renvoyé aucun fichier audio. Aucun temps n’a été décompté.");
           const binary = atob(output.audio);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          const headers = new Headers(cors);
-          headers.set("Content-Type", "audio/mpeg");
-          headers.set("Cache-Control", "no-store");
-          headers.set("X-Content-Type-Options", "nosniff");
-          headers.set("Content-Length", String(bytes.byteLength));
-          return new Response(bytes, { status: 200, headers });
+          audioBytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) audioBytes[i] = binary.charCodeAt(i);
+        } else {
+          const raw = await env.AI.run(selected.id, modelInput, { returnRawResponse: true });
+          if (!(raw instanceof Response) || !raw.ok) {
+            const detail = raw instanceof Response ? await raw.text() : "";
+            throw new Error("La génération a échoué." + (detail ? " " + detail.slice(0, 200) : ""));
+          }
+          audioBytes = new Uint8Array(await raw.arrayBuffer());
         }
-        const raw = await env.AI.run(selected.id, modelInput, { returnRawResponse: true });
-        if (!(raw instanceof Response) || !raw.ok) {
-          const detail = raw instanceof Response ? await raw.text() : "";
-          return json({ error: "Le moteur vocal Deepgram a échoué." + (detail ? " " + detail.slice(0, 300) : "") }, 502, cors);
+        if (!audioBytes || !audioBytes.byteLength) throw new Error("Le fichier audio obtenu est vide.");
+        const actualSeconds = mp3DurationSeconds(audioBytes);
+        if (!actualSeconds) throw new Error("La durée du fichier audio n’a pas pu être vérifiée. Réessaie avec un texte plus court ; aucun temps n’a été décompté.");
+        const settled = await settleTtsQuota(env, reservation, actualSeconds);
+        reservation = null;
+        if (settled.overLimit) {
+          return json({ error: "Ce fichier dépasserait le temps vocal restant. Aucun audio n’a été envoyé ; raccourcis le texte puis réessaie.", quota: settled.quota }, 429, cors);
+        }
+        if (!settled.ok) {
+          return json({ error: "Le compteur a changé pendant la génération. Par sécurité, aucun audio n’a été envoyé. Actualise le compteur puis réessaie.", quota: settled.quota }, 409, cors);
         }
         const headers = new Headers(cors);
-        headers.set("Content-Type", raw.headers.get("Content-Type") || "audio/mpeg");
+        headers.set("Content-Type", "audio/mpeg");
         headers.set("Cache-Control", "no-store");
         headers.set("X-Content-Type-Options", "nosniff");
-        return new Response(raw.body, { status: 200, headers });
+        headers.set("Content-Length", String(audioBytes.byteLength));
+        headers.set("X-Aurore-Audio-Seconds", String(settled.durationSeconds));
+        headers.set("X-Aurore-Quota-Remaining", String(settled.quota.remainingSeconds));
+        return new Response(audioBytes, { status: 200, headers });
       } catch (error) {
-        return json({ error: error instanceof Error ? error.message : "Audio generation failed." }, 502, cors);
+        try { await releaseTtsQuota(env, reservation); } catch (_) {}
+        return json({ error: error instanceof Error ? error.message : "Impossible de générer la voix." }, 502, cors);
       }
     }
 
