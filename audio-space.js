@@ -234,13 +234,17 @@ function importFile() {
 
 /* ---------- Synthèse vocale : aperçu / ajout ---------- */
 async function previewText() {
-  var text = $("audioText").value.trim();
+  var textField = $("audioText");
+  var text = textField ? textField.value.trim() : "";
   if (!text) return status("audioTextStatus", "Écris d’abord un texte à lire.", true);
-  var rate = Number($("audioRate").value) || 1;
-  if (estimateDuration(text, rate) > MAX_MS) return status("audioRecordStatus", "Le texte dépasse environ six minutes.", true);
-  stopPlayback();
+  var rate = Number(($("audioRate") || {}).value) || 1;
+  if (estimateDuration(text, rate) > MAX_MS) return status("audioTextStatus", "Le texte dépasse environ six minutes.", true);
   status("audioTextStatus", "Démarrage de la voix du navigateur…");
-  var r = await speak(text, $("audioVoice").value, $("audioLanguage").value, rate);
+  /* Annuler la lecture précédente, puis lancer la nouvelle depuis le geste utilisateur. */
+  if (window.speechSynthesis) { try { speechSynthesis.cancel(); speechSynthesis.resume(); } catch (_) {} }
+  stopPlayback();
+  var voiceField = $("audioVoice"), languageField = $("audioLanguage");
+  var r = await speak(text, voiceField ? voiceField.value : "", languageField ? languageField.value : "fr-FR", rate);
   if (r.ok) status("audioTextStatus", "Aperçu terminé.");
   else if (r.reason === "canceled") status("audioTextStatus", "Lecture arrêtée.");
   else status("audioTextStatus", speakMessage(r.reason), true);
@@ -432,7 +436,7 @@ function bind() {
   on("audioRecordStop", "click", stopRecording);
   on("audioImport", "change", importFile);
   on("audioRate", "input", function () { $("audioRateLabel").textContent = Number(this.value).toFixed(1) + "×"; });
-  on("audioTextPreview", "click", previewText);
+  /* L’aperçu est géré par délégation globale pour résister à la navigation SPA. */
   on("audioTextStop", "click", stopPreview);
   on("audioTextSave", "click", addText);
   on("playerToggle", "click", togglePlay);
@@ -445,6 +449,17 @@ function bind() {
   on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + summary()); });
   window.addEventListener("online", onOnline);
   if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = fillVoices; }
+}
+if (!window.__auroreAudioPreviewDelegated) {
+  window.__auroreAudioPreviewDelegated = true;
+  document.addEventListener("click", function (event) {
+    var button = event.target && event.target.closest ? event.target.closest("#audioTextPreview") : null;
+    if (!button) return;
+    event.preventDefault();
+    previewText().catch(function (error) {
+      status("audioTextStatus", "L’aperçu n’a pas pu démarrer : " + (error && error.message ? error.message : "erreur inattendue") + ".", true);
+    });
+  }, true);
 }
 window.__auroreAudioCleanup = function () {
   stopPlayback();
