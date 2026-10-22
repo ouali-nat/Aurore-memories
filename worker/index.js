@@ -47,7 +47,7 @@ function json(data, status, cors) {
 
 async function authenticatedUser(request, env) {
   const authorization = request.headers.get("Authorization") || "";
-  if (!/^Bearer\\s+\\S+/i.test(authorization)) return null;
+  if (!/^Bearer\s+\S+/i.test(authorization)) return null;
   const supabaseUrl = env.SUPABASE_URL || "https://oegxxndiuovisustjstp.supabase.co";
   const publishableKey = env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_FALLBACK;
   if (!supabaseUrl || !publishableKey) {
