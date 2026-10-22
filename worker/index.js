@@ -235,7 +235,7 @@ export default {
         memorySyncVersion: "2026-10-21-cors-app-fix",
         conditionalWrites: true,
         aiConfigured: Boolean(env.AI),
-        ttsVersion: "2026-10-22-daily-audio-quota-v1"
+        ttsVersion: "2026-10-22-daily-audio-quota-v2"
       }, 200, corsHeaders(request, env));
     }
 
