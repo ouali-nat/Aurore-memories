@@ -97,19 +97,38 @@ function resolveVoice(sel, lang) {
   return { voice: null, pitch: 1, rate: 1 };
 }
 function fillVoices() {
-  var select = $("audioVoice"); if (!select) return;
-  var previous = select.value; select.textContent = "";
-  var g1 = document.createElement("optgroup"); g1.label = "Voix Aurore (intégrées)";
-  PROFILES.forEach(function (p) { var o = document.createElement("option"); o.value = "profile:" + p.id; o.textContent = p.label; g1.appendChild(o); });
-  select.appendChild(g1);
-  var g2 = document.createElement("optgroup"); g2.label = "Téléphone";
-  var d = document.createElement("option"); d.value = ""; d.textContent = "Voix par défaut du téléphone"; g2.appendChild(d); select.appendChild(g2);
-  var rest = allVoices();
-  if (rest.length) { var g3 = document.createElement("optgroup"); g3.label = "Autres voix installées"; rest.forEach(function (v) { var o = document.createElement("option"); o.value = "voice:" + v.name; o.textContent = v.name + " · " + v.lang + (v.localService ? " · locale" : " · réseau"); g3.appendChild(o); }); select.appendChild(g3); }
-  var has = Array.prototype.some.call(select.options, function (o) { return o.value === previous; });
-  select.value = has ? previous : "profile:aurore";
-  var note = $("audioVoiceNote");
-  if (note) note.textContent = window.speechSynthesis ? (rest.length ? rest.length + " voix du téléphone détectée(s). Les voix Aurore ajustent le timbre et le rythme de la meilleure voix disponible." : "Aucune voix système détectée pour le moment : installe un moteur vocal dans les réglages Android (Synthèse vocale).") : "Synthèse vocale indisponible sur ce navigateur.";
+  var select=$("audioVoice"); if(!select)return;
+  var previous=select.value, picker=$("audioVoicePickerOptions"), selectedLabel=$("audioVoiceSelectedLabel");
+  select.textContent="";
+  var options=[];
+  PROFILES.forEach(function(p){options.push({value:"profile:"+p.id,label:p.label,group:"Voix Aurore"});});
+  options.push({value:"",label:"Voix par défaut du téléphone",group:"Téléphone"});
+  allVoices().forEach(function(v){options.push({value:"voice:"+v.name,label:v.name+" · "+v.lang+(v.localService?" · locale":" · réseau"),group:"Autres voix installées"});});
+  options.forEach(function(item){var o=document.createElement("option");o.value=item.value;o.textContent=item.label;select.appendChild(o);});
+  select.value=options.some(function(item){return item.value===previous;})?previous:"profile:aurore";
+  if(selectedLabel)selectedLabel.textContent=(options.find(function(item){return item.value===select.value;})||options[0]).label;
+  if(picker){
+    picker.textContent="";
+    var group="";
+    options.forEach(function(item){
+      if(item.group!==group){group=item.group;var heading=document.createElement("p");heading.className="audio-voice-picker-group";heading.textContent=group;picker.appendChild(heading);}
+      var button=document.createElement("button");button.type="button";button.className="audio-voice-picker-option";button.textContent=item.label;button.dataset.voiceValue=item.value;button.setAttribute("aria-pressed",item.value===select.value?"true":"false");picker.appendChild(button);
+    });
+  }
+  var note=$("audioVoiceNote");
+  if(note)note.textContent=window.speechSynthesis?(allVoices().length?allVoices().length+" voix du téléphone détectée(s). Les profils Aurore ajustent le timbre et le rythme de la meilleure voix disponible.":"Aucune voix système détectée pour le moment : installe un moteur vocal dans les réglages Android (Synthèse vocale)."):"Synthèse vocale indisponible sur ce navigateur.";
+}
+function initVoicePicker(){
+  var trigger=$("audioVoicePicker"),panel=$("audioVoicePickerPanel"),options=$("audioVoicePickerOptions"),select=$("audioVoice");
+  if(!trigger||!panel||!options||!select)return;
+  trigger.addEventListener("click",function(){var open=panel.hidden;panel.hidden=!open;trigger.setAttribute("aria-expanded",String(open));});
+  options.addEventListener("click",function(event){
+    var button=event.target.closest("[data-voice-value]");if(!button)return;
+    select.value=button.dataset.voiceValue;select.dispatchEvent(new Event("change",{bubbles:true}));
+    var label=$("audioVoiceSelectedLabel");if(label)label.textContent=button.textContent;
+    options.querySelectorAll("[data-voice-value]").forEach(function(item){item.setAttribute("aria-pressed",item===button?"true":"false");});
+    panel.hidden=true;trigger.setAttribute("aria-expanded","false");
+  });
 }
 function splitText(text) {
   var parts = String(text || "").replace(/\s+/g, " ").trim().match(/[^.!?。！？;:]+[.!?。！？;:]*/g) || [], out = [], buf = "";
