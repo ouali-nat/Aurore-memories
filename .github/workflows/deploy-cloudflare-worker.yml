@@ -55,7 +55,7 @@ jobs:
           if ! printf '%s' "$health" | grep -q '"ok":true' ||
              ! printf '%s' "$health" | grep -q '"authConfigured":true' ||
              ! printf '%s' "$health" | grep -q '"aiConfigured":true' ||
-             ! printf '%s' "$health" | grep -q '"ttsVersion":"2026-10-22-cloudflare-dialog-v1"'; then
+             ! printf '%s' "$health" | grep -q '"ttsVersion":"2026-10-22-daily-audio-quota-v1"'; then
             echo "worker_ready=false" >> "$GITHUB_OUTPUT"
             echo "::warning::The active Worker is missing the expected Cloudflare TTS version/configuration."
             exit 0
@@ -106,7 +106,7 @@ jobs:
           printf '%s' "$health" | grep -q '"ok":true'
           printf '%s' "$health" | grep -q '"authConfigured":true'
           printf '%s' "$health" | grep -q '"aiConfigured":true'
-          printf '%s' "$health" | grep -q '"ttsVersion":"2026-10-22-cloudflare-dialog-v1"'
+          printf '%s' "$health" | grep -q '"ttsVersion":"2026-10-22-daily-audio-quota-v1"'
 
           code="$(curl --silent --show-error -o /tmp/tts-response.json -w '%{http_code}' \
             -X POST "$base/api/tts" \
@@ -117,4 +117,10 @@ jobs:
             cat /tmp/tts-response.json
             exit 1
           fi
-          echo "Production Worker, Workers AI binding, and TTS authentication gate verified."
+          quota_code="$(curl --silent --show-error -o /tmp/tts-quota-response.json -w '%{http_code}' "$base/api/tts/quota")"
+          if [[ "$quota_code" != "401" ]]; then
+            echo "::error::The quota endpoint should reject unauthenticated requests with HTTP 401; got $quota_code."
+            cat /tmp/tts-quota-response.json
+            exit 1
+          fi
+          echo "Production Worker, voice generation, daily quota route, and authentication gates verified."
