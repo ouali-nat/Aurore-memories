@@ -194,6 +194,7 @@ function cloudflareDialog() {
   if (dialog) {
     if (typeof dialog.showModal === "function") dialog.showModal();
     checkHealth();
+    refreshVoiceQuota();
     return;
   }
   dialog = document.createElement("dialog");
@@ -230,12 +231,14 @@ function cloudflareDialog() {
   const modelSelect = $("audioCloudflareModel");
   const speakerSelect = $("audioCloudflareSpeaker");
   const languageSelect = $("audioCloudflareLanguage");
-  const pitchSelect = $("audioCloudflarePitch");
   const voiceNote = $("audioCloudflareVoiceNote");
+  const modelChoices = $("audioCloudflareModelChoices");
+  const languageChoices = $("audioCloudflareLanguageChoices");
+  const languageFixed = $("audioCloudflareLanguageFixed");
+  const speakerChoices = $("audioCloudflareSpeakerChoices");
   function applyPlaybackEffects() {
     const speed = Number($("audioCloudflareRate").value) || 1;
-    const pitch = Number(pitchSelect && pitchSelect.value) || 1;
-    if (player) player.playbackRate = Math.max(0.6, Math.min(1.6, speed * pitch));
+    if (player) player.playbackRate = Math.max(0.6, Math.min(1.6, speed));
   }
   const speakers = {
     "melotts": [],
@@ -245,21 +248,63 @@ function cloudflareDialog() {
   };
   function refreshCloudflareVoices() {
     const model = modelSelect.value;
+    const options = speakers[model] || [];
     speakerSelect.textContent = "";
-    (speakers[model] || []).forEach(name => {
+    speakerChoices.textContent = "";
+    options.forEach(name => {
       const option = document.createElement("option");
-      option.value = name; option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      option.value = name;
+      option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
       speakerSelect.appendChild(option);
+      const choice = document.createElement("button");
+      choice.type = "button";
+      choice.className = "voice-speaker-choice";
+      choice.dataset.voiceSpeaker = name;
+      choice.setAttribute("aria-pressed", name === speakerSelect.value ? "true" : "false");
+      choice.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      speakerChoices.appendChild(choice);
     });
-    const hasSpeaker = (speakers[model] || []).length > 0;
+    const hasSpeaker = options.length > 0;
     $("audioCloudflareSpeakerWrap").hidden = !hasSpeaker;
+    modelChoices.querySelectorAll("[data-voice-model]").forEach(button => {
+      button.setAttribute("aria-pressed", button.dataset.voiceModel === model ? "true" : "false");
+    });
     if (model === "aura-1" || model === "aura-2-en") languageSelect.value = "en";
     if (model === "aura-2-es") languageSelect.value = "es";
-    languageSelect.disabled = model !== "melotts";
-    voiceNote.textContent = model === "melotts"
-      ? "Pour le français, utilise MeloTTS : c’est le seul moteur proposé ici qui prend en charge cette langue. Il ne permet pas de choisir un timbre précis."
-      : "Ce moteur Deepgram ne propose pas de voix française. La langue est verrouillée sur " + (model === "aura-2-es" ? "l’espagnol." : "l’anglais.") + " Pour lire en français, sélectionne MeloTTS.";
+    const multilingual = model === "melotts";
+    languageSelect.disabled = !multilingual;
+    languageChoices.hidden = !multilingual;
+    languageFixed.hidden = multilingual;
+    if (!multilingual) languageFixed.textContent = "Langue définie par ce choix : " + (model === "aura-2-es" ? "espagnol." : "anglais.");
+    languageChoices.querySelectorAll("[data-voice-language]").forEach(button => {
+      button.setAttribute("aria-pressed", button.dataset.voiceLanguage === languageSelect.value ? "true" : "false");
+    });
+    voiceNote.textContent = multilingual
+      ? "Pour lire en français, choisis « Voix multilingue ». Les autres styles sont réservés à l’anglais ou à l’espagnol."
+      : (model === "aura-2-es"
+        ? "Ce style est conçu pour les textes en espagnol. Pour le français, choisis « Voix multilingue »."
+        : "Ce style est conçu pour les textes en anglais. Pour le français, choisis « Voix multilingue ».");
   }
+  modelChoices.addEventListener("click", event => {
+    const button = event.target.closest("[data-voice-model]");
+    if (!button) return;
+    modelSelect.value = button.dataset.voiceModel;
+    refreshCloudflareVoices();
+  });
+  languageChoices.addEventListener("click", event => {
+    const button = event.target.closest("[data-voice-language]");
+    if (!button || modelSelect.value !== "melotts") return;
+    languageSelect.value = button.dataset.voiceLanguage;
+    refreshCloudflareVoices();
+  });
+  speakerChoices.addEventListener("click", event => {
+    const button = event.target.closest("[data-voice-speaker]");
+    if (!button) return;
+    speakerSelect.value = button.dataset.voiceSpeaker;
+    speakerChoices.querySelectorAll("[data-voice-speaker]").forEach(choice => {
+      choice.setAttribute("aria-pressed", choice.dataset.voiceSpeaker === speakerSelect.value ? "true" : "false");
+    });
+  });
   browserPreviewButton.addEventListener("click", () => {
     const text = $("audioCloudflareText").value.trim();
     if (!text) { setStatus("Écris d’abord un texte à lire.", true); return; }
@@ -301,16 +346,19 @@ function cloudflareDialog() {
       setStatus("Impossible de démarrer la lecture du navigateur : " + (error.message || "erreur inconnue"), true);
     }
   });
-  modelSelect.addEventListener("change", refreshCloudflareVoices);
   refreshCloudflareVoices();
-  $("audioCloudflareRetry").addEventListener("click", checkHealth);
+  refreshVoiceQuota();
+  checkHealth();
+  $("audioCloudflareQuotaConnect").addEventListener("click", event => connectVoiceAccount(event.currentTarget));
+  $("audioCloudflareRetry").addEventListener("click", async () => {
+    await Promise.all([checkHealth(), refreshVoiceQuota()]);
+  });
   dialog.querySelector(".cloudflare-close").addEventListener("click", () => { player.pause(); dialog.close(); });
   dialog.addEventListener("click", event => { if (event.target === dialog) { player.pause(); dialog.close(); } });
   $("audioCloudflareRate").addEventListener("input", () => {
     $("audioCloudflareRateLabel").textContent = Number($("audioCloudflareRate").value).toFixed(1).replace(".0","") + "×";
     applyPlaybackEffects();
   });
-  if (pitchSelect) pitchSelect.addEventListener("change", applyPlaybackEffects);
   $("audioCloudflareStop").addEventListener("click", () => { player.pause(); $("audioCloudflareStop").disabled = true; });
 
   generateButton.addEventListener("click", async () => {
