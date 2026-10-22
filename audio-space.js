@@ -62,6 +62,7 @@ function render(){var box=$("audioLibraryList");box.textContent="";var all=recor
 $("audioRefresh").addEventListener("click",async function(){await loadCloud();render();status("audioAccountStatus","Bibliothèque actualisée.")});
 window.addEventListener("online",async function(){await syncPending();await loadCloud();render()});
 async function syncPending(){if(!navigator.onLine)return;for(var r of records){if(r.kind!=="recording"||r.synced||!r.key)continue;try{var b=await getBlob(r.id);if(b&&b.blob){await uploadBlob(r,b.blob);await syncManifest()}}catch(_){}}}
+window.addEventListener("aurore-neural-audio-created",function(event){var record=event&&event.detail&&event.detail.record;if(!record||!record.id)return;if(!records.some(function(item){return item.id===record.id})){records.unshift(record);render()}status("audioAccountStatus","Voix HD ajoutée à la bibliothèque audio.");});
 async function init(){var local=readLocal();records=local.records;sequences=local.sequences;voices();if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=voices;await loadCloud();render();await syncPending();status("audioAccountStatus",records.length+" audio(s) · "+sequences.length+" séquence(s). Les données locales restent accessibles hors ligne.");}
 init().catch(e=>{render();status("audioAccountStatus",e.message,true)});
 })();
