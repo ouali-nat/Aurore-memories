@@ -488,9 +488,10 @@ function cloudflareDialog() {
 }
 function addControls() {
   const pageConnect = $("audioVoiceQuotaConnect");
-  if (pageConnect) pageConnect.addEventListener("click", event => connectVoiceAccount(event.currentTarget));
+  const pageConnectClick = event => connectVoiceAccount(event.currentTarget);
+  if (pageConnect) pageConnect.addEventListener("click", pageConnectClick);
   controlsCleanup.push(() => {
-    if (pageConnect) pageConnect.removeEventListener("click", event => connectVoiceAccount(event.currentTarget));
+    if (pageConnect) pageConnect.removeEventListener("click", pageConnectClick);
   });
   window.addEventListener("aurore:auth-changed", refreshVoiceQuota);
   controlsCleanup.push(() => window.removeEventListener("aurore:auth-changed", refreshVoiceQuota));
