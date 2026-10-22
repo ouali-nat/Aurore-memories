@@ -73,8 +73,8 @@ function normalizedEtag(value) {
 }
 
 function relativeKey(value) {
-  if (!value || value.length > 512 || value.startsWith("/") || value.includes("\\\\") ||
-      /[\\u0000-\\u001f\\u007f]/.test(value)) return null;
+  if (!value || value.length > 512 || value.startsWith("/") || value.includes("\\") ||
+      /[\u0000-\u001f\u007f]/.test(value)) return null;
   const parts = value.split("/");
   if (parts.some((part) => !part || part === "." || part === "..")) return null;
   return value;
@@ -235,7 +235,7 @@ export default {
         memorySyncVersion: "2026-10-21-cors-app-fix",
         conditionalWrites: true,
         aiConfigured: Boolean(env.AI),
-        ttsVersion: "2026-10-22-cloudflare-dialog-v1"
+        ttsVersion: "2026-10-22-daily-audio-quota-v1"
       }, 200, corsHeaders(request, env));
     }
 
