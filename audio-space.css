@@ -14,6 +14,9 @@
 .audio-page select option,.audio-page select optgroup{background:var(--surface,#1b1730);color:var(--text,#fff)}
 .audio-button-row,.audio-player-controls,.audio-player-top,.audio-section-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .audio-button-row{margin-top:14px}
+/* Entrée Cloudflare : visible même si une règle de thème externe est trop générale. */
+.audio-page .cloudflare-entry{display:flex!important;visibility:visible!important;opacity:1!important;position:relative;z-index:1}
+.audio-page .cloudflare-entry button{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;min-height:42px;white-space:normal;text-align:center}
 .audio-page button:disabled{opacity:.48;cursor:not-allowed}
 .audio-status,.audio-page .form-help{display:block;margin:10px 0 0;font-size:.76rem;line-height:1.6;overflow-wrap:anywhere;opacity:.92}
 .audio-status[data-error=true]{color:#ffd0d6;font-weight:700}
