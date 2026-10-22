@@ -115,7 +115,8 @@ function cloudflareDialog() {
     '<div class="cloudflare-options"><div><label class="field-label" for="audioCloudflareModel">Moteur vocal</label><select class="text-field" id="audioCloudflareModel"><option value="melotts">MeloTTS · multilingue</option><option value="aura-1">Deepgram Aura · anglais</option><option value="aura-2-en">Deepgram Aura-2 · anglais</option><option value="aura-2-es">Deepgram Aura-2 · espagnol</option></select></div>' +
     '<div><label class="field-label" for="audioCloudflareLanguage">Langue de la voix</label><select class="text-field" id="audioCloudflareLanguage"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="zh">Chinois</option><option value="jp">Japonais</option><option value="kr">Coréen</option></select></div>' +
     '<div id="audioCloudflareSpeakerWrap"><label class="field-label" for="audioCloudflareSpeaker">Voix</label><select class="text-field" id="audioCloudflareSpeaker"><option value="">Voix du modèle</option></select></div>' +
-    '<div><label class="field-label" for="audioCloudflareRate">Vitesse de lecture <span id="audioCloudflareRateLabel">1×</span></label><input id="audioCloudflareRate" type="range" min="0.7" max="1.3" step="0.1" value="1"></div></div>' +
+    '<div><label class="field-label" for="audioCloudflareRate">Vitesse de lecture <span id="audioCloudflareRateLabel">1×</span></label><input id="audioCloudflareRate" type="range" min="0.7" max="1.3" step="0.1" value="1"></div>' +
+    '<div><label class="field-label" for="audioCloudflarePitch">Modificateur de timbre</label><select class="text-field" id="audioCloudflarePitch"><option value="1">Naturel · original</option><option value="0.85">Plus grave</option><option value="0.92">Un peu plus grave</option><option value="1.08">Un peu plus aigu</option><option value="1.16">Plus aigu</option></select><p class="form-help">Effet appliqué à l’écoute : la hauteur et la vitesse changent ensemble. Le fichier sauvegardé reste l’original MeloTTS.</p></div></div>' +
     '<p class="form-help" id="audioCloudflareVoiceNote">MeloTTS propose plusieurs langues, mais pas de sélection de timbre dans ce modèle.</p>' +
     '<div class="cloudflare-actions"><button type="button" class="secondary-btn" id="audioCloudflareBrowserPreview">▶ Aperçu navigateur</button><button type="button" class="primary-btn" id="audioCloudflareGenerate" disabled>☁ Générer et écouter</button><button type="button" class="secondary-btn" id="audioCloudflareRetry">↻ Vérifier le service</button><button type="button" class="secondary-btn" id="audioCloudflareStop" disabled>■ Arrêter</button></div>' +
     '<audio id="audioCloudflarePlayer" controls hidden></audio><p id="audioCloudflareStatus" class="audio-status" role="status" aria-live="polite">Prêt à tester la voix Cloudflare.</p>' +
@@ -129,7 +130,13 @@ function cloudflareDialog() {
   const modelSelect = $("audioCloudflareModel");
   const speakerSelect = $("audioCloudflareSpeaker");
   const languageSelect = $("audioCloudflareLanguage");
+  const pitchSelect = $("audioCloudflarePitch");
   const voiceNote = $("audioCloudflareVoiceNote");
+  function applyPlaybackEffects() {
+    const speed = Number($("audioCloudflareRate").value) || 1;
+    const pitch = Number(pitchSelect && pitchSelect.value) || 1;
+    if (player) player.playbackRate = Math.max(0.6, Math.min(1.6, speed * pitch));
+  }
   const speakers = {
     "melotts": [],
     "aura-1": ["angus","asteria","arcas","orion","orpheus","athena","luna","zeus","perseus","helios","hera","stella"],
@@ -201,8 +208,9 @@ function cloudflareDialog() {
   dialog.addEventListener("click", event => { if (event.target === dialog) { player.pause(); dialog.close(); } });
   $("audioCloudflareRate").addEventListener("input", () => {
     $("audioCloudflareRateLabel").textContent = Number($("audioCloudflareRate").value).toFixed(1).replace(".0","") + "×";
-    if (player) player.playbackRate = Number($("audioCloudflareRate").value);
+    applyPlaybackEffects();
   });
+  if (pitchSelect) pitchSelect.addEventListener("change", applyPlaybackEffects);
   $("audioCloudflareStop").addEventListener("click", () => { player.pause(); $("audioCloudflareStop").disabled = true; });
 
   generateButton.addEventListener("click", async () => {
@@ -245,7 +253,7 @@ function cloudflareDialog() {
       player.dataset.objectUrl = objectUrl;
       player.src = objectUrl;
       player.hidden = false;
-      player.playbackRate = rate;
+      applyPlaybackEffects();
       saveButton.disabled = false;
       setStatus("Voix Cloudflare générée. Écoute le résultat, puis ajoute-le à ta bibliothèque si tu le souhaites.");
       try { await player.play(); $("audioCloudflareStop").disabled = false; } catch (_) {}
