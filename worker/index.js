@@ -1,5 +1,8 @@
 const ROOT = "Aurore mémoires/";
 
+// Same public publishable key as auth.js; never a secret.
+const SUPABASE_PUBLISHABLE_KEY_FALLBACK = "sb_publishable_YOvZs7MeadvbCCK93sp7jQ_NcBDcmGI";
+
 // Sites autorisés à appeler l'API de stockage depuis un navigateur.
 // - aurore9 : site principal Mémoire ; mu : ancien domaine (migration cloud).
 // - aurore-section-archivescom / aurore-section-archives.com : sites Archives, dont l'application Android
@@ -44,18 +47,23 @@ function json(data, status, cors) {
 
 async function authenticatedUser(request, env) {
   const authorization = request.headers.get("Authorization") || "";
-  if (!/^Bearer\s+\S+/i.test(authorization)) return null;
-  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) {
+  if (!/^Bearer\\s+\\S+/i.test(authorization)) return null;
+  const supabaseUrl = env.SUPABASE_URL || "https://oegxxndiuovisustjstp.supabase.co";
+  const publishableKey = env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_FALLBACK;
+  if (!supabaseUrl || !publishableKey) {
     throw new Error("Supabase authentication is not configured on this Worker.");
   }
 
-  const response = await fetch(new URL("/auth/v1/user", env.SUPABASE_URL), {
+  const response = await fetch(new URL("/auth/v1/user", supabaseUrl), {
     headers: {
-      "apikey": env.SUPABASE_PUBLISHABLE_KEY,
+      "apikey": publishableKey,
       "Authorization": authorization
     }
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) return null;
+    throw new Error("Supabase n’a pas pu vérifier la session (HTTP " + response.status + ").");
+  }
   const user = await response.json();
   return user && typeof user.id === "string" ? user : null;
 }
