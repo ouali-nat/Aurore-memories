@@ -479,7 +479,7 @@ window.addEventListener("aurore-neural-audio-created", function (event) {
 function init() {
   var local = readLocal(); records = local.records; sequences = local.sequences;
   $("audioPlayerPanel").hidden = true;
-  fillVoices(); setTimeout(fillVoices, 600); setTimeout(fillVoices, 2000);
+  fillVoices(); initVoicePicker(); setTimeout(fillVoices, 600); setTimeout(fillVoices, 2000);
   bind(); render();
   status("audioAccountStatus", summary());
   loadCloud().then(function () { render(); status("audioAccountStatus", summary()); }).catch(function () {});
