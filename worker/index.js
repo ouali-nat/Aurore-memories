@@ -87,6 +87,50 @@ export default {
         conditionalWrites: true
       }, 200, corsHeaders(request, env));
     }
+
+    // Neural TTS: accessible only to an authenticated Aurore ID user.
+    if (url.pathname === "/api/tts") {
+      const cors = corsHeaders(request, env);
+      if (request.method === "OPTIONS") {
+        if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) {
+          return new Response("Origin not allowed", { status: 403, headers: { "Vary": "Origin" } });
+        }
+        return new Response(null, { status: 204, headers: cors });
+      }
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, cors);
+      if (request.headers.get("Origin") && !cors.has("Access-Control-Allow-Origin")) {
+        return json({ error: "Origin not allowed" }, 403, cors);
+      }
+      try {
+        const user = await authenticatedUser(request, env);
+        if (!user) return json({ error: "Authentication required" }, 401, cors);
+        if (!env.AI) return json({ error: "Workers AI is not configured on this Worker." }, 503, cors);
+        const length = Number(request.headers.get("Content-Length") || 0);
+        if (length > 24000) return json({ error: "Text payload too large." }, 413, cors);
+        const input = await request.json();
+        const prompt = typeof input.text === "string" ? input.text.trim() : "";
+        const languageMap = { "fr-FR": "fr", fr: "fr", "en-US": "en", en: "en", "es-ES": "es", es: "es", "zh-CN": "zh", zh: "zh", "ja-JP": "jp", ja: "jp", "ko-KR": "kr", ko: "kr" };
+        const lang = languageMap[input.language] || "fr";
+        if (!prompt) return json({ error: "Text is required." }, 400, cors);
+        if (prompt.length > 5000) return json({ error: "Maximum 5,000 characters per generated audio." }, 413, cors);
+        const output = await env.AI.run("@cf/myshell-ai/melotts", { prompt, lang });
+        if (!output || typeof output.audio !== "string" || !output.audio) {
+          return json({ error: "Workers AI returned no audio." }, 502, cors);
+        }
+        const binary = atob(output.audio);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const headers = new Headers(cors);
+        headers.set("Content-Type", "audio/mpeg");
+        headers.set("Cache-Control", "no-store");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("Content-Length", String(bytes.byteLength));
+        return new Response(bytes, { status: 200, headers });
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : "Audio generation failed." }, 502, cors);
+      }
+    }
+
     if (!url.pathname.startsWith("/api/storage")) return env.ASSETS.fetch(request);
 
     const cors = corsHeaders(request, env);
