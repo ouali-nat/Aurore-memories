@@ -59,3 +59,25 @@
 @media(max-width:720px){.audio-create-grid{grid-template-columns:1fr}.audio-page .page-heading{margin-top:14px}.audio-library-item{align-items:flex-start;flex-direction:column}.audio-item-actions{width:100%}.audio-item-actions button{flex:1}.audio-voice-options{grid-template-columns:1fr}.audio-voice-options .field-label:first-child,.audio-voice-options select:first-of-type{grid-column:auto}.audio-player-controls button{flex:1;min-width:0}.audio-section-heading{align-items:flex-start}.audio-section-heading button{white-space:nowrap}.audio-library-item,.audio-sequence-track{padding:11px;border-radius:12px}}
 @media(max-width:420px){.audio-page .page-heading,.audio-panel,.audio-player-panel{padding:15px;border-radius:13px}.audio-button-row>*{flex:1;min-width:0}.audio-page .primary-btn,.audio-page .secondary-btn{font-size:.74rem;padding-inline:9px}.audio-section-heading{gap:8px}.audio-section-heading h2{font-size:1.05rem}}
 @media(prefers-reduced-motion:reduce){.audio-panel,.audio-library-item,.audio-page button{transition:none!important}.audio-page button:hover{transform:none}}
+
+/* Fenêtre d’essai indépendante pour la synthèse Cloudflare */
+.cloudflare-test-dialog{width:min(620px,calc(100vw - 28px));max-width:620px;max-height:min(88dvh,850px);overflow:auto;padding:clamp(18px,4vw,28px);border:1px solid var(--soft-border);border-radius:20px;background:var(--surface);color:var(--text);box-shadow:0 24px 90px rgba(0,0,0,.35)}
+.cloudflare-test-dialog::backdrop{background:rgba(7,7,14,.72);backdrop-filter:blur(5px)}
+.cloudflare-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.cloudflare-dialog-head h2{margin:5px 0 8px;font-size:clamp(1.2rem,4vw,1.55rem);letter-spacing:-.035em}
+.cloudflare-dialog-head .section-kicker{margin:0;color:var(--accent-light);font-size:.64rem;font-weight:850;letter-spacing:.12em}
+.cloudflare-close{flex:0 0 auto;min-width:40px;padding:8px}
+.cloudflare-intro{margin:8px 0 16px;color:var(--muted);font-size:.82rem;line-height:1.65}
+.cloudflare-test-dialog .field-label{display:block;margin:14px 0 7px;color:var(--text);font-size:.79rem;font-weight:750}
+.cloudflare-test-dialog .text-area{width:100%;box-sizing:border-box;resize:vertical}
+.cloudflare-options{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cloudflare-options>div{min-width:0}
+.cloudflare-options input[type=range]{width:100%;accent-color:var(--accent)}
+.cloudflare-actions,.cloudflare-dialog-foot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px}
+.cloudflare-test-dialog .primary-btn,.cloudflare-test-dialog .secondary-btn{min-height:40px}
+.cloudflare-test-dialog audio{display:block;width:100%;margin-top:14px}
+.cloudflare-test-dialog .audio-status{min-height:1.4em;margin:12px 0 0;font-size:.78rem;line-height:1.55}
+.cloudflare-dialog-foot{justify-content:space-between;padding-top:13px;border-top:1px solid var(--border)}
+.cloudflare-dialog-foot .form-help{flex:1;min-width:150px;margin:0;color:var(--muted);font-size:.72rem;line-height:1.5}
+.cloudflare-test-dialog button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:520px){.cloudflare-test-dialog{padding:17px;border-radius:16px}.cloudflare-options{grid-template-columns:1fr;gap:2px}.cloudflare-actions>*{flex:1}.cloudflare-dialog-foot{align-items:stretch;flex-direction:column}.cloudflare-dialog-foot button{width:100%}}
