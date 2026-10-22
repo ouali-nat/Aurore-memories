@@ -45,16 +45,18 @@ function workerUrl() {
   return window.auroreAuth && window.auroreAuth.workerUrl || DEFAULT_WORKER_URL;
 }
 async function authApi(path, options) {
-  // app.js initialise auth.js de façon asynchrone. Attendre cette initialisation
-  // évite de confondre un chargement encore en cours avec un module absent.
-  if (window.auroreMemoryCloudBootstrapPromise) {
-    try { await window.auroreMemoryCloudBootstrapPromise; } catch (_) {}
+  // auth.js expose une promesse dès son chargement. Attendre celle-ci même si
+  // le client Supabase n'a pas encore fini de s'initialiser.
+  if (window.auroreAuthReady && typeof window.auroreAuthReady.then === "function") {
+    try { await window.auroreAuthReady; } catch (error) {
+      throw Error("Initialisation Aurore ID impossible : " + (error && error.message ? error.message : "vérifie la connexion puis actualise la page."));
+    }
   }
-  if (!window.auroreAuth && window.auroreAuthReady) {
-    try { await window.auroreAuthReady; } catch (_) {}
+  if (!window.auroreAuth && typeof window.auroreAuthReady !== "undefined") {
+    throw Error("Aurore ID n’a pas pu initialiser la session. Actualise la page ; si le problème persiste, reconnecte-toi à Aurore ID.");
   }
   if (!window.auroreAuth || typeof window.auroreAuth.api !== "function") {
-    throw Error("La connexion Aurore ID n’a pas pu être initialisée. Actualisez la page ; si le problème persiste, reconnectez-vous à Aurore ID.");
+    throw Error("Le module Aurore ID n’est pas chargé sur cette page. Actualise la page pour charger la version corrigée.");
   }
   return window.auroreAuth.api(path, options || {});
 }
