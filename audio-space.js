@@ -138,10 +138,12 @@ function speak(text, sel, lang, rate) {
       u.onstart = function () { started = true; clearTimeout(wd); };
       u.onend = function () { clearTimeout(wd); next(); };
       u.onerror = function (e) { clearTimeout(wd); var er = e && e.error; end({ ok: false, reason: (er === "canceled" || er === "interrupted") ? "canceled" : (er || "error") }); };
-      wd = setTimeout(function () { if (!started && !done && !synth.speaking) end({ ok: false, reason: "silent" }); }, 5000);
+      wd = setTimeout(function () { if (!started && !done && !synth.speaking) end({ ok: false, reason: "silent" }); }, 8000);
       try { synth.speak(u); if (synth.resume) synth.resume(); } catch (e) { end({ ok: false, reason: "error" }); }
     }
-    setTimeout(next, 90);
+    /* Démarrer immédiatement depuis le clic : certains navigateurs mobiles
+       ignorent la synthèse si elle commence après un setTimeout. */
+    next();
   });
 }
 function speakMessage(r) {
@@ -233,11 +235,11 @@ function importFile() {
 /* ---------- Synthèse vocale : aperçu / ajout ---------- */
 async function previewText() {
   var text = $("audioText").value.trim();
-  if (!text) return status("audioRecordStatus", "Écris d’abord un texte.", true);
+  if (!text) return status("audioTextStatus", "Écris d’abord un texte à lire.", true);
   var rate = Number($("audioRate").value) || 1;
   if (estimateDuration(text, rate) > MAX_MS) return status("audioRecordStatus", "Le texte dépasse environ six minutes.", true);
   stopPlayback();
-  status("audioTextStatus", "Lecture en cours…");
+  status("audioTextStatus", "Démarrage de la voix du navigateur…");
   var r = await speak(text, $("audioVoice").value, $("audioLanguage").value, rate);
   if (r.ok) status("audioTextStatus", "Aperçu terminé.");
   else if (r.reason === "canceled") status("audioTextStatus", "Lecture arrêtée.");
