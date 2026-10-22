@@ -471,7 +471,7 @@ window.addEventListener("aurore-neural-audio-created", function (event) {
   records.unshift(record);
   writeLocal();
   render();
-  status("audioTextStatus", "Voix Cloudflare ajoutée à ta bibliothèque audio.");
+  status("audioTextStatus", "Voix alternative ajoutée à ta bibliothèque audio.");
   syncManifest().then(render).catch(function () {
     status("audioAccountStatus", "Audio conservé sur cet appareil ; synchronisation cloud à réessayer.", true);
   });
