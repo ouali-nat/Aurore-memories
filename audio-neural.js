@@ -45,8 +45,16 @@ function workerUrl() {
   return window.auroreAuth && window.auroreAuth.workerUrl || DEFAULT_WORKER_URL;
 }
 async function authApi(path, options) {
+  // app.js initialise auth.js de façon asynchrone. Attendre cette initialisation
+  // évite de confondre un chargement encore en cours avec un module absent.
+  if (window.auroreMemoryCloudBootstrapPromise) {
+    try { await window.auroreMemoryCloudBootstrapPromise; } catch (_) {}
+  }
+  if (!window.auroreAuth && window.auroreAuthReady) {
+    try { await window.auroreAuthReady; } catch (_) {}
+  }
   if (!window.auroreAuth || typeof window.auroreAuth.api !== "function") {
-    throw Error("Le module Aurore ID n’est pas disponible sur cette page.");
+    throw Error("La connexion Aurore ID n’a pas pu être initialisée. Actualisez la page ; si le problème persiste, reconnectez-vous à Aurore ID.");
   }
   return window.auroreAuth.api(path, options || {});
 }
