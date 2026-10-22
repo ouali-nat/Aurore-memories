@@ -27,6 +27,23 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Inspect the currently deployed Worker
+        shell: bash
+        run: |
+          set +e
+          health="$(curl --silent --show-error --max-time 15 "https://aurore-memories.oualikevin6.workers.dev/health" 2>&1)"
+          code=$?
+          if [[ $code -ne 0 ]]; then
+            echo "::warning::Unable to read the current Worker health endpoint: $health"
+            exit 0
+          fi
+          printf '%s\n' "$health"
+          if printf '%s' "$health" | grep -q '"ttsVersion":"2026-10-22-cloudflare-dialog-v1"'; then
+            echo "Cloudflare TTS code is already active on the Worker."
+          else
+            echo "::warning::The active Worker has not yet reported the new Cloudflare TTS version marker."
+          fi
+
       - name: Check Cloudflare credentials are configured
         shell: bash
         env:
