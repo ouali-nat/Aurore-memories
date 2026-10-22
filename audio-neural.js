@@ -146,34 +146,50 @@ function cloudflareDialog() {
     });
     const hasSpeaker = (speakers[model] || []).length > 0;
     $("audioCloudflareSpeakerWrap").hidden = !hasSpeaker;
-    voiceNote.textContent = model === "melotts"
-      ? "MeloTTS prend en charge plusieurs langues, mais ne permet pas de choisir un timbre précis."
-      : "Choisis une voix Deepgram. Ce moteur est prévu pour " + (model === "aura-2-es" ? "l’espagnol." : "l’anglais.") + " Le résultat dépend du modèle sélectionné.";
     if (model === "aura-1" || model === "aura-2-en") languageSelect.value = "en";
     if (model === "aura-2-es") languageSelect.value = "es";
     languageSelect.disabled = model !== "melotts";
+    voiceNote.textContent = model === "melotts"
+      ? "Pour le français, utilise MeloTTS : c’est le seul moteur proposé ici qui prend en charge cette langue. Il ne permet pas de choisir un timbre précis."
+      : "Ce moteur Deepgram ne propose pas de voix française. La langue est verrouillée sur " + (model === "aura-2-es" ? "l’espagnol." : "l’anglais.") + " Pour lire en français, sélectionne MeloTTS.";
   }
   browserPreviewButton.addEventListener("click", () => {
     const text = $("audioCloudflareText").value.trim();
     if (!text) { setStatus("Écris d’abord un texte à lire.", true); return; }
     if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-      setStatus("La lecture du navigateur n’est pas prise en charge ici. Essaie Chrome à jour et vérifie le moteur de synthèse vocale Android.", true);
+      setStatus("La synthèse vocale du navigateur n’est pas disponible. Sur Android, active ou installe Speech Services by Google, puis télécharge une voix française.", true);
       return;
     }
     try {
-      window.speechSynthesis.cancel();
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const language = ({fr:"fr-FR",en:"en-US",es:"es-ES",zh:"zh-CN",jp:"ja-JP",kr:"ko-KR"})[languageSelect.value] || "fr-FR";
+      const voices = synth.getVoices ? synth.getVoices() : [];
+      const matching = voices.filter(v => (v.lang || "").toLowerCase().replace("_","-") === language.toLowerCase() ||
+        (v.lang || "").toLowerCase().startsWith(language.slice(0,2).toLowerCase()+"-"));
+      if (language.startsWith("fr") && voices.length && !matching.length) {
+        setStatus("Aucune voix française n’est installée ou exposée au navigateur. Dans Android, ouvre Synthèse vocale, choisis Speech Services by Google et télécharge le français, puis réessaie.", true);
+        return;
+      }
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = $("audioCloudflareLanguage").value === "fr" ? "fr-FR" :
-        $("audioCloudflareLanguage").value === "en" ? "en-US" :
-        $("audioCloudflareLanguage").value === "es" ? "es-ES" :
-        $("audioCloudflareLanguage").value === "zh" ? "zh-CN" :
-        $("audioCloudflareLanguage").value === "jp" ? "ja-JP" : "ko-KR";
+      utterance.lang = language;
       utterance.rate = Number($("audioCloudflareRate").value) || 1;
-      utterance.onstart = () => setStatus("Lecture du navigateur en cours…");
+      if (matching.length) utterance.voice = matching.find(v => v.default) || matching[0];
+      let started = false;
+      utterance.onstart = () => { started = true; setStatus("Lecture du navigateur en cours…"); };
       utterance.onend = () => setStatus("Aperçu du navigateur terminé.");
-      utterance.onerror = event => setStatus("La lecture du navigateur a échoué (" + (event.error || "erreur inconnue") + "). Vérifie la synthèse vocale Android.", true);
-      window.speechSynthesis.speak(utterance);
-      if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+      utterance.onerror = event => {
+        const code = event.error || "erreur inconnue";
+        const detail = code === "synthesis-failed" || code === "voice-unavailable"
+          ? " Le moteur vocal Android a refusé la lecture. Vérifie Speech Services by Google et la voix française téléchargée."
+          : code === "not-allowed" ? " Appuie de nouveau sur Aperçu après avoir touché l’écran." : "";
+        setStatus("La lecture du navigateur a échoué (" + code + ")." + detail, true);
+      };
+      synth.speak(utterance);
+      if (synth.resume) synth.resume();
+      window.setTimeout(() => {
+        if (!started && synth.speaking) setStatus("Le moteur vocal n’a pas encore démarré. Patiente un instant ou vérifie la voix Android.", true);
+      }, 3500);
     } catch (error) {
       setStatus("Impossible de démarrer la lecture du navigateur : " + (error.message || "erreur inconnue"), true);
     }
