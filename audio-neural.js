@@ -19,6 +19,9 @@ const MAX_MS = 6 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_WORKER_URL = "https://aurore-memories.oualikevin6.workers.dev";
 const $ = id => document.getElementById(id);
 let healthReady = false;
+let quotaSnapshot = null;
+let quotaRequiresLogin = false;
+let generationInProgress = false;
 
 function uid() {
   return window.crypto && crypto.randomUUID ? crypto.randomUUID() :
@@ -76,6 +79,93 @@ function setStatus(message, error) {
   if (!el) return;
   el.textContent = message;
   el.dataset.error = error ? "true" : "false";
+}
+function quotaTime(seconds) {
+  const value = Math.max(0, Math.ceil(Number(seconds) || 0));
+  const minutes = Math.floor(value / 60), rest = value % 60;
+  if (minutes && rest) return minutes + " min " + rest + " s";
+  if (minutes) return minutes + " min";
+  return rest + " s";
+}
+function updateQuotaView(data, message, requiresLogin) {
+  quotaSnapshot = data && data.ok ? data : null;
+  quotaRequiresLogin = !!requiresLogin;
+  const views = [
+    { text: $("audioVoiceQuotaText"), bar: $("audioVoiceQuotaBar") },
+    { text: $("audioCloudflareQuotaText"), bar: $("audioCloudflareQuotaBar") }
+  ];
+  views.forEach(view => {
+    if (view.text) {
+      if (quotaSnapshot) {
+        if (quotaSnapshot.remainingSeconds <= 0) view.text.textContent = "Quota atteint · renouvellement à minuit";
+        else if (quotaSnapshot.inProgress) view.text.textContent = quotaTime(quotaSnapshot.remainingSeconds) + " disponibles · génération en cours";
+        else view.text.textContent = quotaTime(quotaSnapshot.remainingSeconds) + " disponibles · " + quotaTime(quotaSnapshot.usedSeconds) + " utilisés";
+      } else {
+        view.text.textContent = message || (quotaRequiresLogin ? "Connexion requise pour afficher le compteur." : "Compteur temporairement indisponible.");
+      }
+    }
+    if (view.bar) {
+      const used = quotaSnapshot ? Math.min(180, Math.max(0, quotaSnapshot.usedSeconds)) : 0;
+      view.bar.style.width = (used / 180 * 100) + "%";
+      const progress = view.bar.closest('[role="progressbar"]');
+      if (progress) progress.setAttribute("aria-valuenow", String(used));
+    }
+  });
+  ["audioVoiceQuotaConnect", "audioCloudflareQuotaConnect"].forEach(id => {
+    const button = $(id);
+    if (button) button.hidden = !quotaRequiresLogin;
+  });
+  const generate = $("audioCloudflareGenerate");
+  if (generate) {
+    generate.disabled = !healthReady || generationInProgress || !quotaSnapshot ||
+      quotaSnapshot.remainingSeconds <= 0 || quotaSnapshot.inProgress;
+  }
+}
+async function refreshVoiceQuota() {
+  try {
+    if (window.auroreAuthReady && typeof window.auroreAuthReady.then === "function") {
+      try { await window.auroreAuthReady; } catch (_) {}
+    }
+    if (!window.auroreAuth || typeof window.auroreAuth.getSession !== "function") {
+      updateQuotaView(null, "Connecte-toi avec Aurore ID pour afficher le compteur.", true);
+      return null;
+    }
+    const session = await window.auroreAuth.getSession();
+    if (!session || !session.user) {
+      updateQuotaView(null, "Connecte-toi avec Aurore ID pour afficher le compteur.", true);
+      return null;
+    }
+    const response = await authApi("/api/tts/quota", { method: "GET" });
+    const data = await response.json();
+    if (!data || data.ok !== true) throw Error("Le compteur vocal n’a pas renvoyé une réponse valide.");
+    updateQuotaView(data);
+    return data;
+  } catch (error) {
+    const requiresLogin = Number(error && error.status) === 401 ||
+      /connecte|session|authentification/i.test(error && error.message || "");
+    updateQuotaView(null,
+      requiresLogin ? "Connecte-toi avec Aurore ID pour afficher le compteur." :
+        "Le compteur est momentanément indisponible. Réessaie avant de générer une voix.",
+      requiresLogin);
+    return null;
+  }
+}
+async function connectVoiceAccount(button) {
+  if (button) button.disabled = true;
+  try {
+    if (window.auroreAuthReady && typeof window.auroreAuthReady.then === "function") await window.auroreAuthReady;
+    if (!window.auroreAuth || typeof window.auroreAuth.signIn !== "function") {
+      throw Error("La connexion Aurore ID n’est pas disponible sur cette page. Actualise puis réessaie.");
+    }
+    await window.auroreAuth.signIn("audio.html");
+  } catch (error) {
+    const target = $("audioCloudflareStatus");
+    if (target) {
+      target.textContent = error.message || "Connexion impossible. Réessaie.";
+      target.dataset.error = "true";
+    }
+    if (button) button.disabled = false;
+  }
 }
 async function checkHealth() {
   const button = $("audioCloudflareGenerate");
