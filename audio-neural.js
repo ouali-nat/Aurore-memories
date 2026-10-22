@@ -229,6 +229,20 @@ function addControls() {
   if (status) { panel.insertBefore(row, status); panel.insertBefore(help, status); }
   else panel.append(row, help);
 }
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addControls, {once:true});
-else addControls();
+function openCloudflareFromChooser() {
+  if (new URLSearchParams(window.location.search).get("cloudflare") !== "1") return;
+  const open = () => {
+    const button = $("audioNeuralGenerate");
+    if (button) button.click();
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { addControls(); open(); }, {once:true});
+  else { addControls(); open(); }
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", addControls, {once:true});
+  document.addEventListener("DOMContentLoaded", openCloudflareFromChooser, {once:true});
+} else {
+  addControls();
+  openCloudflareFromChooser();
+}
 })();
