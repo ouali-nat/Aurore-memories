@@ -244,7 +244,13 @@ async function previewText() {
   if (window.speechSynthesis) { try { speechSynthesis.cancel(); speechSynthesis.resume(); } catch (_) {} }
   stopPlayback();
   var voiceField = $("audioVoice"), languageField = $("audioLanguage");
-  var r = await speak(text, voiceField ? voiceField.value : "", languageField ? languageField.value : "fr-FR", rate);
+  var language = languageField ? languageField.value : "fr-FR";
+  var r = await speak(text, voiceField ? voiceField.value : "", language, rate);
+  /* Certains moteurs Android refusent le profil vocal choisi. Réessayer avec la voix système par défaut. */
+  if (!r.ok && r.reason !== "canceled" && voiceField && voiceField.value) {
+    status("audioTextStatus", "Le profil vocal a échoué ; nouvel essai avec la voix système…");
+    r = await speak(text, "", language, rate);
+  }
   if (r.ok) status("audioTextStatus", "Aperçu terminé.");
   else if (r.reason === "canceled") status("audioTextStatus", "Lecture arrêtée.");
   else status("audioTextStatus", speakMessage(r.reason), true);
