@@ -1,0 +1,52 @@
+/* Aurore Mémoire — espace audio. Les blocs réutilisent .form-panel / .draft-card : le design « pilule flottante » (aurore-pill.css) s'applique donc comme dans la création de cartes et suit la couleur du site. */
+.audio-page{padding-bottom:3rem}
+.audio-page [hidden]{display:none!important}
+.audio-create-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:8px 0 18px;align-items:start}
+.audio-page .audio-panel{min-width:0;margin:0 0 18px}
+.audio-create-grid .audio-panel{margin-bottom:0}
+.audio-page .audio-panel h2,.audio-page .audio-player-panel h2,.audio-section-heading h2{margin:4px 0 8px;font-size:1.12rem;letter-spacing:-.025em}
+.audio-page .audio-panel>p:not(.section-kicker){font-size:.8rem;line-height:1.6;opacity:.9}
+.audio-page .field-label{display:block;margin:15px 0 7px;font-size:.79rem;font-weight:750}
+.audio-page .text-field,.audio-page .text-area{display:block;width:100%;min-width:0;min-height:43px;padding:10px 14px;color:inherit}
+.audio-page .text-area{min-height:150px;resize:vertical;line-height:1.6}
+.audio-page input[type=file]{max-width:100%;font-size:.76rem}
+.audio-page input[type=range]{width:100%;accent-color:#fff}
+.audio-page select option,.audio-page select optgroup{background:#1b1730;color:#fff}
+.audio-button-row,.audio-player-controls,.audio-player-top,.audio-section-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.audio-button-row{margin-top:14px}
+.audio-page button:disabled{opacity:.48;cursor:not-allowed}
+.audio-status,.audio-page .form-help{display:block;margin:10px 0 0;font-size:.76rem;line-height:1.6;overflow-wrap:anywhere;opacity:.92}
+.audio-status[data-error=true]{color:#ffd0d6;font-weight:700}
+.audio-rec-live{display:flex;align-items:center;gap:12px;margin-top:14px}
+.audio-rec-live strong{font-variant-numeric:tabular-nums;font-size:.9rem;min-width:84px}
+.audio-meter{flex:1;height:8px;border-radius:99px;background:rgba(0,0,0,.28);overflow:hidden}
+.audio-meter span{display:block;height:100%;width:0;border-radius:99px;background:#fff;transition:width .25s linear}
+.audio-panel.is-recording #audioRecordStart{opacity:.5}
+.audio-panel.is-recording .audio-rec-live strong:before{content:"";display:inline-block;width:9px;height:9px;margin-right:7px;border-radius:50%;background:#ff5468;animation:audioPulse 1s ease-in-out infinite}
+@keyframes audioPulse{50%{opacity:.25}}
+.audio-voice-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.audio-voice-options .field-label:first-child,.audio-voice-options select:first-of-type{grid-column:1/-1}
+.audio-voice-options input[type=range],.audio-voice-options .field-label:nth-of-type(4){grid-column:1/-1}
+.audio-sequence-builder,.audio-library-list{display:grid;gap:10px;margin:13px 0}
+.audio-empty{margin:0;padding:17px;border:1px dashed var(--soft-border);border-radius:20px;color:var(--muted);font-size:.8rem;line-height:1.6}
+.audio-page .audio-library-item,.audio-page .audio-sequence-track{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:14px 16px;margin:0}
+.audio-item-main{min-width:0;flex:1}
+.audio-item-main strong,.audio-item-main small{display:block;overflow-wrap:anywhere}
+.audio-item-main strong{font-size:.88rem}
+.audio-item-main small{margin-top:4px;font-size:.7rem;line-height:1.5;opacity:.88}
+.audio-item-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.audio-item-actions button{min-height:36px;padding:7px 12px;font-size:.72rem}
+.audio-track-settings{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.73rem}
+.audio-track-settings input{width:62px;min-height:35px;padding:6px 8px;border:1px solid var(--border);border-radius:14px;background:var(--bg);color:inherit}
+.audio-sequence-track>input[type=checkbox]{width:20px;height:20px;flex:0 0 auto;accent-color:#fff}
+.audio-order{flex:0 0 auto;min-width:24px;height:24px;border-radius:50%;background:#fff;color:var(--pill-ink,#333);font-size:.72rem;font-weight:850;display:inline-flex;align-items:center;justify-content:center}
+.audio-section-heading{justify-content:space-between;align-items:flex-end;margin:22px 0 12px}
+.audio-section-heading h2{font-size:1.25rem}
+/* Lecteur : bloc flottant collé en bas de l'écran */
+.audio-page .audio-player-panel{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;margin:18px 0 0;padding:16px 18px}
+.audio-player-top{justify-content:space-between;align-items:flex-start}
+.audio-player-controls{margin:12px 0}
+.audio-player-controls button{min-width:92px}
+.audio-player-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}
+@media(max-width:720px){.audio-create-grid{grid-template-columns:1fr}.audio-page .audio-library-item{align-items:flex-start;flex-direction:column}.audio-item-actions{width:100%}.audio-item-actions button{flex:1}.audio-voice-options,.audio-player-settings{grid-template-columns:1fr}.audio-voice-options .field-label:first-child,.audio-voice-options select:first-of-type{grid-column:auto}.audio-player-controls button{flex:1;min-width:0}.audio-section-heading{align-items:flex-start}.audio-page .audio-sequence-track{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.audio-meter span{transition:none}.audio-panel.is-recording .audio-rec-live strong:before{animation:none}}
