@@ -451,6 +451,19 @@ window.__auroreAudioCleanup = function () {
   window.removeEventListener("online", onOnline);
   if (window.speechSynthesis && speechSynthesis.onvoiceschanged === fillVoices) speechSynthesis.onvoiceschanged = null;
 };
+
+/* Les pistes MP3 créées dans la fenêtre Cloudflare rejoignent la bibliothèque native. */
+window.addEventListener("aurore-neural-audio-created", function (event) {
+  var record = event && event.detail && event.detail.record;
+  if (!record || !record.id || records.some(function (item) { return item.id === record.id; })) return;
+  records.unshift(record);
+  writeLocal();
+  render();
+  status("audioTextStatus", "Voix Cloudflare ajoutée à ta bibliothèque audio.");
+  syncManifest().then(render).catch(function () {
+    status("audioAccountStatus", "Audio conservé sur cet appareil ; synchronisation cloud à réessayer.", true);
+  });
+});
 function init() {
   var local = readLocal(); records = local.records; sequences = local.sequences;
   $("audioPlayerPanel").hidden = true;
