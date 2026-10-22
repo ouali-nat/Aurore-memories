@@ -1,7 +1,18 @@
 (function () {
 "use strict";
-if (window.__auroreCloudflareVoiceTestLoaded) return;
-window.__auroreCloudflareVoiceTestLoaded = true;
+if (typeof window.__auroreCloudflareVoiceCleanup === "function") {
+  try { window.__auroreCloudflareVoiceCleanup(); } catch (_) {}
+}
+if (!document.getElementById("audioTextSave")) {
+  window.__auroreCloudflareVoiceCleanup = null;
+  return;
+}
+const controlsCleanup = [];
+window.__auroreCloudflareVoiceCleanup = function () {
+  controlsCleanup.splice(0).forEach(fn => { try { fn(); } catch (_) {} });
+  const dialog = document.getElementById("audioCloudflareDialog");
+  if (dialog) { try { if (dialog.open) dialog.close(); } catch (_) {} dialog.remove(); }
+};
 
 const DB = "aurore-audio-library-v1", STORE = "blobs", MANIFEST = "aurore-audio-manifest-v1";
 const MAX_MS = 6 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
@@ -212,9 +223,10 @@ function cloudflareDialog() {
 }
 function addControls() {
   const staticButton = $("audioCloudflareEntry");
-  if (staticButton && !staticButton.dataset.bound) {
-    staticButton.dataset.bound = "true";
+  if (staticButton) {
     staticButton.addEventListener("click", cloudflareDialog);
+    controlsCleanup.push(() => staticButton.removeEventListener("click", cloudflareDialog));
+    return;
   }
   const save = $("audioTextSave");
   const panel = save && save.closest(".form-panel");
@@ -226,6 +238,8 @@ function addControls() {
   button.type = "button"; button.id = "audioNeuralGenerate"; button.className = "secondary-btn";
   button.textContent = "✦ Expérimenter la voix Cloudflare";
   button.addEventListener("click", cloudflareDialog);
+  controlsCleanup.push(() => button.removeEventListener("click", cloudflareDialog));
+  controlsCleanup.push(() => { row.remove(); help.remove(); });
   row.appendChild(button);
   const help = document.createElement("p");
   help.className = "form-help";
@@ -234,20 +248,9 @@ function addControls() {
   if (status) { panel.insertBefore(row, status); panel.insertBefore(help, status); }
   else panel.append(row, help);
 }
-function openCloudflareFromChooser() {
-  if (new URLSearchParams(window.location.search).get("cloudflare") !== "1") return;
-  const open = () => {
-    const button = $("audioNeuralGenerate");
-    if (button) button.click();
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { addControls(); open(); }, {once:true});
-  else { addControls(); open(); }
-}
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", addControls, {once:true});
-  document.addEventListener("DOMContentLoaded", openCloudflareFromChooser, {once:true});
 } else {
   addControls();
-  openCloudflareFromChooser();
 }
 })();

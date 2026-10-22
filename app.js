@@ -228,7 +228,7 @@
   }
 
   function setColor(name, persist) {
-    var value = themes.indexOf(name) !== -1 ? name : "violet";
+    var value = themes.indexOf(name) !== -1 ? name : "rose";
     root.dataset.colorTheme = value;
     document.querySelectorAll("[data-color-choice]").forEach(function (button) {
       button.setAttribute("aria-pressed", button.dataset.colorChoice === value ? "true" : "false");
@@ -253,10 +253,10 @@
 
   try {
     setTheme(localStorage.getItem("aurore-memory-theme") || "system", false);
-    setColor(localStorage.getItem("aurore-memory-color-theme") || "violet", false);
+    setColor(localStorage.getItem("aurore-memory-color-theme") || "rose", false);
   } catch (e) {
     setTheme("system", false);
-    setColor("violet", false);
+    setColor("rose", false);
   }
 
   if (themeToggle) {

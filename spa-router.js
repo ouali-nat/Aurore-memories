@@ -3,6 +3,8 @@
 if(window.__auroreSpaRouterReady)return;window.__auroreSpaRouterReady=true;
 var cache=new Map(),serial=0,activeHref=location.href,maxCache=16,warmed=new Set();
 var SCROLL_KEY="aurore-spa-scroll-v1";
+var PAGE_STYLE_ATTR="data-aurore-spa-page-style";
+Array.prototype.forEach.call(document.querySelectorAll('link[rel="stylesheet"][href]'),function(link){link.setAttribute(PAGE_STYLE_ATTR,"true")});
 var style=document.createElement("style");style.id="aurore-spa-motion-style";style.textContent="main.main-content,main.groups-main{transition:opacity .12s ease,transform .12s ease}main[aria-busy=true]{opacity:.82}main.aurore-spa-enter{animation:auroreSpaEnter .16s ease-out}@keyframes auroreSpaEnter{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){main.main-content,main.groups-main{transition:none!important}main.aurore-spa-enter{animation:none!important}}";document.head.appendChild(style);
 function urlOf(v){try{return new URL(v,location.href)}catch(e){return null}}
 function pageName(u){return u?u.pathname.split("/").pop()||"index.html":""}
@@ -27,13 +29,16 @@ async function metadata(doc,u){
 if(doc.title)document.title=doc.title;
 ["description","theme-color"].forEach(function(n){var inc=doc.querySelector('meta[name="'+n+'"]');if(!inc)return;var cur=document.querySelector('meta[name="'+n+'"]');if(!cur){cur=document.createElement("meta");cur.name=n;document.head.appendChild(cur)}cur.content=inc.content||""});
 var pending=[];
+var desiredStyles=new Set();
 Array.prototype.forEach.call(doc.querySelectorAll('link[rel="stylesheet"][href]'),function(inc){
 var href,desiredMedia;
 try{href=new URL(inc.getAttribute("href"),u.href).href;desiredMedia=inc.media&&inc.media!=="all"&&inc.media!=="print"?inc.media:"all"}catch(e){return}
+desiredStyles.add(href);
 var link=null;
 Array.prototype.some.call(document.querySelectorAll('link[rel="stylesheet"][href]'),function(l){try{if(new URL(l.href,location.href).href===href){link=l;return true}}catch(e){}return false});
 var created=false;
 if(!link){link=document.createElement("link");link.rel="stylesheet";link.href=href;link.media="not all";created=true}
+link.setAttribute(PAGE_STYLE_ATTR,"true");
 var needsWait=created||!link.sheet;
 if(needsWait){
 var promise=new Promise(function(resolve){
@@ -52,6 +57,11 @@ link.media=desiredMedia;
 }
 });
 await Promise.all(pending);
+/* Retire les feuilles de style de l’ancienne route seulement après chargement des nouvelles. */
+Array.prototype.forEach.call(document.querySelectorAll('link[rel="stylesheet"][href]['+PAGE_STYLE_ATTR+']'),function(link){
+var href;try{href=new URL(link.href,location.href).href}catch(e){return}
+if(!desiredStyles.has(href))link.remove();
+});
 }
 function bodyRoute(body){["data-page","data-mode-page"].forEach(function(n){if(body.hasAttribute(n))document.body.setAttribute(n,body.getAttribute(n));else document.body.removeAttribute(n)});if(body.className)document.body.className=body.className;else document.body.removeAttribute("class")}
 function header(doc){var a=document.querySelectorAll(".top-actions a"),b=doc.querySelectorAll(".top-actions a");for(var i=0;i<Math.min(a.length,b.length);i++){a[i].href=b[i].getAttribute("href")||b[i].href;a[i].textContent=b[i].textContent;a[i].className=b[i].className;Array.from(a[i].attributes).forEach(function(x){if(x.name.indexOf("data-")===0&&!b[i].hasAttribute(x.name))a[i].removeAttribute(x.name)});Array.from(b[i].attributes).forEach(function(x){if(x.name.indexOf("data-")===0)a[i].setAttribute(x.name,x.value)})}
