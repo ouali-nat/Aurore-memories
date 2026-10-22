@@ -39,7 +39,7 @@ async function generate() {
   if (!text) throw Error("Écris d’abord le texte à lire.");
   const rate = Number($("audioRate").value) || 1;
   const words = text.split(/\s+/).filter(Boolean).length;
-  if (Math.ceil(words / 2.5 / rate * 60) * 1000 > MAX_MS) throw Error("Le texte dépasse environ six minutes. Raccourcis-le ou crée plusieurs pistes.");
+  if (Math.ceil(words / 2.5 / rate) * 1000 > MAX_MS) throw Error("Le texte dépasse environ six minutes. Raccourcis-le ou crée plusieurs pistes.");
   if (!navigator.onLine) throw Error("La génération HD nécessite Internet. Une fois enregistrée, la piste pourra être relue hors ligne.");
   status("Génération de la voix HD en cours…", false);
   const response = await api("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, language: $("audioLanguage").value }) });
