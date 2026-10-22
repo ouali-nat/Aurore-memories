@@ -26,13 +26,14 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 2
 
       - name: Detect Worker source changes
         id: changes
         shell: bash
         run: |
           set -euo pipefail
-          if git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" | grep -Eq '^(worker/|wrangler\.toml$)'; then
+          if git diff --name-only HEAD^ HEAD | grep -Eq '^(worker/|wrangler\.toml$)'; then
             echo "deploy_needed=true" >> "$GITHUB_OUTPUT"
             echo "Worker source changed in this commit; deployment is required."
           else
