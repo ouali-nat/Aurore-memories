@@ -361,39 +361,55 @@ function cloudflareDialog() {
   });
   $("audioCloudflareStop").addEventListener("click", () => { player.pause(); $("audioCloudflareStop").disabled = true; });
 
+  $("audioCloudflareText").addEventListener("input", updateVoiceEstimate);
+  function updateVoiceEstimate() {
+    const text = $("audioCloudflareText").value.trim();
+    const words = text.split(/\s+/).filter(Boolean).length;
+    const estimate = text ? Math.ceil(words / 2.2) : 0;
+    const target = $("audioCloudflareEstimate");
+    if (!target) return;
+    if (!text) target.textContent = "La durée estimée apparaîtra ici.";
+    else if (quotaSnapshot && estimate > quotaSnapshot.remainingSeconds) {
+      target.textContent = "Durée estimée : " + quotaTime(estimate) + ". Il ne reste que " + quotaTime(quotaSnapshot.remainingSeconds) + " ; raccourcis le texte pour éviter un refus.";
+    } else {
+      target.textContent = "Durée indicative : " + quotaTime(estimate) + ". Le compteur final utilise la durée réelle du fichier.";
+    }
+  }
   generateButton.addEventListener("click", async () => {
     const prompt = $("audioCloudflareText").value.trim();
-    const rate = Number($("audioCloudflareRate").value) || 1;
     const words = prompt.split(/\s+/).filter(Boolean).length;
-    if (!prompt) return setStatus("Écris un texte avant de lancer le test.", true);
+    const estimate = Math.ceil(words / 2.2);
+    if (!prompt) return setStatus("Écris un texte avant de générer la voix.", true);
     if (prompt.length > 5000) return setStatus("Le texte ne doit pas dépasser 5 000 caractères.", true);
-    if (Math.ceil(words / 2.5 / rate) * 1000 > MAX_MS) {
-      return setStatus("Le texte dépasse environ six minutes à cette vitesse. Raccourcis-le pour tester.", true);
+    if (!quotaSnapshot) {
+      await refreshVoiceQuota();
+      if (!quotaSnapshot) return setStatus("Connecte-toi avec Aurore ID pour utiliser une autre voix.", true);
+    }
+    if (quotaSnapshot.inProgress) return setStatus("Une génération est déjà en cours sur ton compte. Patiente puis actualise le compteur.", true);
+    if (estimate > quotaSnapshot.remainingSeconds) {
+      return setStatus("Le texte est estimé à " + quotaTime(estimate) + ", mais il ne reste que " + quotaTime(quotaSnapshot.remainingSeconds) + ". Raccourcis-le avant de lancer la génération.", true);
     }
     if (!healthReady) {
       await checkHealth();
       if (!healthReady) return;
     }
-    generateButton.disabled = true;
+    generationInProgress = true;
+    updateQuotaView(quotaSnapshot);
     saveButton.disabled = true;
-    setStatus("Cloudflare génère la voix…");
+    setStatus("Génération de la voix en cours…");
     try {
-      if (!navigator.onLine) throw Error("Une connexion Internet est nécessaire pour générer une voix Cloudflare.");
+      if (!navigator.onLine) throw Error("Une connexion Internet est nécessaire pour générer une voix.");
       const response = await authApi("/api/tts", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({text:prompt, language:$("audioCloudflareLanguage").value, model:modelSelect.value, voice:speakerSelect.value})
+        body:JSON.stringify({text:prompt, language:languageSelect.value, model:modelSelect.value, voice:speakerSelect.value})
       });
       if (!response.ok) {
-        let message = "Échec de la génération Cloudflare (HTTP " + response.status + ").";
+        let message = "La génération de la voix a échoué (HTTP " + response.status + ").";
         try { const detail = await response.json(); if (detail && detail.error) message = detail.error; } catch (_) {}
         throw Error(message);
       }
       const contentType = response.headers.get("Content-Type") || "";
-      if (!contentType.startsWith("audio/")) {
-        let message = "Le serveur n’a pas renvoyé un fichier audio valide.";
-        try { const detail = await response.json(); if (detail && detail.error) message = detail.error; } catch (_) {}
-        throw Error(message);
-      }
+      if (!contentType.startsWith("audio/")) throw Error("Le service n’a pas renvoyé un fichier audio valide.");
       const blob = await response.blob();
       if (!blob.size || blob.size > MAX_BYTES) throw Error("Le fichier audio est vide ou dépasse 10 Mo.");
       if (player.dataset.objectUrl) URL.revokeObjectURL(player.dataset.objectUrl);
@@ -403,12 +419,17 @@ function cloudflareDialog() {
       player.hidden = false;
       applyPlaybackEffects();
       saveButton.disabled = false;
-      setStatus("Voix Cloudflare générée. Écoute le résultat, puis ajoute-le à ta bibliothèque si tu le souhaites.");
       try { await player.play(); $("audioCloudflareStop").disabled = false; } catch (_) {}
+      await refreshVoiceQuota();
+      const generatedSeconds = Number(response.headers.get("X-Aurore-Audio-Seconds")) || estimate;
+      setStatus("Voix générée (" + quotaTime(generatedSeconds) + "). Il te reste " +
+        quotaTime(quotaSnapshot ? quotaSnapshot.remainingSeconds : 0) + " aujourd’hui. Tu peux écouter la piste ou l’ajouter à ta bibliothèque.");
     } catch (error) {
-      setStatus(error.message || "Impossible de générer la voix Cloudflare.", true);
+      setStatus(error.message || "Impossible de générer la voix.", true);
+      await refreshVoiceQuota();
     } finally {
-      generateButton.disabled = false;
+      generationInProgress = false;
+      updateQuotaView(quotaSnapshot);
     }
   });
 
@@ -419,7 +440,7 @@ function cloudflareDialog() {
     try {
       const blob = await (await fetch(player.dataset.objectUrl)).blob();
       if (!blob.size || blob.size > MAX_BYTES) throw Error("Le fichier audio est vide ou dépasse 10 Mo.");
-      const id = uid(), name = ($("audioCloudflareName").value.trim() || "Essai voix Cloudflare").slice(0,100);
+      const id = uid(), name = ($("audioCloudflareName").value.trim() || "Voix alternative").slice(0,100);
       const record = {
         id, kind:"recording", name, key:"audios/" + id + ".mp3", mime:"audio/mpeg",
         size:blob.size, durationMs:Number.isFinite(player.duration) ? Math.round(player.duration * 1000) : null,
@@ -441,7 +462,7 @@ function cloudflareDialog() {
         });
         cloudMessage = "Audio enregistré et synchronisé dans ton espace privé.";
       } catch (error) {
-        cloudMessage += " Synchronisation cloud à vérifier : " + error.message;
+        cloudMessage += " Synchronisation en ligne à vérifier : " + error.message;
       }
       window.dispatchEvent(new CustomEvent("aurore-neural-audio-created", {detail:{record}}));
       setStatus(cloudMessage);
@@ -477,14 +498,14 @@ function addControls() {
   row.style.marginTop = "9px";
   const button = document.createElement("button");
   button.type = "button"; button.id = "audioNeuralGenerate"; button.className = "secondary-btn";
-  button.textContent = "✦ Expérimenter la voix Cloudflare";
+  button.textContent = "Choisir une autre voix";
   button.addEventListener("click", cloudflareDialog);
   controlsCleanup.push(() => button.removeEventListener("click", cloudflareDialog));
   controlsCleanup.push(() => { row.remove(); help.remove(); });
   row.appendChild(button);
   const help = document.createElement("p");
   help.className = "form-help";
-  help.textContent = "Teste la génération cloud séparément ; l’aperçu vocal du téléphone reste disponible ci-dessus.";
+  help.textContent = "Choisis une voix différente sans modifier celle de ton téléphone.";
   const status = $("audioTextStatus");
   if (status) { panel.insertBefore(row, status); panel.insertBefore(help, status); }
   else panel.append(row, help);
