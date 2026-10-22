@@ -487,6 +487,15 @@ function cloudflareDialog() {
   dialog.showModal();
 }
 function addControls() {
+  const pageConnect = $("audioVoiceQuotaConnect");
+  if (pageConnect) pageConnect.addEventListener("click", event => connectVoiceAccount(event.currentTarget));
+  controlsCleanup.push(() => {
+    if (pageConnect) pageConnect.removeEventListener("click", event => connectVoiceAccount(event.currentTarget));
+  });
+  window.addEventListener("aurore:auth-changed", refreshVoiceQuota);
+  controlsCleanup.push(() => window.removeEventListener("aurore:auth-changed", refreshVoiceQuota));
+  refreshVoiceQuota();
+
   const staticButton = $("audioCloudflareEntry");
   if (staticButton) {
     staticButton.addEventListener("click", cloudflareDialog);
