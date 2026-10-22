@@ -112,8 +112,11 @@ function cloudflareDialog() {
     '<p class="cloudflare-intro">Teste une voix neuronale générée dans le cloud, sans modifier la voix déjà intégrée à ton téléphone.</p>' +
     '<label class="field-label" for="audioCloudflareName">Nom de la piste</label><input class="text-field" id="audioCloudflareName" maxlength="100" value="Essai voix Cloudflare" placeholder="Ex. : Révision de biologie">' +
     '<label class="field-label" for="audioCloudflareText">Texte d’essai</label><textarea class="text-area" id="audioCloudflareText" rows="5" maxlength="5000">Bonjour et bienvenue dans Aurore Mémoire. Apprendre, répéter et mémoriser devient plus simple avec une voix claire et naturelle.</textarea>' +
-    '<div class="cloudflare-options"><div><label class="field-label" for="audioCloudflareLanguage">Langue de la voix</label><select class="text-field" id="audioCloudflareLanguage"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="zh">Chinois</option><option value="jp">Japonais</option><option value="kr">Coréen</option></select></div>' +
+    '<div class="cloudflare-options"><div><label class="field-label" for="audioCloudflareModel">Moteur vocal</label><select class="text-field" id="audioCloudflareModel"><option value="melotts">MeloTTS · multilingue</option><option value="aura-1">Deepgram Aura · anglais</option><option value="aura-2-en">Deepgram Aura-2 · anglais</option><option value="aura-2-es">Deepgram Aura-2 · espagnol</option></select></div>' +
+    '<div><label class="field-label" for="audioCloudflareLanguage">Langue de la voix</label><select class="text-field" id="audioCloudflareLanguage"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="zh">Chinois</option><option value="jp">Japonais</option><option value="kr">Coréen</option></select></div>' +
+    '<div id="audioCloudflareSpeakerWrap"><label class="field-label" for="audioCloudflareSpeaker">Voix</label><select class="text-field" id="audioCloudflareSpeaker"><option value="">Voix du modèle</option></select></div>' +
     '<div><label class="field-label" for="audioCloudflareRate">Vitesse de lecture <span id="audioCloudflareRateLabel">1×</span></label><input id="audioCloudflareRate" type="range" min="0.7" max="1.3" step="0.1" value="1"></div></div>' +
+    '<p class="form-help" id="audioCloudflareVoiceNote">MeloTTS propose plusieurs langues, mais pas de sélection de timbre dans ce modèle.</p>'
     '<div class="cloudflare-actions"><button type="button" class="primary-btn" id="audioCloudflareGenerate" disabled>▶ Générer et écouter</button><button type="button" class="secondary-btn" id="audioCloudflareRetry">↻ Vérifier le service</button><button type="button" class="secondary-btn" id="audioCloudflareStop" disabled>■ Arrêter</button></div>' +
     '<audio id="audioCloudflarePlayer" controls hidden></audio><p id="audioCloudflareStatus" class="audio-status" role="status" aria-live="polite">Prêt à tester la voix Cloudflare.</p>' +
     '<div class="cloudflare-dialog-foot"><span class="form-help">L’essai reste privé. Il n’est pas ajouté automatiquement à ta bibliothèque.</span><button type="button" class="secondary-btn" id="audioCloudflareSave" disabled>＋ Ajouter à ma bibliothèque</button></div>';
@@ -122,6 +125,35 @@ function cloudflareDialog() {
   const player = $("audioCloudflarePlayer");
   const generateButton = $("audioCloudflareGenerate");
   const saveButton = $("audioCloudflareSave");
+  const modelSelect = $("audioCloudflareModel");
+  const speakerSelect = $("audioCloudflareSpeaker");
+  const languageSelect = $("audioCloudflareLanguage");
+  const voiceNote = $("audioCloudflareVoiceNote");
+  const speakers = {
+    "melotts": [],
+    "aura-1": ["angus","asteria","arcas","orion","orpheus","athena","luna","zeus","perseus","helios","hera","stella"],
+    "aura-2-en": ["amalthea","andromeda","apollo","arcas","aries","asteria","athena","atlas","aurora","callista","cora","cordelia","delia","draco","electra","harmonia","helena","hera","hermes","hyperion","iris","janus","juno","jupiter","luna","mars","minerva","neptune","odysseus","ophelia","orion","orpheus","pandora","phoebe","pluto","saturn","thalia","theia","vesta","zeus"],
+    "aura-2-es": ["sirio","nestor","carina","celeste","alvaro","diana","aquila","selena","estrella","javier"]
+  };
+  function refreshCloudflareVoices() {
+    const model = modelSelect.value;
+    speakerSelect.textContent = "";
+    (speakers[model] || []).forEach(name => {
+      const option = document.createElement("option");
+      option.value = name; option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      speakerSelect.appendChild(option);
+    });
+    const hasSpeaker = (speakers[model] || []).length > 0;
+    $("audioCloudflareSpeakerWrap").hidden = !hasSpeaker;
+    voiceNote.textContent = model === "melotts"
+      ? "MeloTTS prend en charge plusieurs langues, mais ne permet pas de choisir un timbre précis."
+      : "Choisis une voix Deepgram. Ce moteur est prévu pour " + (model === "aura-2-es" ? "l’espagnol." : "l’anglais.") + " Le résultat dépend du modèle sélectionné.";
+    if (model === "aura-1" || model === "aura-2-en") languageSelect.value = "en";
+    if (model === "aura-2-es") languageSelect.value = "es";
+    languageSelect.disabled = model !== "melotts";
+  }
+  modelSelect.addEventListener("change", refreshCloudflareVoices);
+  refreshCloudflareVoices();
   $("audioCloudflareRetry").addEventListener("click", checkHealth);
   dialog.querySelector(".cloudflare-close").addEventListener("click", () => { player.pause(); dialog.close(); });
   dialog.addEventListener("click", event => { if (event.target === dialog) { player.pause(); dialog.close(); } });
@@ -151,7 +183,7 @@ function cloudflareDialog() {
       if (!navigator.onLine) throw Error("Une connexion Internet est nécessaire pour générer une voix Cloudflare.");
       const response = await authApi("/api/tts", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({text:prompt, language:$("audioCloudflareLanguage").value})
+        body:JSON.stringify({text:prompt, language:$("audioCloudflareLanguage").value, model:modelSelect.value, voice:speakerSelect.value})
       });
       const blob = await response.blob();
       if (!blob.size || blob.size > MAX_BYTES) throw Error("Le fichier audio est vide ou dépasse 10 Mo.");
