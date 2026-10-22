@@ -436,7 +436,7 @@ function bind() {
   on("audioRecordStop", "click", stopRecording);
   on("audioImport", "change", importFile);
   on("audioRate", "input", function () { $("audioRateLabel").textContent = Number(this.value).toFixed(1) + "×"; });
-  /* L’aperçu est géré par délégation globale pour résister à la navigation SPA. */
+  on("audioTextPreview", "click", previewText);
   on("audioTextStop", "click", stopPreview);
   on("audioTextSave", "click", addText);
   on("playerToggle", "click", togglePlay);
@@ -454,11 +454,12 @@ if (!window.__auroreAudioPreviewDelegated) {
   window.__auroreAudioPreviewDelegated = true;
   document.addEventListener("click", function (event) {
     var button = event.target && event.target.closest ? event.target.closest("#audioTextPreview") : null;
-    if (!button) return;
+    if (!button || button.dataset.previewHandled === "1") return;
+    button.dataset.previewHandled = "1";
     event.preventDefault();
     previewText().catch(function (error) {
       status("audioTextStatus", "L’aperçu n’a pas pu démarrer : " + (error && error.message ? error.message : "erreur inattendue") + ".", true);
-    });
+    }).finally(function () { button.dataset.previewHandled = "0"; });
   }, true);
 }
 window.__auroreAudioCleanup = function () {
