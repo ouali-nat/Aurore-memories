@@ -117,13 +117,14 @@ function cloudflareDialog() {
     '<div id="audioCloudflareSpeakerWrap"><label class="field-label" for="audioCloudflareSpeaker">Voix</label><select class="text-field" id="audioCloudflareSpeaker"><option value="">Voix du modèle</option></select></div>' +
     '<div><label class="field-label" for="audioCloudflareRate">Vitesse de lecture <span id="audioCloudflareRateLabel">1×</span></label><input id="audioCloudflareRate" type="range" min="0.7" max="1.3" step="0.1" value="1"></div></div>' +
     '<p class="form-help" id="audioCloudflareVoiceNote">MeloTTS propose plusieurs langues, mais pas de sélection de timbre dans ce modèle.</p>'
-    '<div class="cloudflare-actions"><button type="button" class="primary-btn" id="audioCloudflareGenerate" disabled>▶ Générer et écouter</button><button type="button" class="secondary-btn" id="audioCloudflareRetry">↻ Vérifier le service</button><button type="button" class="secondary-btn" id="audioCloudflareStop" disabled>■ Arrêter</button></div>' +
+    '<div class="cloudflare-actions"><button type="button" class="secondary-btn" id="audioCloudflareBrowserPreview">▶ Aperçu navigateur</button><button type="button" class="primary-btn" id="audioCloudflareGenerate" disabled>☁ Générer et écouter</button><button type="button" class="secondary-btn" id="audioCloudflareRetry">↻ Vérifier le service</button><button type="button" class="secondary-btn" id="audioCloudflareStop" disabled>■ Arrêter</button></div>' +
     '<audio id="audioCloudflarePlayer" controls hidden></audio><p id="audioCloudflareStatus" class="audio-status" role="status" aria-live="polite">Prêt à tester la voix Cloudflare.</p>' +
     '<div class="cloudflare-dialog-foot"><span class="form-help">L’essai reste privé. Il n’est pas ajouté automatiquement à ta bibliothèque.</span><button type="button" class="secondary-btn" id="audioCloudflareSave" disabled>＋ Ajouter à ma bibliothèque</button></div>';
   document.body.appendChild(dialog);
 
   const player = $("audioCloudflarePlayer");
   const generateButton = $("audioCloudflareGenerate");
+  const browserPreviewButton = $("audioCloudflareBrowserPreview");
   const saveButton = $("audioCloudflareSave");
   const modelSelect = $("audioCloudflareModel");
   const speakerSelect = $("audioCloudflareSpeaker");
@@ -152,6 +153,31 @@ function cloudflareDialog() {
     if (model === "aura-2-es") languageSelect.value = "es";
     languageSelect.disabled = model !== "melotts";
   }
+  browserPreviewButton.addEventListener("click", () => {
+    const text = $("audioCloudflareText").value.trim();
+    if (!text) { setStatus("Écris d’abord un texte à lire.", true); return; }
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      setStatus("La lecture du navigateur n’est pas prise en charge ici. Essaie Chrome à jour et vérifie le moteur de synthèse vocale Android.", true);
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = $("audioCloudflareLanguage").value === "fr" ? "fr-FR" :
+        $("audioCloudflareLanguage").value === "en" ? "en-US" :
+        $("audioCloudflareLanguage").value === "es" ? "es-ES" :
+        $("audioCloudflareLanguage").value === "zh" ? "zh-CN" :
+        $("audioCloudflareLanguage").value === "jp" ? "ja-JP" : "ko-KR";
+      utterance.rate = Number($("audioCloudflareRate").value) || 1;
+      utterance.onstart = () => setStatus("Lecture du navigateur en cours…");
+      utterance.onend = () => setStatus("Aperçu du navigateur terminé.");
+      utterance.onerror = event => setStatus("La lecture du navigateur a échoué (" + (event.error || "erreur inconnue") + "). Vérifie la synthèse vocale Android.", true);
+      window.speechSynthesis.speak(utterance);
+      if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+    } catch (error) {
+      setStatus("Impossible de démarrer la lecture du navigateur : " + (error.message || "erreur inconnue"), true);
+    }
+  });
   modelSelect.addEventListener("change", refreshCloudflareVoices);
   refreshCloudflareVoices();
   $("audioCloudflareRetry").addEventListener("click", checkHealth);
@@ -185,6 +211,17 @@ function cloudflareDialog() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({text:prompt, language:$("audioCloudflareLanguage").value, model:modelSelect.value, voice:speakerSelect.value})
       });
+      if (!response.ok) {
+        let message = "Échec de la génération Cloudflare (HTTP " + response.status + ").";
+        try { const detail = await response.json(); if (detail && detail.error) message = detail.error; } catch (_) {}
+        throw Error(message);
+      }
+      const contentType = response.headers.get("Content-Type") || "";
+      if (!contentType.startsWith("audio/")) {
+        let message = "Le serveur n’a pas renvoyé un fichier audio valide.";
+        try { const detail = await response.json(); if (detail && detail.error) message = detail.error; } catch (_) {}
+        throw Error(message);
+      }
       const blob = await response.blob();
       if (!blob.size || blob.size > MAX_BYTES) throw Error("Le fichier audio est vide ou dépasse 10 Mo.");
       if (player.dataset.objectUrl) URL.revokeObjectURL(player.dataset.objectUrl);
