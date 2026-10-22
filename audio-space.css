@@ -79,3 +79,73 @@
 .cloudflare-dialog-foot .form-help{flex:1;min-width:150px;margin:0;color:var(--muted);font-size:.72rem;line-height:1.5}
 .cloudflare-test-dialog button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:520px){.cloudflare-test-dialog{padding:17px;border-radius:16px}.cloudflare-options{grid-template-columns:1fr;gap:2px}.cloudflare-actions>*{flex:1}.cloudflare-dialog-foot{align-items:stretch;flex-direction:column}.cloudflare-dialog-foot button{width:100%}}
+
+
+/* Bloc de choix vocal : même langage visuel que les cartes Aurore Mémoire. */
+.audio-page .audio-alternative-card{
+  display:grid;gap:15px;margin-top:18px;padding:16px;
+  border:1px solid var(--border,rgba(255,255,255,.22));
+  border-radius:24px;background:var(--pill-bg,var(--surface,rgba(255,255,255,.055)));
+  color:var(--text,#fff);box-shadow:var(--pill-shadow,0 10px 28px rgba(0,0,0,.12));
+}
+.audio-alternative-heading{display:flex;align-items:flex-start;gap:12px}
+.audio-alternative-heading>div{min-width:0;flex:1}
+.audio-alternative-icon{display:flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;border-radius:15px;background:color-mix(in srgb,var(--accent,#e85d94) 18%,var(--pill-bg,var(--surface,#222)));color:var(--text,#fff);font-size:1.4rem}
+.audio-alternative-heading .section-kicker{margin:0 0 5px;font-size:.62rem;letter-spacing:.1em;color:var(--accent,#e85d94)}
+.audio-alternative-heading h3{margin:0 0 6px;font-size:1rem;letter-spacing:-.025em}
+.audio-alternative-heading p:last-child{margin:0;font-size:.78rem;line-height:1.55;color:var(--muted,var(--text,#fff));opacity:.92}
+.audio-voice-quota-preview{padding:12px 13px;border:1px solid var(--border,rgba(255,255,255,.17));border-radius:17px;background:color-mix(in srgb,var(--surface,rgba(255,255,255,.04)) 72%,transparent)}
+.audio-voice-quota-meta{display:grid;gap:5px}
+.audio-voice-quota-meta strong{font-size:.74rem}
+.audio-voice-quota-meta span{font-size:.77rem;line-height:1.45;color:var(--muted,var(--text,#fff));font-variant-numeric:tabular-nums}
+.audio-voice-quota-track{height:7px;margin-top:10px;border-radius:999px;overflow:hidden;background:var(--soft-border,rgba(255,255,255,.14))}
+.audio-voice-quota-track span{display:block;width:0;height:100%;border-radius:inherit;background:var(--accent,#e85d94);transition:width .25s ease}
+.audio-voice-quota-preview .form-help{margin-top:8px;font-size:.68rem}
+.audio-alternative-actions{display:flex;gap:9px;flex-wrap:wrap}
+.audio-alternative-actions>*{flex:1;min-width:160px}
+.audio-alternative-actions button{min-height:43px;border-radius:999px}
+.audio-alternative-actions button[hidden]{display:none!important}
+
+/* Sélecteurs personnalisés. Les menus natifs d’Android ne reprennent pas le thème du site. */
+.cloudflare-test-dialog .voice-choice-section{margin-top:17px}
+.cloudflare-test-dialog .voice-choice-title{margin:0 0 8px;font-size:.77rem;font-weight:800;color:var(--text,#fff)}
+.cloudflare-test-dialog .voice-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.cloudflare-test-dialog .voice-choice-card,.cloudflare-test-dialog .voice-choice-chip,.cloudflare-test-dialog .voice-speaker-choice{
+  appearance:none;-webkit-appearance:none;min-width:0;border:1px solid var(--border,rgba(255,255,255,.2));
+  background:var(--surface,rgba(255,255,255,.045));color:var(--text,#fff);
+  border-radius:17px;text-align:left;cursor:pointer;transition:border-color .15s ease,background .15s ease,transform .15s ease;
+}
+.cloudflare-test-dialog .voice-choice-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:12px}
+.cloudflare-test-dialog .voice-choice-card strong{font-size:.77rem;line-height:1.35}
+.cloudflare-test-dialog .voice-choice-card small{font-size:.67rem;line-height:1.45;color:var(--muted,var(--text,#fff))}
+.cloudflare-test-dialog .voice-choice-card[aria-pressed=true],.cloudflare-test-dialog .voice-choice-chip[aria-pressed=true],.cloudflare-test-dialog .voice-speaker-choice[aria-pressed=true]{
+  border-color:var(--accent,#e85d94);background:color-mix(in srgb,var(--accent,#e85d94) 14%,var(--pill-bg,var(--surface,#222)));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent,#e85d94) 42%,transparent);
+}
+.cloudflare-test-dialog .voice-choice-card[aria-pressed=true]::before{content:"✓ Sélectionnée";font-size:.61rem;font-weight:800;color:var(--accent,#e85d94);order:-1}
+.cloudflare-test-dialog .voice-choice-chips{display:flex;gap:7px;flex-wrap:wrap}
+.cloudflare-test-dialog .voice-choice-chip{padding:9px 12px;border-radius:999px;text-align:center;font-size:.74rem;font-weight:700}
+.cloudflare-test-dialog .voice-speaker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-height:190px;overflow:auto;padding:2px 3px 3px 0;overscroll-behavior:contain}
+.cloudflare-test-dialog .voice-speaker-choice{padding:10px 7px;text-align:center;font-size:.72rem;font-weight:700;overflow-wrap:anywhere}
+.cloudflare-test-dialog .voice-choice-card:hover,.cloudflare-test-dialog .voice-choice-chip:hover,.cloudflare-test-dialog .voice-speaker-choice:hover{border-color:var(--accent,#e85d94)}
+.cloudflare-test-dialog .voice-choice-card:focus-visible,.cloudflare-test-dialog .voice-choice-chip:focus-visible,.cloudflare-test-dialog .voice-speaker-choice:focus-visible{outline:2px solid var(--accent,#e85d94);outline-offset:2px}
+.cloudflare-test-dialog .voice-rate-control{margin-top:17px;padding:12px 13px;border:1px solid var(--border,rgba(255,255,255,.18));border-radius:17px}
+.cloudflare-test-dialog .voice-rate-control .field-label{margin:0 0 10px}
+.cloudflare-test-dialog .voice-quota-card{margin-top:17px;padding:14px;border:1px solid var(--border,rgba(255,255,255,.22));border-radius:19px;background:color-mix(in srgb,var(--accent,#e85d94) 7%,var(--pill-bg,var(--surface,#222)))}
+.cloudflare-test-dialog .voice-quota-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cloudflare-test-dialog .voice-quota-head strong{font-size:.78rem}
+.cloudflare-test-dialog .voice-quota-head span{font-size:.7rem;color:var(--muted,var(--text,#fff));text-align:right}
+.cloudflare-test-dialog .voice-quota-track{height:7px;margin:11px 0 8px;overflow:hidden;border-radius:999px;background:var(--soft-border,rgba(255,255,255,.15))}
+.cloudflare-test-dialog .voice-quota-track span{display:block;height:100%;width:0;border-radius:inherit;background:var(--accent,#e85d94);transition:width .25s ease}
+.cloudflare-test-dialog .voice-quota-card .form-help{font-size:.68rem;line-height:1.5;margin-top:7px}
+.cloudflare-test-dialog .voice-quota-connect{margin-top:10px;min-height:38px;border-radius:999px}
+.cloudflare-test-dialog [hidden]{display:none!important}
+.cloudflare-test-dialog .voice-hidden-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:520px){
+  .audio-page .audio-alternative-card{padding:14px;border-radius:21px}
+  .audio-alternative-actions{flex-direction:column}
+  .audio-alternative-actions>*{width:100%;min-width:0}
+  .cloudflare-test-dialog .voice-choice-grid{grid-template-columns:1fr}
+  .cloudflare-test-dialog .voice-speaker-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:165px}
+}
+@media(prefers-reduced-motion:reduce){.audio-voice-quota-track span,.cloudflare-test-dialog .voice-quota-track span{transition:none}}
