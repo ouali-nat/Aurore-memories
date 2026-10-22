@@ -211,6 +211,11 @@ function cloudflareDialog() {
   checkHealth();
 }
 function addControls() {
+  const staticButton = $("audioCloudflareEntry");
+  if (staticButton && !staticButton.dataset.bound) {
+    staticButton.dataset.bound = "true";
+    staticButton.addEventListener("click", cloudflareDialog);
+  }
   const save = $("audioTextSave");
   const panel = save && save.closest(".form-panel");
   if (!panel || $("audioNeuralGenerate")) return;
