@@ -89,7 +89,7 @@ export default {
       return json({
         ok: true,
         service: "aurore-memories",
-        authConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY),
+        authConfigured: Boolean((env.SUPABASE_URL || "https://oegxxndiuovisustjstp.supabase.co") && (env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_FALLBACK)),
         storageConfigured: Boolean(env.MEMORIES_BUCKET),
         memorySyncVersion: "2026-10-21-cors-app-fix",
         conditionalWrites: true,
