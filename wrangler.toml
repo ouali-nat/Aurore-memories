@@ -9,6 +9,9 @@ SUPABASE_URL = "https://oegxxndiuovisustjstp.supabase.co"
 binding = "MEMORIES_BUCKET"
 bucket_name = "aurore-memories"
 
+[ai]
+binding = "AI"
+
 [assets]
 directory = "."
 binding = "ASSETS"
