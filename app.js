@@ -15,6 +15,14 @@
   // Deployment-specific Vercel URLs are temporary and must never become navigation/share origins.
   var AURORE_CANONICAL_HOST = "aurore-memories-aurore9.vercel.app";
   var currentHost = String(window.location.hostname || "").toLowerCase();
+  // Autoriser explicitement l'inspection d'une préversion Vercel sans changer l'hôte canonique de production.
+  // Le marqueur reste limité à cette origine de prévisualisation via sessionStorage.
+  var aurorePreviewMode = false;
+  try {
+    var previewRequested = new URLSearchParams(window.location.search).get("__aurore_preview") === "1";
+    if (previewRequested) sessionStorage.setItem("aurore-memory-preview-mode", "1");
+    aurorePreviewMode = previewRequested || sessionStorage.getItem("aurore-memory-preview-mode") === "1";
+  } catch (_) {}
   var legacyCardsPresent = false;
   try {
     var legacyStore = JSON.parse(localStorage.getItem("aurore-memory-cards-v1") || "{}");
@@ -23,6 +31,7 @@
   var isLegacyMuHost = currentHost === "aurore-memories-mu.vercel.app";
   if (currentHost !== AURORE_CANONICAL_HOST &&
       /^aurore-memories(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(currentHost) &&
+      !aurorePreviewMode &&
       !(isLegacyMuHost && legacyCardsPresent)) {
     var canonicalUrl = new URL(window.location.href);
     canonicalUrl.hostname = AURORE_CANONICAL_HOST;
