@@ -19,7 +19,7 @@ var MALE = /(thomas|daniel|henri|paul|claude|remy|rémy|mathieu|antoine|guillaum
 var $ = function (id) { return document.getElementById(id); };
 var records = [], sequences = [], seqPick = [];
 var recorder = null, stream = null, chunks = [], startedAt = 0, tickTimer = 0, stopTimer = 0;
-var current = null, currentTrack = 0, playing = false, paused = false, playerAudio = null, playerUrl = null, token = 0, statusLine = "", activeSpeakEnd = null;
+var current = null, currentTrack = 0, playing = false, paused = false, playerAudio = null, playerUrl = null, token = 0, statusLine = "", activeSpeakEnd = null, sequenceRound = 1;
 
 function uid() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "au-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10); }
 function status(id, msg, error) { var el = $(id); if (el) { el.textContent = msg || ""; el.dataset.error = error ? "true" : "false"; } }
@@ -299,7 +299,7 @@ function stopPlayback() {
 }
 function selectedTracks() {
   if (!current) return [];
-  if (current.type === "sequence") return current.item.tracks.map(function (t) { return { record: records.find(function (r) { return r.id === t.id; }), repeat: Math.max(1, Math.min(20, Number(t.repeat) || 1)) }; }).filter(function (t) { return t.record; });
+  if (current.type === "sequence") return current.item.tracks.map(function (t) { return { record: records.find(function (r) { return r.id === t.id; }), repeat: Math.max(1, Math.min(20, Number(t.repeat) || 1)), rate: Math.max(0.6, Math.min(1.4, Number(t.rate) || 1)) }; }).filter(function (t) { return t.record; });
   return [{ record: current.item, repeat: Math.max(1, Math.min(20, Number(current.item.repeat) || 1)) }];
 }
 function showPlayer() {
@@ -308,7 +308,7 @@ function showPlayer() {
   var tracks = selectedTracks(), track = tracks[currentTrack];
   $("playerKind").textContent = current.type === "sequence" ? "SÉQUENCE AUDIO" : "LECTEUR AUDIO";
   $("playerTitle").textContent = current.item.name;
-  $("playerTrackLabel").textContent = "Piste " + (Math.min(currentTrack, tracks.length - 1) + 1) + " / " + tracks.length + (statusLine ? " · " + statusLine : "");
+  $("playerTrackLabel").textContent = "Piste " + (Math.min(currentTrack, tracks.length - 1) + 1) + " / " + tracks.length + (current.type === "sequence" ? " · Séquence " + sequenceRound + "/" + (Number($("playerSequenceRepeat").value)||1) : "") + (statusLine ? " · " + statusLine : "");
   var box = $("playerTrackContent"); box.textContent = "";
   if (track) {
     var main = document.createElement("div"); main.className = "audio-item-main";
@@ -366,9 +366,9 @@ async function playTrack() {
   }
   if (my !== token) return;
   if (currentTrack < tracks.length - 1) { currentTrack++; playTrack(); }
-  else { playing = false; paused = false; currentTrack = 0; statusLine = "terminé"; showPlayer(); }
+  else if (current.type === "sequence" && sequenceRound < Math.max(1, Math.min(20, Number(current.sequenceRepeat) || 1))) { sequenceRound++; currentTrack = 0; playTrack(); }\n  else { playing = false; paused = false; currentTrack = 0; sequenceRound = 1; statusLine = "terminé"; showPlayer(); }
 }
-function openPlayer(type, item) { stopPlayback(); current = { type: type, item: item, rate: 1 }; currentTrack = 0; statusLine = ""; showPlayer(); playTrack(); }
+function openPlayer(type, item) { stopPlayback(); current = { type: type, item: item, rate: 1, sequenceRepeat: 1 }; currentTrack = 0; sequenceRound = 1; statusLine = "Prêt à lire"; showPlayer(); }
 function togglePlay() {
   if (playing && !paused) { paused = true; if (playerAudio) playerAudio.pause(); if (window.speechSynthesis && speechSynthesis.speaking) speechSynthesis.pause(); showPlayer(); return; }
   if (playing && paused) { paused = false; if (playerAudio) playerAudio.play(); if (window.speechSynthesis && speechSynthesis.paused) speechSynthesis.resume(); showPlayer(); return; }
@@ -407,7 +407,7 @@ async function saveSequence() {
   if (!name) return status("sequenceStatus", "Donne un nom à la séquence.", true);
   if (!seqPick.length) return status("sequenceStatus", "Coche au moins un audio (l’ordre des coches = l’ordre de lecture).", true);
   var tracks = seqPick.map(function (id) { var inp = $("sequenceBuilder").querySelector('[data-repeat-for="' + id + '"]'); return { id: id, repeat: Math.max(1, Math.min(20, Number(inp && inp.value) || 1)) }; });
-  sequences.unshift({ id: uid(), name: name.slice(0, 100), tracks: tracks, createdAt: new Date().toISOString(), public: false });
+  sequences.unshift({ id: uid(), name: name.slice(0, 100), tracks: tracks.map(function(t){return {id:t.id,repeat:t.repeat,rate:1};}), createdAt: new Date().toISOString(), public: false });
   seqPick = []; $("sequenceName").value = "";
   writeLocal(); render();
   status("sequenceStatus", "Séquence enregistrée.");
@@ -417,30 +417,20 @@ async function saveSequence() {
 /* ---------- Bibliothèque ---------- */
 function render() {
   var box = $("audioLibraryList"); if (!box) return; box.textContent = "";
-  var all = records.map(function (r) { return { type: "audio", item: r }; }).concat(sequences.map(function (s) { return { type: "sequence", item: s }; }));
-  if (!all.length) { var e = document.createElement("p"); e.className = "audio-empty"; e.textContent = "Aucun audio pour le moment. Enregistre ta voix ou fais lire un texte ci-dessus."; box.append(e); renderSequenceBuilder(); return; }
-  all.forEach(function (entry) {
-    var r = entry.item, row = document.createElement("article"); row.className = "draft-card audio-library-item";
+  if (!sequences.length) {
+    var e = document.createElement("p"); e.className = "audio-empty";
+    e.textContent = "Aucune séquence enregistrée pour le moment. Crée d’abord une séquence dans Mes audios.";
+    box.append(e); renderSequenceBuilder(); return;
+  }
+  sequences.forEach(function (seq) {
+    var row = document.createElement("article"); row.className = "draft-card audio-library-item audio-sequence-card";
     var main = document.createElement("div"); main.className = "audio-item-main";
-    var title = document.createElement("strong"); title.textContent = (entry.type === "sequence" ? "▤ " : "♫ ") + r.name;
-    var meta = document.createElement("small");
-    var kindText = entry.type === "sequence" ? r.tracks.length + " piste(s) · séquence" : (r.kind === "speech" ? "Texte lu" : "Enregistrement" + (r.size ? " · " + bytes(r.size) : "") + (r.durationMs ? " · " + clock(r.durationMs) : ""));
-    meta.textContent = kindText + " · " + new Date(r.createdAt).toLocaleDateString("fr-FR") + " · ID " + String(r.id).slice(0, 8) + (r.synced ? " · synchronisé" : "");
-    meta.title = "ID Aurore : " + r.id;
+    var title = document.createElement("strong"); title.textContent = seq.name;
+    var meta = document.createElement("small"); meta.textContent = seq.tracks.length + " piste(s) · séquence de révision · " + new Date(seq.createdAt).toLocaleDateString("fr-FR");
     main.append(title, meta);
     var actions = document.createElement("div"); actions.className = "audio-item-actions";
-    function button(label, fn) { var b = document.createElement("button"); b.className = "secondary-btn"; b.type = "button"; b.textContent = label; b.addEventListener("click", fn); actions.append(b); }
-    button("▶ Écouter", function () { openPlayer(entry.type, r); });
-    if (entry.type === "audio") button("↓ Télécharger", function () { downloadAudio(r); });
-    button("Supprimer", async function () {
-      if (!confirm("Supprimer « " + r.name + " » de cette bibliothèque ?")) return;
-      stopPlayback();
-      if (entry.type === "audio") { records = records.filter(function (x) { return x.id !== r.id; }); try { await delBlob(r.id); } catch (_) {} sequences = sequences.map(function (s) { return Object.assign({}, s, { tracks: s.tracks.filter(function (t) { return t.id !== r.id; }) }); }); }
-      else sequences = sequences.filter(function (x) { return x.id !== r.id; });
-      var panel = $("audioPlayerPanel"); if (panel) panel.hidden = true;
-      writeLocal(); render(); await syncManifest();
-    });
-    row.append(main, actions); box.append(row);
+    var open = document.createElement("button"); open.className = "primary-btn"; open.type = "button"; open.textContent = "Ouvrir la séquence"; open.addEventListener("click", function () { openPlayer("sequence", seq); });
+    actions.append(open); row.append(main, actions); box.append(row);
   });
   renderSequenceBuilder();
 }
@@ -468,8 +458,8 @@ function bind() {
   on("playerNext", "click", function () { var n = selectedTracks().length; stopPlayback(); if (currentTrack < n - 1) currentTrack++; statusLine = ""; showPlayer(); playTrack(); });
   on("playerPrevious", "click", function () { stopPlayback(); currentTrack = Math.max(0, currentTrack - 1); statusLine = ""; showPlayer(); playTrack(); });
   on("playerClose", "click", function () { stopPlayback(); $("audioPlayerPanel").hidden = true; });
-  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) current.rate = v; if (playerAudio) playerAudio.playbackRate = v; });
-  on("playerRepeat", "change", function () { if (!current || current.type !== "audio") return; current.item.repeat = Math.max(1, Math.min(20, Number(this.value) || 1)); writeLocal(); showPlayer(); });
+  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) t.rate=v; } if (playerAudio) playerAudio.playbackRate = v; });
+  on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });\n  on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
   on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + summary()); });
   window.addEventListener("online", onOnline);
