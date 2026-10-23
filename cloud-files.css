@@ -31,3 +31,7 @@ body[data-page="cloud-files"] .aurore-auth-controls,
 body[data-page="cloud-files"] .aurore-auth-user,
 body[data-page="cloud-files"] #cloudFilesAccount { display:none !important; }
 body[data-page="cloud-files"] .cloud-files-page { padding-top: 1rem; }
+
+/* Compactage de la page privée : aucune adresse de compte dans l’en-tête. */
+body[data-page="cloud-files"] .aurore-auth-controls, body[data-page="cloud-files"] .aurore-auth-user, body[data-page="cloud-files"] #cloudFilesAccount { display:none !important; }
+body[data-page="cloud-files"] .cloud-files-page { padding-top:1rem; }
