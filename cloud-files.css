@@ -25,3 +25,9 @@
 .aurore-auth-user{font-size:.75rem;opacity:.72;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .aurore-auth-button{font:inherit;font-size:.8rem;border:1px solid rgba(160,135,255,.55);color:inherit;background:rgba(126,91,255,.16);border-radius:10px;padding:.48rem .7rem;cursor:pointer;white-space:nowrap}
 @media(max-width:760px){.aurore-auth-controls{order:3;width:100%;margin:.45rem 0 0;justify-content:flex-start}.aurore-auth-user{max-width:125px}.cloud-file-item{align-items:flex-start;flex-direction:column}.cloud-file-actions{width:100%}.cloud-file-actions .cloud-files-button{flex:1}.cloud-files-hero{margin:1rem 0}}
+
+/* La page privée reste compacte : pas de bloc supérieur ni d’adresse de compte dans l’en-tête. */
+body[data-page="cloud-files"] .aurore-auth-controls,
+body[data-page="cloud-files"] .aurore-auth-user,
+body[data-page="cloud-files"] #cloudFilesAccount { display:none !important; }
+body[data-page="cloud-files"] .cloud-files-page { padding-top: 1rem; }
