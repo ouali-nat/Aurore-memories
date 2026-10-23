@@ -13,7 +13,7 @@
 
   // Keep every Aurore Mémoire page on the stable production domain.
   // Deployment-specific Vercel URLs are temporary and must never become navigation/share origins.
-  var AURORE_CANONICAL_HOST = "aurore-memories-aurore9.vercel.app";
+  var AURORE_CANONICAL_HOST = "aurore-memories-mu.vercel.app";
   var currentHost = String(window.location.hostname || "").toLowerCase();
   var legacyCardsPresent = false;
   try {
