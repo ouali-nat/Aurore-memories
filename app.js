@@ -3,7 +3,7 @@
   if (document.querySelector('link[data-aurore-pill]')) return;
   var pill = document.createElement("link");
   pill.rel = "stylesheet";
-  pill.href = "aurore-pill.css?v=20261023-theme-adaptive-v1";
+  pill.href = "aurore-pill.css?v=20261023-adaptive-relief-v2";
   pill.setAttribute("data-aurore-pill", "1");
   document.head.appendChild(pill);
 })();
