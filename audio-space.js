@@ -299,7 +299,7 @@ function stopPlayback() {
 }
 function selectedTracks() {
   if (!current) return [];
-  if (current.type === "sequence") return current.item.tracks.map(function (t) { return { record: records.find(function (r) { return r.id === t.id; }), repeat: Math.max(1, Math.min(20, Number(t.repeat) || 1)), rate: Math.max(0.6, Math.min(1.4, Number(t.rate) || 1)) }; }).filter(function (t) { return t.record; });
+  if (current.type === "sequence") return current.item.tracks.map(function (t) { return { record: records.find(function (r) { return r.id === t.id; }), repeat: Math.max(1, Math.min(20, Number(t.repeat) || 1)), rate: Math.max(0.6, Math.min(4, Number(t.rate) || 1)) }; }).filter(function (t) { return t.record; });
   return [{ record: current.item, repeat: Math.max(1, Math.min(20, Number(current.item.repeat) || 1)) }];
 }
 function showPlayer() {
@@ -317,8 +317,8 @@ function showPlayer() {
     main.append(t, s); box.append(main);
     $("playerRepeat").value = String(track.repeat || 1);
   }
-  $("playerRepeat").disabled = current.type === "sequence";
-  $("playerRate").value = String(current.rate || 1);
+  $("playerRepeat").disabled = false;
+  $("playerRate").value = String(track && track.rate || current.rate || 1);
   $("playerRateLabel").textContent = Number($("playerRate").value).toFixed(1) + "×";
   $("playerToggle").textContent = playing ? (paused ? "▶ Reprendre" : "Ⅱ Pause") : "▶ Lire";
 }
@@ -358,7 +358,7 @@ async function playTrack() {
   for (var i = 0; i < t.repeat; i++) {
     if (my !== token) return;
     statusLine = "lecture " + (i + 1) + " / " + t.repeat; showPlayer();
-    var rate = Number($("playerRate").value) || 1;
+    var rate = Number($("playerRate").value) || t.rate || 1;
     var ok = await playOnce(t.record, rate, my);
     if (my !== token) return;
     if (!ok) { playing = false; paused = false; statusLine = ""; showPlayer(); return; }
@@ -459,7 +459,7 @@ function bind() {
   on("playerNext", "click", function () { var n = selectedTracks().length; stopPlayback(); if (currentTrack < n - 1) currentTrack++; statusLine = ""; showPlayer(); playTrack(); });
   on("playerPrevious", "click", function () { stopPlayback(); currentTrack = Math.max(0, currentTrack - 1); statusLine = ""; showPlayer(); playTrack(); });
   on("playerClose", "click", function () { stopPlayback(); $("audioPlayerPanel").hidden = true; });
-  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) { t.rate=v; writeLocal(); } } if (playerAudio) playerAudio.playbackRate = v; });
+  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) { t.rate=Math.max(0.6,Math.min(4,v)); writeLocal(); } } if (playerAudio) playerAudio.playbackRate = v; });
   on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
   on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
