@@ -50,14 +50,14 @@ async function syncManifest() {
   } catch (e) { status("audioAccountStatus", "Conservé sur cet appareil. Synchronisation cloud en attente : " + e.message, true); }
 }
 async function loadCloud() {
-  if (!navigator.onLine || !window.auroreAuth || !window.auroreAuth.getSession) return;
+  if (!navigator.onLine || !window.auroreAuth || !window.auroreAuth.getSession) return false;
   try {
     var session = await window.auroreAuth.getSession();
-    if (!session || !session.user) return;
+    if (!session || !session.user) return false;
     var res = await api("/api/storage?key=" + encodeURIComponent(CLOUD_MANIFEST), { method: "GET" });
-    if (!res.ok) return;
+    if (!res.ok) return false;
     var remote = await res.json();
-    if (!remote || !Array.isArray(remote.records)) return;
+    if (!remote || !Array.isArray(remote.records)) return false;
     var map = new Map(records.map(function (r) { return [r.id, r]; }));
     remote.records.forEach(function (r) { if (r && r.id && !map.has(r.id)) map.set(r.id, r); });
     records = Array.from(map.values());
@@ -65,7 +65,17 @@ async function loadCloud() {
     (remote.sequences || []).forEach(function (s) { if (s && s.id && !seqMap.has(s.id)) seqMap.set(s.id, s); });
     sequences = Array.from(seqMap.values());
     writeLocal();
-  } catch (_) {}
+    return true;
+  } catch (_) { return false; }
+}
+/* Au chargement, auth.js peut encore être en train de restaurer la session.
+   Quelques tentatives évitent de laisser la bibliothèque bloquée sur les seules données locales. */
+async function loadCloudWithRetry() {
+  for (var attempt = 0; attempt < 4; attempt++) {
+    if (await loadCloud()) return true;
+    if (attempt < 3) await sleep(700);
+  }
+  return false;
 }
 async function syncPending() {
   if (!navigator.onLine || !window.auroreAuth || !window.auroreAuth.api) return;
@@ -447,7 +457,7 @@ async function downloadAudio(r) {
 function summary() { return records.length + " audio(s) · " + sequences.length + " séquence(s). Tout reste accessible hors ligne sur cet appareil."; }
 
 /* ---------- Initialisation ---------- */
-function onOnline() { syncPending().then(loadCloud).then(render).catch(function () {}); }
+function onOnline() { syncPending().then(loadCloudWithRetry).then(function () { render(); }).catch(function () {}); }
 function bind() {
   on("audioRecordStart", "click", startRecording);
   on("audioRecordStop", "click", stopRecording);
@@ -464,7 +474,7 @@ function bind() {
   on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
   on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.item) current.item.sequenceRepeat=current.sequenceRepeat; sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
-  on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + (document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary())); });
+  on("audioRefresh", "click", async function () { await loadCloudWithRetry(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + (document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary())); });
   window.addEventListener("online", onOnline);
   if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = fillVoices; }
 }
@@ -495,7 +505,7 @@ function init() {
   bind(); render();
   var accountSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary();
   status("audioAccountStatus", accountSummary);
-  loadCloud().then(function () { render(); var updatedSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary(); status("audioAccountStatus", updatedSummary); }).catch(function () {});
+  loadCloudWithRetry().then(function () { render(); var updatedSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary(); status("audioAccountStatus", updatedSummary); }).catch(function () {});
   syncPending();
 }
 try { init(); } catch (e) { status("audioAccountStatus", "Erreur d’initialisation : " + e.message, true); }
