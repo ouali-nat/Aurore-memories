@@ -77,6 +77,21 @@ jobs:
             echo "::warning::Logo absent : ajoutez android-app/assets/icon.png pour générer les icônes de l’application."
           fi
           npx cap sync android
+          # L'application doit ouvrir le site de production, et non la copie HTML figée
+          # embarquée au moment de la compilation.
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          config = Path("android/app/src/main/assets/capacitor.config.json")
+          if not config.is_file():
+              raise SystemExit(f"Configuration Capacitor introuvable : {config}")
+          data = json.loads(config.read_text())
+          data.setdefault("server", {})
+          data["server"]["url"] = "https://aurore-memories-mu.vercel.app"
+          data["server"]["androidScheme"] = "https"
+          config.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\\n")
+          print("Application Android reliée au site Aurore Mémoire de production.")
+          PY
 
       - name: Définir le numéro de version
         working-directory: android-app
