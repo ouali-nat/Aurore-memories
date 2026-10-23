@@ -20,7 +20,7 @@
       var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
       var vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
       var rect = toggle.getBoundingClientRect();
-      var width = Math.min(270, Math.max(180, vw - margin * 2));
+      var width = Math.max(120, Math.min(270, vw - margin * 2));
       panel.style.setProperty("position", "fixed", "important");
       panel.style.setProperty("width", width + "px", "important");
       panel.style.setProperty("max-width", (vw - margin * 2) + "px", "important");
