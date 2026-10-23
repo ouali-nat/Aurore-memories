@@ -26,6 +26,8 @@
   async function ensureSupabaseLibrary() {
     if (window.supabase && typeof window.supabase.createClient === "function") return;
     var sources = [
+      // Prefer the bundled browser client in the Android APK so startup does not depend on a CDN.
+      "vendor/supabase.js",
       "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
       "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
     ];
