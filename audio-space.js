@@ -366,7 +366,8 @@ async function playTrack() {
   }
   if (my !== token) return;
   if (currentTrack < tracks.length - 1) { currentTrack++; playTrack(); }
-  else if (current.type === "sequence" && sequenceRound < Math.max(1, Math.min(20, Number(current.sequenceRepeat) || 1))) { sequenceRound++; currentTrack = 0; playTrack(); }\n  else { playing = false; paused = false; currentTrack = 0; sequenceRound = 1; statusLine = "terminé"; showPlayer(); }
+  else if (current.type === "sequence" && sequenceRound < Math.max(1, Math.min(20, Number(current.sequenceRepeat) || 1))) { sequenceRound++; currentTrack = 0; playTrack(); }
+  else { playing = false; paused = false; currentTrack = 0; sequenceRound = 1; statusLine = "terminé"; showPlayer(); }
 }
 function openPlayer(type, item) { stopPlayback(); current = { type: type, item: item, rate: 1, sequenceRepeat: 1 }; currentTrack = 0; sequenceRound = 1; statusLine = "Prêt à lire"; showPlayer(); }
 function togglePlay() {
@@ -459,7 +460,8 @@ function bind() {
   on("playerPrevious", "click", function () { stopPlayback(); currentTrack = Math.max(0, currentTrack - 1); statusLine = ""; showPlayer(); playTrack(); });
   on("playerClose", "click", function () { stopPlayback(); $("audioPlayerPanel").hidden = true; });
   on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) t.rate=v; } if (playerAudio) playerAudio.playbackRate = v; });
-  on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });\n  on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); sequenceRound=1; showPlayer(); writeLocal(); });
+  on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
+  on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
   on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + summary()); });
   window.addEventListener("online", onOnline);
