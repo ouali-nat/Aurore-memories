@@ -57,7 +57,7 @@ jobs:
           {
             "appId": "app.aurore.memoire",
             "appName": "Aurore Mémoire",
-            "webDir": "www",
+            "webDir": "www"
           }
           JSON
           cat > android-app/www/index.html <<'HTML'
