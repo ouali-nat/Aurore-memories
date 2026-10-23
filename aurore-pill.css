@@ -1,144 +1,317 @@
 /* ==========================================================================
-   Aurore Mémoire — design « pilule flottante », variante B (capsule d'accent pleine),
-   appliqué à TOUS les blocs : cartes, panneaux, rangées, héros, barre du haut.
-   - fond d'accent plein en capsule, texte blanc, ombre flottante
-   - pastille d'icône = disque blanc (comme le logo de la barre)
-   - élément actif = tuile claire arrondie avec petit point dessous
-   Les variables de couleur sont réaffectées à l'intérieur de chaque bloc : le
-   contenu (textes, champs, boutons, graphiques) reste lisible sans autre réglage.
-   Suit --accent (18 couleurs) et les thèmes clair/sombre.
-   Retrait : supprimer ce fichier.
+   Aurore Adaptive Relief Design — fusion visuelle expérimentale
+   Relief, couleur et contraste s'adaptent au thème global.
+   Les ombres restent subtiles : aucun composant ne dépend d'un fond blanc fixe.
    ========================================================================== */
+
 :root {
-  --pill-radius: 32px;
-  --pill-radius-sm: 24px;
-  --pill-a: var(--accent-deep);
-  --pill-b: color-mix(in srgb, var(--accent-deep) 55%, var(--accent));
-  --pill-ink: var(--accent-deep);
-  --pill-bg: linear-gradient(135deg, var(--pill-a), var(--pill-b));
-  --pill-shadow: 0 18px 38px -14px color-mix(in srgb, var(--accent-deep) 70%, rgba(0, 0, 0, .55)), 0 3px 8px rgba(0, 0, 0, .18);
-  --pill-shadow-hover: 0 26px 48px -14px color-mix(in srgb, var(--accent) 75%, rgba(0, 0, 0, .5)), 0 4px 10px rgba(0, 0, 0, .22);
+  --relief-radius: 24px;
+  --relief-radius-sm: 17px;
+  --relief-radius-pill: 999px;
+  --relief-tint: 15%;
+  --relief-edge: color-mix(in srgb, var(--accent) 25%, var(--border));
+  --relief-highlight: rgba(255,255,255,.055);
+  --relief-shadow-low: 7px 7px 18px rgba(0,0,0,.24);
+  --relief-shadow-high: -5px -5px 15px rgba(255,255,255,.035);
+  --relief-shadow: var(--relief-shadow-low), var(--relief-shadow-high);
+  --relief-shadow-hover: 10px 12px 24px color-mix(in srgb, var(--accent) 15%, rgba(0,0,0,.3)),
+    -4px -4px 13px rgba(255,255,255,.045);
+  --relief-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+  --relief-panel: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 91%, var(--accent) 9%),
+    color-mix(in srgb, var(--surface) 79%, var(--accent) 21%));
+  --relief-panel-soft: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 95%, var(--accent) 5%),
+    color-mix(in srgb, var(--surface) 86%, var(--accent) 14%));
+  --relief-control: color-mix(in srgb, var(--surface) 87%, var(--accent) 13%);
 }
+
 html[data-theme="light"] {
-  --pill-shadow: 0 18px 36px -16px color-mix(in srgb, var(--accent-deep) 60%, rgba(60, 40, 90, .4)), 0 3px 8px rgba(60, 40, 90, .12);
-}
-
-/* ---- 1. Barre du haut : capsule d'accent, onglet actif en tuile avec point ---- */
-:root:root:root .top-actions {
-  padding: 5px; gap: 2px; border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
-  background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
-  box-shadow: 6px 6px 14px color-mix(in srgb, var(--bg) 24%, #000 76%),
-    -6px -6px 14px color-mix(in srgb, var(--surface) 90%, #fff 10%);
-}
-:root:root:root .nav-link { position: relative; min-height: 40px; padding: 8px 16px 11px; border-radius: 999px; color: var(--muted); }
-:root:root:root .nav-link:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--text); }
-:root:root:root .nav-link.active { color: var(--text); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); box-shadow: inset 3px 3px 7px color-mix(in srgb, var(--bg) 28%, #000 72%), inset -3px -3px 7px color-mix(in srgb, var(--surface) 88%, #fff 12%); }
-:root:root:root .nav-link.active::after {
-  content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #fff;
-}
-:root:root:root .brand-mark { border-radius: 50%; background: color-mix(in srgb, var(--surface) 76%, var(--accent) 24%); color: var(--accent-light); border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border)); box-shadow: 5px 5px 11px color-mix(in srgb, var(--bg) 28%, #000 72%), -5px -5px 11px color-mix(in srgb, var(--surface) 90%, #fff 10%); }
-
-/* ---- 2. TOUS les blocs : capsule d'accent pleine ---- */
-:root:root:root :is(
-  .home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner,
-  .mini-hero, .groups-hero, .groups-detail-hero,
-  .form-panel, .study-card, .progress-panel, .mode-navigation, .workspace-panel, .practice-card-header, .practice-work-area,
-  .memory-block-card, .chunk-chart-card, .groups-detail-content, .science-mode-picker, .card-appearance-settings,
-  .single-card-appearance, .groups-note, .empty-state, .groups-empty, .groups-error, .groups-loading, .mode-area,
-  .memory-row, .chunk-progress-row, .draft-card, .workspace-chunk, .mode-link,
-  .library-summary > div, .review-summary > span, .chunk-kpis > div
-) {
-  color: var(--text);
-  background: linear-gradient(145deg,
+  --relief-tint: 16%;
+  --relief-edge: color-mix(in srgb, var(--accent) 24%, #d8d1e1);
+  --relief-highlight: rgba(255,255,255,.88);
+  --relief-shadow-low: 7px 8px 18px rgba(55,38,78,.105);
+  --relief-shadow-high: -6px -6px 16px rgba(255,255,255,.92);
+  --relief-shadow: var(--relief-shadow-low), var(--relief-shadow-high);
+  --relief-shadow-hover: 10px 12px 24px color-mix(in srgb, var(--accent) 13%, rgba(55,38,78,.13)),
+    -5px -5px 14px rgba(255,255,255,.96);
+  --relief-panel: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 84%, var(--accent) 16%),
+    color-mix(in srgb, var(--surface) 75%, var(--accent) 25%));
+  --relief-panel-soft: linear-gradient(145deg,
     color-mix(in srgb, var(--surface) 94%, var(--accent) 6%),
     color-mix(in srgb, var(--surface) 84%, var(--accent) 16%));
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
-  box-shadow: 8px 8px 18px color-mix(in srgb, var(--bg) 28%, #000 72%),
-    -7px -7px 17px color-mix(in srgb, var(--surface) 90%, #fff 10%);
+  --relief-control: color-mix(in srgb, var(--surface) 86%, var(--accent) 14%);
 }
 
-/* Formes : grands blocs en capsule arrondie, rangées et tuiles un peu moins larges */
-:root:root:root :is(
-  .home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner,
-  .mini-hero, .groups-hero, .groups-detail-hero,
-  .form-panel, .study-card, .progress-panel, .mode-navigation, .workspace-panel, .practice-card-header, .practice-work-area,
-  .memory-block-card, .chunk-chart-card, .groups-detail-content, .science-mode-picker, .card-appearance-settings,
-  .groups-note, .empty-state, .groups-empty, .groups-error, .groups-loading
-) { border-radius: var(--pill-radius); }
-:root:root:root :is(.memory-row, .chunk-progress-row, .draft-card, .workspace-chunk, .mode-area, .single-card-appearance) { border-radius: var(--pill-radius-sm); }
-:root:root:root :is(.mode-link, .library-summary > div, .review-summary > span, .chunk-kpis > div) { border-radius: 999px; }
-:root:root:root :is(.library-summary > div, .review-summary > span, .chunk-kpis > div) { align-items: center; text-align: center; }
-
-/* Survol / appui : le bloc se soulève et s'éclaire */
-:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner, .memory-row, .mode-link):hover {
-  filter: brightness(1.1) saturate(1.05); transform: translateY(-4px); box-shadow: var(--pill-shadow-hover); border-color: rgba(255, 255, 255, .4);
+/* Atmosphère générale : l'accent colore le fond sans gêner la lecture. */
+html, body { background-color: var(--bg); }
+.ambient-bg {
+  background:
+    radial-gradient(ellipse at 8% 3%, color-mix(in srgb, var(--accent) 19%, transparent), transparent 38%),
+    radial-gradient(ellipse at 94% 18%, color-mix(in srgb, var(--accent-light) 13%, transparent), transparent 32%),
+    radial-gradient(ellipse at 55% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%);
 }
-:root:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner):active { transform: translateY(-1px) scale(.99); }
-/* Bloc actif / sélectionné : tuile claire avec petit point dessous */
-:root:root:root :is(.mode-link.is-active, .home-action-card[aria-current], .home-card[aria-current]) {
-  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 82%, var(--accent) 18%), color-mix(in srgb, var(--surface) 90%, var(--accent) 10%)); position: relative;
-}
-:root:root:root .mode-link.is-active::after {
-  content: ""; position: absolute; left: 50%; bottom: 6px; width: 5px; height: 5px; margin-left: -2px; border-radius: 50%; background: #fff;
+html[data-theme="light"] .ambient-bg {
+  background:
+    radial-gradient(ellipse at 8% 3%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 39%),
+    radial-gradient(ellipse at 94% 18%, color-mix(in srgb, var(--accent-light) 13%, transparent), transparent 34%),
+    radial-gradient(ellipse at 55% 100%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 43%);
 }
 
-/* Pastilles d'icône : disque blanc, glyphe d'accent (comme le logo de la barre) */
-:root:root:root :is(.card-symbol, .action-icon, .library-choice-icon, .chooser-icon, .creation-choice-icon, .library-shortcut-symbol, .group-card-symbol, .empty-icon, .memory-row-mark, .visibility-choice-icon, .science-mode-icon, .create-plus, .card-series-mark) {
-  border-radius: 50%; background: #fff; color: var(--pill-ink); border: 0;
-  box-shadow: 0 8px 18px -8px rgba(0, 0, 0, .5);
-}
-:root:root:root :is(.library-choice-count, .coming-label) { border-radius: 999px; background: rgba(255, 255, 255, .2); border-color: rgba(255, 255, 255, .38); color: #fff; }
-
-/* Boutons dans un bloc : bouton principal blanc, lisible sur l'accent */
-:root:root:root :is(
-  .home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice, .library-shortcut, .create-banner,
-  .mini-hero, .groups-hero, .groups-detail-hero, .form-panel, .study-card, .progress-panel, .mode-navigation, .workspace-panel,
-  .practice-card-header, .practice-work-area, .memory-block-card, .chunk-chart-card, .groups-detail-content, .science-mode-picker,
-  .card-appearance-settings, .single-card-appearance, .groups-note, .empty-state, .groups-empty, .groups-error, .groups-loading,
-  .mode-area, .memory-row, .chunk-progress-row, .draft-card, .workspace-chunk
-) :is(.primary-btn, .groups-btn.primary) {
-  background: linear-gradient(135deg, var(--accent-deep), var(--accent)); color: #fff; border-color: color-mix(in srgb, var(--accent-light) 35%, transparent); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--accent) 60%, transparent);
-}
-:root:root:root :is(.memory-row, .form-panel, .study-card, .workspace-panel, .practice-work-area, .empty-state, .mode-area, .memory-block-card) .subtle-danger { color: #fff; }
-:root:root:root :is(.mode-chip.is-active, .practice-segments button.is-active, .create-mode-tab.is-active) { color: #fff; }
-
-/* ---- 3. Boutons, onglets, champs, menus : capsules complètes ---- */
-:root:root:root :is(.primary-btn, .secondary-btn, .text-link, .subtle-danger, .groups-btn, .back-link, .groups-tab, .theme-btn, .theme-mode-choices, .theme-mode-choices button, .app-menu-toggle, .color-theme-choice, .mode-chip, .create-mode-tab) {
-  border-radius: 999px;
-}
-:root:root:root :is(.primary-btn, .secondary-btn, .groups-btn, .back-link, .theme-btn, .app-menu-toggle) { box-shadow: var(--pill-shadow); }
-:root:root:root :is(.search-field, .groups-search) { border-radius: 999px; box-shadow: var(--pill-shadow); }
-:root:root:root :is(.text-field, .groups-form input, .groups-form select, .sharing-form input) { border-radius: 20px; }
-:root:root:root :is(.text-area, .groups-form textarea, .sharing-form textarea) { border-radius: 22px; }
-:root:root:root :is(.color-theme-panel, .app-menu-panel, .sharing-modal, .groups-modal, .group-settings-dialog) { border-radius: 28px; box-shadow: var(--pill-shadow); }
-:root:root:root .app-menu-item { border-radius: 999px; }
-:root:root:root .app-menu-item:hover, :root:root:root .color-theme-choice[aria-pressed="true"] { background: var(--pill-bg); border-color: transparent; color: #fff; }
-
-/* ---- 4. Cartes de groupe, couvertures ---- */
-:root:root:root .group-cover { border-radius: 28px; box-shadow: var(--pill-shadow); }
-:root:root:root .group-card-body { border-radius: 24px; box-shadow: var(--pill-shadow); }
-
-@media (max-width: 560px) {
-  :root { --pill-radius: 26px; --pill-radius-sm: 20px; }
-  :root:root:root :is(.library-summary > div, .review-summary > span, .chunk-kpis > div) { border-radius: 22px; }
+/* Socle partagé : toutes les grandes surfaces adoptent la teinte choisie. */
+:root:root :is(
+  .home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice,
+  .library-shortcut, .create-banner, .mini-hero, .groups-hero, .groups-detail-hero,
+  .form-panel, .study-card, .progress-panel, .mode-navigation, .workspace-panel,
+  .practice-card-header, .practice-work-area, .memory-block-card, .chunk-chart-card,
+  .groups-detail-content, .science-mode-picker, .card-appearance-settings,
+  .single-card-appearance, .groups-note, .empty-state, .groups-empty, .groups-error,
+  .groups-loading, .mode-area, .memory-row, .chunk-progress-row, .draft-card,
+  .workspace-chunk, .mode-link, .library-summary > div, .review-summary > span,
+  .chunk-kpis > div, .public-cards-hero, .public-cards-toolbar, .public-cards-section,
+  .public-cards-panel, .public-card-notice, .public-cards-intro
+) {
+  color: var(--text);
+  background: var(--relief-panel-soft);
+  border-color: var(--relief-edge);
+  box-shadow: var(--relief-shadow);
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease,
+    transform .2s ease, color .2s ease;
 }
 
-/* ---------- Correctif navigation : plus de superposition des libellés ---------- */
-:root:root .topbar .top-actions .nav-link { flex: 0 0 auto; min-width: 62px; padding: 5px 11px 8px; }
-:root:root .topbar .top-actions .nav-link[href^="index.html"]::before { content: "⌂"; }
-:root:root .topbar .top-actions .nav-link[href^="groupes.html"]::before { content: "♧"; }
-:root:root .topbar .top-actions .nav-link[href^="cartes-publiques.html"]::before,
-:root:root .topbar .top-actions .nav-link[href^="choisir.html"]::before,
-:root:root .topbar .top-actions .nav-link[href^="mes-memoires.html"]::before { content: "▤"; }
-:root:root .topbar .top-actions .nav-link[href^="revisions.html"]::before { content: "↻"; }
-:root:root .topbar .top-actions .nav-link.aurore-refresh-app::before { content: "⟳"; }
-@media (max-width: 760px) { :root:root .topbar .top-actions .nav-link { min-width: 60px; padding-inline: 10px; } }
-@media (max-width: 560px) {
-  /* L'en-tête ne reste plus collé en haut : il ne masque plus le contenu qui défile dessous. */
-  :root:root .topbar { position: relative; }
-  :root:root .topbar .top-actions .nav-link { min-width: 58px; padding-inline: 9px; }
+/* Les blocs de premier plan ont un relief plus lisible, sans devenir des capsules géantes. */
+:root:root :is(
+  .home-card, .home-action-card, .library-choice-card, .chooser-card, .creation-choice,
+  .library-shortcut, .create-banner, .form-panel, .study-card, .progress-panel,
+  .workspace-panel, .practice-work-area, .memory-block-card, .chunk-chart-card,
+  .groups-detail-content, .science-mode-picker, .card-appearance-settings,
+  .empty-state, .groups-empty, .groups-error, .groups-loading, .public-cards-panel
+) { border-radius: var(--relief-radius); }
+
+:root:root :is(
+  .memory-row, .chunk-progress-row, .draft-card, .workspace-chunk, .mode-area,
+  .single-card-appearance, .groups-note, .library-summary > div, .review-summary > span,
+  .chunk-kpis > div
+) { border-radius: var(--relief-radius-sm); }
+
+:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card,
+  .creation-choice, .library-shortcut, .create-banner, .memory-row, .mode-link):hover {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  box-shadow: var(--relief-shadow-hover);
+  transform: translateY(-2px);
 }
-/* La porte de connexion n'existe que sur l'accueil : jamais visible (ni sans style) ailleurs. */
-.memory-access-lock[hidden] { display: none !important; }
-body:not([data-page="home"]) .memory-access-lock { display: none !important; }
+:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card,
+  .creation-choice, .library-shortcut, .create-banner, .memory-row, .mode-link):active {
+  transform: translateY(0) scale(.995);
+}
+:root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card,
+  .creation-choice, .library-shortcut, .create-banner):focus-visible {
+  outline: none;
+  box-shadow: var(--relief-shadow), var(--relief-focus);
+}
+
+/* Héros : plus de profondeur et de couleur, tout en gardant le texte contrasté. */
+:root:root :is(.mini-hero, .groups-hero, .groups-detail-hero) {
+  background:
+    radial-gradient(ellipse at 92% 8%, color-mix(in srgb, var(--accent-light) 25%, transparent), transparent 34%),
+    radial-gradient(ellipse at 6% 100%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 40%),
+    var(--relief-panel);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  box-shadow: var(--relief-shadow), inset 0 1px 0 var(--relief-highlight);
+}
+
+/* La navigation garde sa propre identité ; l'onglet actif reprend l'accent du site. */
+:root:root .topbar {
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--accent) 23%, var(--border));
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--bg) 20%, transparent);
+}
+:root:root .top-actions {
+  padding: 4px;
+  gap: 3px;
+  border: 1px solid var(--relief-edge);
+  border-radius: var(--relief-radius-pill);
+  background: var(--relief-panel-soft);
+  box-shadow: var(--relief-shadow);
+}
+:root:root .topbar .top-actions .nav-link {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  border-radius: var(--relief-radius-pill);
+  padding: 8px 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+:root:root .topbar .top-actions .nav-link:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--text);
+}
+:root:root .topbar .top-actions .nav-link.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 19%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  box-shadow: inset 2px 2px 5px color-mix(in srgb, var(--bg) 20%, transparent),
+    inset -2px -2px 5px var(--relief-highlight);
+}
+:root:root .topbar .top-actions .nav-link.active::after {
+  content: "";
+  position: absolute;
+  width: 4px; height: 4px;
+  bottom: 3px; left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--accent-light);
+}
+:root:root .brand-mark {
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--accent-deep), var(--accent) 64%, var(--accent-light));
+  color: #fff;
+  box-shadow: 4px 5px 12px color-mix(in srgb, var(--accent-deep) 30%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.28);
+}
+
+/* Les commandes visuelles (clair/sombre, palette, menu) suivent aussi la fusion. */
+:root:root :is(.theme-btn, .app-menu-toggle, .theme-mode-choices, .theme-mode-choices button,
+  .color-theme-choice, .mode-chip, .create-mode-tab, .back-link, .search-field, .groups-search) {
+  border-color: var(--relief-edge);
+  background-color: var(--relief-control);
+  box-shadow: 3px 3px 8px color-mix(in srgb, var(--bg) 18%, transparent),
+    -3px -3px 8px var(--relief-highlight);
+}
+:root:root :is(.theme-btn, .app-menu-toggle, .theme-mode-choices button, .color-theme-choice,
+  .mode-chip, .create-mode-tab, .back-link, .search-field, .groups-search) {
+  border-radius: var(--relief-radius-pill);
+}
+:root:root :is(.theme-btn, .app-menu-toggle, .color-theme-choice, .mode-chip, .create-mode-tab,
+  .back-link):hover,
+:root:root .theme-mode-choices button[aria-pressed="true"],
+:root:root .color-theme-choice[aria-pressed="true"],
+:root:root .mode-chip.is-active,
+:root:root .create-mode-tab.is-active {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  color: var(--text);
+}
+:root:root :is(.color-theme-panel, .app-menu-panel, .sharing-modal, .groups-modal, .group-settings-dialog) {
+  background: var(--relief-panel-soft);
+  border-color: var(--relief-edge);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--bg) 34%, transparent), var(--relief-shadow-high);
+}
+:root:root .app-menu-item { border-radius: 13px; }
+:root:root .app-menu-item:hover {
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+  border-color: var(--relief-edge);
+  color: var(--text);
+}
+
+/* Les icônes sont teintées par la palette au lieu d'être systématiquement blanches. */
+:root:root :is(.card-symbol, .action-icon, .library-choice-icon, .chooser-icon,
+  .creation-choice-icon, .library-shortcut-symbol, .group-card-symbol, .empty-icon,
+  .memory-row-mark, .visibility-choice-icon, .science-mode-icon, .create-plus, .card-series-mark) {
+  color: var(--accent-deep);
+  background: color-mix(in srgb, var(--accent) 17%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 23%, var(--border));
+  box-shadow: inset 2px 2px 5px color-mix(in srgb, var(--bg) 9%, transparent),
+    -2px -2px 6px var(--relief-highlight);
+}
+html[data-theme="dark"] :root:root :is(.card-symbol, .action-icon, .library-choice-icon,
+  .chooser-icon, .creation-choice-icon, .library-shortcut-symbol, .group-card-symbol,
+  .empty-icon, .memory-row-mark, .visibility-choice-icon, .science-mode-icon, .create-plus,
+  .card-series-mark) { color: var(--accent-light); }
+
+/* Boutons principaux : accent franc, contraste stable dans les deux modes. */
+:root:root :is(.primary-btn, .groups-btn.primary) {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+  border-color: color-mix(in srgb, var(--accent-light) 36%, transparent);
+  box-shadow: 0 5px 13px color-mix(in srgb, var(--accent-deep) 26%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.22);
+}
+:root:root :is(.primary-btn, .groups-btn.primary):hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent-deep) 32%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.25);
+}
+:root:root :is(.secondary-btn, .groups-btn:not(.primary)) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 78%, var(--accent) 22%);
+  border-color: var(--relief-edge);
+  box-shadow: 3px 3px 8px color-mix(in srgb, var(--bg) 16%, transparent),
+    -2px -2px 7px var(--relief-highlight);
+}
+
+/* Champs et zones de saisie : relief intérieur léger et focus évident. */
+:root:root :is(.text-field, .text-area, .groups-form input, .groups-form select,
+  .groups-form textarea, .sharing-form input, .sharing-form textarea, select, input, textarea) {
+  border-color: var(--relief-edge);
+}
+:root:root :is(.text-field, .text-area, .groups-form input, .groups-form select,
+  .groups-form textarea, .sharing-form input, .sharing-form textarea) {
+  background: color-mix(in srgb, var(--bg) 84%, var(--accent) 16%);
+  box-shadow: inset 3px 3px 7px color-mix(in srgb, var(--bg) 24%, transparent),
+    inset -2px -2px 6px var(--relief-highlight);
+}
+:root:root :is(.text-field, .text-area, .groups-form input, .groups-form select,
+  .groups-form textarea, .sharing-form input, .sharing-form textarea):focus {
+  border-color: var(--accent);
+  box-shadow: inset 2px 2px 5px color-mix(in srgb, var(--bg) 15%, transparent), var(--relief-focus);
+}
+:root:root :is(.text-field, .groups-form input, .groups-form select, .sharing-form input) {
+  border-radius: 14px;
+}
+:root:root :is(.text-area, .groups-form textarea, .sharing-form textarea) {
+  border-radius: 16px;
+}
+
+/* Badges et états : petite dose d'accent, sans sacrifier les couleurs de feedback. */
+:root:root :is(.library-choice-count, .coming-label, .card-counter, .public-series-name,
+  .public-domain-chip, .mode-chip.is-active) {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--accent-light);
+}
+:root:root .empty-state {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 91%, var(--accent) 9%),
+    color-mix(in srgb, var(--surface) 84%, var(--accent) 16%));
+}
+:root:root .site-footer { border-top-color: var(--relief-edge); }
+
+/* Navigation mobile : retour à la ligne propre, sans libellés qui se chevauchent. */
+@media (max-width: 760px) {
+  :root:root .topbar .topbar-inner { flex-wrap: wrap; gap: 9px; padding-block: 10px; }
+  :root:root .topbar .app-menu-wrap { order: 0; }
+  :root:root .topbar .brand { order: 1; }
+  :root:root .topbar .header-right {
+    order: 2; flex: 1 1 100%; width: 100%; min-width: 0;
+    flex-direction: column; align-items: stretch; gap: 8px;
+  }
+  :root:root .topbar .top-actions {
+    display: flex; width: 100%; min-width: 0; justify-content: stretch;
+    overflow: visible; flex-wrap: wrap; border-radius: 19px;
+  }
+  :root:root .topbar .top-actions .nav-link {
+    flex: 1 1 auto; min-width: 0; white-space: normal; text-align: center;
+    justify-content: center; padding: 8px 7px 10px; overflow-wrap: anywhere;
+    font-size: .73rem;
+  }
+  :root:root .topbar .appearance { justify-content: flex-end; }
+}
+@media (max-width: 390px) {
+  :root:root .topbar .top-actions .nav-link { flex-basis: calc(50% - 6px); }
+  :root:root .topbar .top-actions .nav-link.active::after { bottom: 2px; }
+  :root:root :is(.home-card, .home-action-card, .library-choice-card, .chooser-card) {
+    border-radius: 20px;
+  }
+}
+
+/* Mouvement modéré et respect des préférences d'accessibilité. */
+@media (prefers-reduced-motion: reduce) {
+  :root:root *, :root:root *::before, :root:root *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
