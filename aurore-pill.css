@@ -70,7 +70,7 @@ html[data-theme="light"] .ambient-bg {
   .groups-loading, .mode-area, .memory-row, .chunk-progress-row, .draft-card,
   .workspace-chunk, .mode-link, .library-summary > div, .review-summary > span,
   .chunk-kpis > div, .public-cards-hero, .public-cards-toolbar, .public-cards-section,
-  .public-cards-panel, .public-card-notice, .public-cards-intro
+  .public-cards-panel, .public-card-notice, .public-cards-intro, .public-flashcard-content
 ) {
   color: var(--text);
   background: var(--relief-panel-soft);
@@ -216,7 +216,7 @@ html[data-theme="light"] .ambient-bg {
   box-shadow: inset 2px 2px 5px color-mix(in srgb, var(--bg) 9%, transparent),
     -2px -2px 6px var(--relief-highlight);
 }
-html[data-theme="dark"] :root:root :is(.card-symbol, .action-icon, .library-choice-icon,
+html[data-theme="dark"] :is(.card-symbol, .action-icon, .library-choice-icon,
   .chooser-icon, .creation-choice-icon, .library-shortcut-symbol, .group-card-symbol,
   .empty-icon, .memory-row-mark, .visibility-choice-icon, .science-mode-icon, .create-plus,
   .card-series-mark) { color: var(--accent-light); }
