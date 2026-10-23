@@ -1,4 +1,4 @@
-// Aurore Mémoire — design « pilule flottante » : feuille de style chargée sur toutes les pages, en dernier.
+// Aurore Mémoire — Aurore Adaptive Relief Design : feuille de style partagée, chargée en dernier.
 (function () {
   if (document.querySelector('link[data-aurore-pill]')) return;
   var pill = document.createElement("link");
