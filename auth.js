@@ -154,8 +154,6 @@
     box.id = "auroreAuthControls";
     box.className = "aurore-auth-controls";
     box.innerHTML =
-      '<a class="aurore-cloud-link" href="fichiers.html">Fichiers privés</a>' +
-      '<span class="aurore-auth-user" id="auroreAuthUser" aria-live="polite"></span>' +
       '<button class="aurore-auth-button" id="auroreAuthButton" type="button">Connexion Aurore ID</button>';
     header.insertBefore(box, header.firstChild || null);
 
@@ -199,19 +197,14 @@
 
   function updateHeader(session) {
     mountHeader();
-    var user = document.getElementById("auroreAuthUser");
     var button = document.getElementById("auroreAuthButton");
-    if (!user || !button) return;
+    if (!button) return;
     if (session && session.user) {
-      user.textContent = session.user.email || "Compte connecté";
-      user.title = "Session Aurore Mémoire active";
       button.textContent = "Se déconnecter";
       button.dataset.action = "signout";
       button.hidden = true;
       button.disabled = false;
     } else {
-      user.textContent = "Non connecté";
-      user.title = "Connexion nécessaire pour le stockage privé";
       button.textContent = "Connexion Aurore ID";
       button.dataset.action = "signin";
       button.hidden = true;
