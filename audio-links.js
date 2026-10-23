@@ -10,7 +10,7 @@ function inject() {
   if (!tpl || !tpl.parentNode) return;
   var a = document.createElement("a");
   a.className = tpl.className.replace(/\bis-active\b/g, "").trim();
-  a.href = "audio.html";
+  a.href = "mes-audios.html";
   a.setAttribute("data-audio-card", "1");
   a.innerHTML = tpl.innerHTML;
   var w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT), n, nodes = [];
