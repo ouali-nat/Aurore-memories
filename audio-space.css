@@ -168,7 +168,6 @@
 @media(max-width:420px){.audio-page .audio-voice-picker-options{grid-template-columns:1fr}.audio-page .audio-voice-action-row{gap:6px}.audio-page .audio-voice-action-row button{font-size:.72rem}}
 
 /* La page d’écoute affiche uniquement les séquences enregistrées. */
-.audio-page .audio-create-grid, .audio-page .audio-sequence-panel { display:none !important; }
 .audio-page .audio-sequence-card { display:flex; flex-direction:column; align-items:stretch; gap:14px; min-height:125px; padding:20px; border-radius:22px; }
 .audio-page .audio-sequence-card .audio-item-main strong { font-size:1rem; }
 .audio-page .audio-sequence-card .audio-item-actions button { width:100%; min-height:44px; }
