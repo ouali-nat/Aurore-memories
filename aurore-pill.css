@@ -120,3 +120,22 @@ html[data-theme="light"] {
   :root { --pill-radius: 26px; --pill-radius-sm: 20px; }
   :root:root:root :is(.library-summary > div, .review-summary > span, .chunk-kpis > div) { border-radius: 22px; }
 }
+
+/* ---------- Correctif navigation : plus de superposition des libellés ---------- */
+:root:root .topbar .top-actions .nav-link { flex: 0 0 auto; min-width: 62px; padding: 5px 11px 8px; }
+:root:root .topbar .top-actions .nav-link[href^="index.html"]::before { content: "⌂"; }
+:root:root .topbar .top-actions .nav-link[href^="groupes.html"]::before { content: "♧"; }
+:root:root .topbar .top-actions .nav-link[href^="cartes-publiques.html"]::before,
+:root:root .topbar .top-actions .nav-link[href^="choisir.html"]::before,
+:root:root .topbar .top-actions .nav-link[href^="mes-memoires.html"]::before { content: "▤"; }
+:root:root .topbar .top-actions .nav-link[href^="revisions.html"]::before { content: "↻"; }
+:root:root .topbar .top-actions .nav-link.aurore-refresh-app::before { content: "⟳"; }
+@media (max-width: 760px) { :root:root .topbar .top-actions .nav-link { min-width: 60px; padding-inline: 10px; } }
+@media (max-width: 560px) {
+  /* L'en-tête ne reste plus collé en haut : il ne masque plus le contenu qui défile dessous. */
+  :root:root .topbar { position: relative; }
+  :root:root .topbar .top-actions .nav-link { min-width: 58px; padding-inline: 9px; }
+}
+/* La porte de connexion n'existe que sur l'accueil : jamais visible (ni sans style) ailleurs. */
+.memory-access-lock[hidden] { display: none !important; }
+body:not([data-page="home"]) .memory-access-lock { display: none !important; }
