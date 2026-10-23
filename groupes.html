@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="style.css?v=20261021-menu-right-v3">
   <link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
-  <link rel="prefetch" href="groupes.js?v=20261021-public-catalog-v3" as="script">
+  <link rel="prefetch" href="groupes.js?v=20261023-groups-fast-v4" as="script">
 </head>
 <body data-page="groups">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -87,48 +87,37 @@
   <script>
     (function () {
       "use strict";
+      var V = "20261023-groups-fast-v4";
       var sources = [
         "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
         "https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js",
-        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
-        "https://unpkg.com/@supabase/supabase-js@2"
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
       ];
-      var index = 0, loaded = false, timeoutId = null;
-      function startGroups() {
-        if (loaded) return;
-        loaded = true;
-        if (timeoutId) window.clearTimeout(timeoutId);
-        var script = document.createElement("script");
-        script.src = "groupes.js?v=20261021-public-catalog-v3";
-        document.body.appendChild(script);
+      var index = 0;
+      function ready() {
+        if (typeof window.__auroreGroupsSupabaseReady === "function") window.__auroreGroupsSupabaseReady();
       }
-      function tryNext() {
-        if (window.supabase && typeof window.supabase.createClient === "function") {
-          startGroups();
-          return;
+      function loadSupabase() {
+        if (window.supabase && typeof window.supabase.createClient === "function") { ready(); return; }
+        if (index >= sources.length) { console.warn("Supabase JS indisponible : catalogue public seul."); return; }
+        var script = document.createElement("script"), settled = false, timer;
+        function next() {
+          if (settled) return; settled = true; clearTimeout(timer);
+          if (window.supabase && typeof window.supabase.createClient === "function") ready();
+          else loadSupabase();
         }
-        if (index >= sources.length) {
-          console.error("Supabase JS n'a pu être chargé depuis les sources de secours.");
-          startGroups();
-          return;
-        }
-        var script = document.createElement("script");
         script.src = sources[index++];
         script.async = true;
-        var settled = false;
-        function nextOnce() {
-          if (settled) return;
-          settled = true;
-          if (timeoutId) window.clearTimeout(timeoutId);
-          if (window.supabase && typeof window.supabase.createClient === "function") startGroups();
-          else tryNext();
-        }
-        script.onload = nextOnce;
-        script.onerror = nextOnce;
+        script.onload = next; script.onerror = next;
+        timer = setTimeout(next, 8000);
         document.head.appendChild(script);
-        timeoutId = window.setTimeout(nextOnce, 9000);
       }
-      tryNext();
+      // Le catalogue public démarre immédiatement ; la bibliothèque de compte se charge en arrière-plan.
+      var app = document.createElement("script");
+      app.src = "groupes.js?v=" + V;
+      app.onload = loadSupabase;
+      app.onerror = loadSupabase;
+      document.body.appendChild(app);
     })();
   </script>
 </body>
