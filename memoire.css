@@ -1132,7 +1132,7 @@ body[data-page="library"] .memory-series-card .series-sharing-status{display:fle
 @media(max-width:560px){.public-card-attribution{font-size:.56rem;max-width:66%}.public-card-attribution span:last-child{font-size:.48rem}}
 
 
-/* Correctifs mobiles ciblés — navigation lisible et cartes publiques claires */
+/* Correctifs mobiles ciblés — navigation lisible et cartes publiques adaptatives */
 @media (max-width: 620px) {
   .topbar .topbar-inner { flex-wrap: wrap; align-items: center; gap: 8px; }
   .topbar .brand { flex: 0 0 auto; min-width: 0; }
@@ -1142,19 +1142,49 @@ body[data-page="library"] .memory-series-card .series-sharing-status{display:fle
   .topbar .top-actions .nav-link::before { display: block; margin: 0 auto 3px; }
   .topbar .appearance { justify-content: flex-end; }
 }
+/* Les cartes suivent les variables globales de thème et d'accent, sans couleurs figées. */
 body[data-page="public-cards"] .public-flashcard {
-  background: #fff !important;
-  color: #24212b !important;
-  border: 1px solid #e2dce8 !important;
-  box-shadow: 0 8px 22px rgba(18, 14, 28, .10) !important;
+  color: var(--text) !important;
   text-shadow: none !important;
 }
-body[data-page="public-cards"] .public-flashcard-content { color: #24212b !important; }
+body[data-page="public-cards"] .public-flashcard-content {
+  color: var(--text) !important;
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border)) !important;
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 96%, var(--accent) 4%),
+    color-mix(in srgb, var(--surface) 88%, var(--accent) 12%)) !important;
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 10%, transparent) !important;
+}
 body[data-page="public-cards"] .public-flashcard h2,
 body[data-page="public-cards"] .public-flashcard h2 *,
 body[data-page="public-cards"] .public-card-answer,
-body[data-page="public-cards"] .public-card-answer p:last-child { color: #24212b !important; text-shadow: none !important; }
+body[data-page="public-cards"] .public-card-answer p:last-child {
+  color: var(--text) !important;
+  text-shadow: none !important;
+}
 body[data-page="public-cards"] .public-card-eyebrow,
-body[data-page="public-cards"] .public-card-hint { color: #6b6474 !important; text-shadow: none !important; }
-body[data-page="public-cards"] .public-flashcard-bottom { border-color: #e7e1eb !important; }
-body[data-page="public-cards"] .public-icon-button { background: #f5f2f8 !important; color: #30283a !important; border-color: #ded6e6 !important; }
+body[data-page="public-cards"] .public-card-hint,
+body[data-page="public-cards"] .public-card-attribution {
+  color: var(--muted) !important;
+  text-shadow: none !important;
+}
+body[data-page="public-cards"] .public-series-name,
+body[data-page="public-cards"] .public-domain-chip {
+  background: color-mix(in srgb, var(--accent) 13%, var(--surface)) !important;
+  color: var(--accent-light) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border)) !important;
+}
+body[data-page="public-cards"] .public-flashcard-bottom,
+body[data-page="public-cards"] .public-card-answer {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border)) !important;
+}
+body[data-page="public-cards"] .public-icon-button {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface)) !important;
+  color: var(--accent-light) !important;
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border)) !important;
+}
+html[data-theme="dark"] body[data-page="public-cards"] .public-flashcard-content {
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 94%, var(--accent) 6%),
+    color-mix(in srgb, var(--surface) 82%, var(--accent) 18%)) !important;
+}
