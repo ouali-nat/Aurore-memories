@@ -50,3 +50,84 @@
 
 /* Deux cartes par ligne, y compris sur téléphone, avec une taille adaptée. */
 @media(max-width:520px){.public-card-feed-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px 10px!important;padding-inline:0!important}.public-flashcard.pf-ready{border-radius:18px!important}.pf-face{padding:10px 9px 9px;border-radius:18px}.pf-chip{max-width:100%;font-size:.56rem;padding:4px 6px}.public-flashcard.pf-ready .pf-q,.public-flashcard.pf-ready .pf-a{font-size:clamp(.76rem,3.1vw,1rem)!important}.public-flashcard.pf-ready .pf-btn{width:30px;height:30px}.public-flashcard.pf-ready .pf-hint{font-size:.58rem!important}.pf-foot{gap:4px;padding-top:6px}}
+
+
+/* Thème global des cartes publiques : les faces suivent le thème et l'accent du site. */
+html { background-color: var(--bg) !important; }
+body[data-page="public-cards"] {
+  background:
+    radial-gradient(ellipse at 8% 12%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 46%),
+    radial-gradient(ellipse at 92% 42%, color-mix(in srgb, var(--accent-light) 9%, transparent), transparent 42%),
+    var(--bg) !important;
+  color: var(--text) !important;
+}
+body[data-page="public-cards"] .public-cards-hero,
+body[data-page="public-cards"] .public-cards-toolbar,
+body[data-page="public-cards"] .public-cards-section,
+body[data-page="public-cards"] .public-cards-panel,
+body[data-page="public-cards"] .public-card-notice {
+  background-color: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%) !important;
+  border-color: color-mix(in srgb, var(--border) 72%, var(--accent) 28%) !important;
+  color: var(--text) !important;
+}
+body[data-page="public-cards"] .public-cards-hero,
+body[data-page="public-cards"] .public-cards-toolbar {
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 9%, transparent) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-face {
+  background-color: var(--accent-deep) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-light) 48%, transparent) !important;
+  color: var(--text) !important;
+  box-shadow: 0 18px 36px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--accent-light) 18%, transparent) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-front {
+  background-image:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--accent-light) 35%, transparent), transparent 58%),
+    radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--accent-deep) 70%, transparent), transparent 65%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-raised) 52%, var(--accent) 48%), color-mix(in srgb, var(--bg) 55%, var(--accent) 45%)) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-back {
+  background-image: linear-gradient(145deg, color-mix(in srgb, var(--surface-raised) 48%, var(--accent) 52%), color-mix(in srgb, var(--bg) 45%, var(--accent-deep) 55%)) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-face::before {
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--bg) 16%, transparent),
+    transparent 36%,
+    color-mix(in srgb, var(--bg) 68%, transparent)) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-q,
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-a,
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-eyebrow,
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-hint,
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-chip,
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-btn {
+  color: var(--text) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-chip {
+  background: color-mix(in srgb, var(--surface) 66%, var(--accent) 34%) !important;
+  border-color: color-mix(in srgb, var(--accent-light) 48%, var(--border)) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-btn {
+  background: color-mix(in srgb, var(--surface) 75%, var(--accent) 25%) !important;
+  border-color: color-mix(in srgb, var(--accent-light) 42%, var(--border)) !important;
+}
+body[data-page="public-cards"] .public-flashcard.pf-ready .pf-add {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-face {
+  color: var(--text) !important;
+}
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-face::before {
+  background: linear-gradient(to bottom, rgba(255,255,255,.20), rgba(255,255,255,.04) 35%, rgba(255,255,255,.28)) !important;
+}
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-q,
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-a,
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-eyebrow,
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-hint,
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-chip,
+html[data-theme="light"] body[data-page="public-cards"] .public-flashcard.pf-ready .pf-btn {
+  color: var(--text) !important;
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--surface) 65%, transparent) !important;
+}

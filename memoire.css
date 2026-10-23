@@ -1188,3 +1188,28 @@ html[data-theme="dark"] body[data-page="public-cards"] .public-flashcard-content
     color-mix(in srgb, var(--surface) 94%, var(--accent) 6%),
     color-mix(in srgb, var(--surface) 82%, var(--accent) 18%)) !important;
 }
+
+
+/* Les surfaces de la page publique héritent aussi du thème global. */
+body[data-page="public-cards"] .mini-hero,
+body[data-page="public-cards"] .public-cards-hero,
+body[data-page="public-cards"] .public-cards-toolbar,
+body[data-page="public-cards"] .public-cards-section,
+body[data-page="public-cards"] .public-cards-panel,
+body[data-page="public-cards"] .public-card-notice,
+body[data-page="public-cards"] .public-cards-intro {
+  background-color: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
+  border-color: color-mix(in srgb, var(--border) 72%, var(--accent) 28%);
+  color: var(--text);
+}
+body[data-page="public-cards"] .primary-btn,
+body[data-page="public-cards"] .public-cards-toolbar .primary-btn {
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent)) !important;
+  border-color: color-mix(in srgb, var(--accent-light) 35%, var(--accent)) !important;
+  color: #fff !important;
+}
+body[data-page="public-cards"] .secondary-btn {
+  background: color-mix(in srgb, var(--surface) 84%, var(--accent) 16%) !important;
+  border-color: color-mix(in srgb, var(--border) 60%, var(--accent) 40%) !important;
+  color: var(--text) !important;
+}
