@@ -25,12 +25,15 @@ html[data-theme="light"] {
 
 /* ---- 1. Barre du haut : capsule d'accent, onglet actif en tuile avec point ---- */
 :root:root:root .top-actions {
-  padding: 5px; gap: 2px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .22);
-  background: var(--pill-bg); box-shadow: var(--pill-shadow);
+  padding: 5px; gap: 2px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
+  box-shadow: 6px 6px 14px color-mix(in srgb, var(--bg) 24%, #000 76%),
+    -6px -6px 14px color-mix(in srgb, var(--surface) 90%, #fff 10%);
 }
-:root:root:root .nav-link { position: relative; min-height: 40px; padding: 8px 16px 11px; border-radius: 999px; color: rgba(255, 255, 255, .86); }
-:root:root:root .nav-link:hover { background: rgba(255, 255, 255, .16); color: #fff; }
-:root:root:root .nav-link.active { color: #fff; background: rgba(255, 255, 255, .22); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28); }
+:root:root:root .nav-link { position: relative; min-height: 40px; padding: 8px 16px 11px; border-radius: 999px; color: var(--muted); }
+:root:root:root .nav-link:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--text); }
+:root:root:root .nav-link.active { color: var(--text); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); box-shadow: inset 3px 3px 7px color-mix(in srgb, var(--bg) 28%, #000 72%), inset -3px -3px 7px color-mix(in srgb, var(--surface) 88%, #fff 12%); }
 :root:root:root .nav-link.active::after {
   content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #fff;
 }
@@ -46,13 +49,13 @@ html[data-theme="light"] {
   .memory-row, .chunk-progress-row, .draft-card, .workspace-chunk, .mode-link,
   .library-summary > div, .review-summary > span, .chunk-kpis > div
 ) {
-  --text: #fff; --muted: rgba(255, 255, 255, .84);
-  --border: rgba(255, 255, 255, .28); --line: rgba(255, 255, 255, .28);
-  --soft: rgba(255, 255, 255, .16); --soft-border: rgba(255, 255, 255, .34);
-  --surface: rgba(255, 255, 255, .13); --surface-raised: rgba(255, 255, 255, .2); --bg: rgba(0, 0, 0, .22);
-  --accent: #fff; --accent-light: #fff;
-  color: #fff; background: var(--pill-bg); border: 1px solid rgba(255, 255, 255, .22);
-  box-shadow: var(--pill-shadow);
+  color: var(--text);
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 94%, var(--accent) 6%),
+    color-mix(in srgb, var(--surface) 84%, var(--accent) 16%));
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  box-shadow: 8px 8px 18px color-mix(in srgb, var(--bg) 28%, #000 72%),
+    -7px -7px 17px color-mix(in srgb, var(--surface) 90%, #fff 10%);
 }
 
 /* Formes : grands blocs en capsule arrondie, rangées et tuiles un peu moins larges */
@@ -95,7 +98,7 @@ html[data-theme="light"] {
   .card-appearance-settings, .single-card-appearance, .groups-note, .empty-state, .groups-empty, .groups-error, .groups-loading,
   .mode-area, .memory-row, .chunk-progress-row, .draft-card, .workspace-chunk
 ) :is(.primary-btn, .groups-btn.primary) {
-  background: #fff; color: var(--pill-ink); border-color: transparent; box-shadow: 0 10px 22px -10px rgba(0, 0, 0, .5);
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent)); color: #fff; border-color: color-mix(in srgb, var(--accent-light) 35%, transparent); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 :root:root:root :is(.memory-row, .form-panel, .study-card, .workspace-panel, .practice-work-area, .empty-state, .mode-area, .memory-block-card) .subtle-danger { color: #fff; }
 :root:root:root :is(.mode-chip.is-active, .practice-segments button.is-active, .create-mode-tab.is-active) { color: #fff; }
