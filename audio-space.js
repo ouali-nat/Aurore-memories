@@ -319,6 +319,7 @@ function showPlayer() {
   }
   $("playerRepeat").disabled = false;
   $("playerRate").value = String(track && track.rate || current.rate || 1);
+  $("playerSequenceRepeat").value = String(current.sequenceRepeat || 1);
   $("playerRateLabel").textContent = Number($("playerRate").value).toFixed(1) + "×";
   $("playerToggle").textContent = playing ? (paused ? "▶ Reprendre" : "Ⅱ Pause") : "▶ Lire";
 }
@@ -369,7 +370,7 @@ async function playTrack() {
   else if (current.type === "sequence" && sequenceRound < Math.max(1, Math.min(20, Number(current.sequenceRepeat) || 1))) { sequenceRound++; currentTrack = 0; playTrack(); }
   else { playing = false; paused = false; currentTrack = 0; sequenceRound = 1; statusLine = "terminé"; showPlayer(); }
 }
-function openPlayer(type, item) { stopPlayback(); current = { type: type, item: item, rate: 1, sequenceRepeat: 1 }; currentTrack = 0; sequenceRound = 1; statusLine = "Prêt à lire"; showPlayer(); }
+function openPlayer(type, item) { stopPlayback(); current = { type: type, item: item, rate: 1, sequenceRepeat: Math.max(1, Math.min(20, Number(item.sequenceRepeat) || 1)) }; currentTrack = 0; sequenceRound = 1; statusLine = "Prêt à lire"; showPlayer(); }
 function togglePlay() {
   if (playing && !paused) { paused = true; if (playerAudio) playerAudio.pause(); if (window.speechSynthesis && speechSynthesis.speaking) speechSynthesis.pause(); showPlayer(); return; }
   if (playing && paused) { paused = false; if (playerAudio) playerAudio.play(); if (window.speechSynthesis && speechSynthesis.paused) speechSynthesis.resume(); showPlayer(); return; }
