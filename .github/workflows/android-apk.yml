@@ -1,6 +1,8 @@
 name: Android APK — Aurore Mémoire (Capacitor)
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -38,17 +40,48 @@ jobs:
           yes | "$SDKM" --licenses >/dev/null || true
           "$SDKM" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Installer Capacitor et les bibliothèques locales
-        working-directory: android-app
-        run: npm install --no-audit --no-fund
+      - name: Préparer le wrapper Capacitor distant
+        run: |
+          set -euo pipefail
+          mkdir -p android-app/www
+          cat > android-app/package.json <<'JSON'
+          {
+            "name": "aurore-memoire-android",
+            "version": "1.0.0",
+            "private": true,
+            "description": "Wrapper Android officiel pour le site Aurore Mémoire",
+            "scripts": {}
+          }
+          JSON
+          cat > android-app/capacitor.config.json <<'JSON'
+          {
+            "appId": "app.aurore.memoire",
+            "appName": "Aurore Mémoire",
+            "webDir": "www",
+            "server": {
+              "url": "https://aurore-memories-mu.vercel.app",
+              "androidScheme": "https"
+            }
+          }
+          JSON
+          cat > android-app/www/index.html <<'HTML'
+          <!doctype html>
+          <html lang="fr">
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aurore Mémoire</title></head>
+          <body><p>Connexion au site Aurore Mémoire…</p></body>
+          </html>
+          HTML
 
-      - name: Préparer les pages et embarquer les dépendances
-        working-directory: android-app
-        run: npm run build:web
-
-      - name: Générer le projet Android Capacitor
+      - name: Installer Capacitor
         working-directory: android-app
         run: |
+          npm install --no-audit --no-fund @capacitor/core@^7 @capacitor/android@^7
+          npm install --no-audit --no-fund --save-dev @capacitor/cli@^7
+
+      - name: Générer le projet Android et configurer le retour Aurore ID
+        working-directory: android-app
+        run: |
+          set -euo pipefail
           npx cap add android
           python3 - <<'PY'
           from pathlib import Path
@@ -71,26 +104,16 @@ jobs:
               manifest.write_text(xml)
           print("Lien profond Aurore ID configuré.")
           PY
-          if [ -f assets/icon.png ]; then
-            npx capacitor-assets generate
-          else
-            echo "::warning::Logo absent : ajoutez android-app/assets/icon.png pour générer les icônes de l’application."
-          fi
           npx cap sync android
-          # L'application doit ouvrir le site de production, et non la copie HTML figée
-          # embarquée au moment de la compilation.
           python3 - <<'PY'
           import json
           from pathlib import Path
-          config = Path("android/app/src/main/assets/capacitor.config.json")
-          if not config.is_file():
-              raise SystemExit(f"Configuration Capacitor introuvable : {config}")
-          data = json.loads(config.read_text())
-          data.setdefault("server", {})
-          data["server"]["url"] = "https://aurore-memories-mu.vercel.app"
-          data["server"]["androidScheme"] = "https"
-          config.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-          print("Application Android reliée au site Aurore Mémoire de production.")
+          config = json.loads(Path("android/app/src/main/assets/capacitor.config.json").read_text())
+          server = config.get("server", {})
+          expected = "https://aurore-memories-mu.vercel.app"
+          if server.get("url") != expected or server.get("androidScheme") != "https":
+              raise SystemExit(f"Configuration distante inattendue : {server!r}")
+          print(f"URL de production intégrée : {server['url']}")
           PY
 
       - name: Définir le numéro de version
@@ -106,49 +129,48 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
 
-      - name: Signer l’APK de test
+      - name: Vérifier la configuration de signature stable
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -e
+          if [ -z "$KS_B64" ] || [ -z "$KS_PASS" ] || [ -z "$KS_ALIAS" ] || [ -z "$KS_KEY_PASS" ]; then
+            echo "::error::Secrets de signature stable manquants. Aucun APK à clé temporaire ne sera publié, car il ne pourrait pas mettre à jour de manière fiable l'application installée."
+            exit 1
+          fi
+          echo "Les quatre secrets de signature permanente sont présents."
+
+      - name: Signer et vérifier l’APK
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
           BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
           UNSIGNED="$(find android-app/android/app/build/outputs/apk/release -name '*.apk' | head -1)"
           test -n "$UNSIGNED" || { echo "APK de sortie introuvable"; exit 1; }
-          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/aurore-memoire.jks"
-            ALIAS="${KS_ALIAS:-aurore-memoire}"
-            PASS="$KS_PASS"
-            KEYPASS="${KS_KEY_PASS:-$KS_PASS}"
-            echo "Signature stable détectée."
-          else
-            ALIAS=aurore-memoire
-            PASS="$(openssl rand -hex 16)"
-            KEYPASS="$PASS"
-            keytool -genkeypair -keystore "$RUNNER_TEMP/aurore-memoire.jks" -storetype PKCS12 -alias "$ALIAS" \
-              -keyalg RSA -keysize 2048 -validity 10000 -storepass "$PASS" -keypass "$PASS" \
-              -dname "CN=Aurore Memoire, O=Aurore, C=BF"
-            echo "::warning::Clé temporaire : cet APK est uniquement destiné aux tests et ne pourra pas être mis à jour par une prochaine compilation."
-          fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/aurore-memoire.jks"
           "$BT/zipalign" -p -f 4 "$UNSIGNED" "$RUNNER_TEMP/aurore-memoire-aligned.apk"
-          "$BT/apksigner" sign --ks "$RUNNER_TEMP/aurore-memoire.jks" --ks-key-alias "$ALIAS" \
-            --ks-pass "pass:$PASS" --key-pass "pass:$KEYPASS" --out Aurore-Memoire.apk "$RUNNER_TEMP/aurore-memoire-aligned.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/aurore-memoire.jks" --ks-key-alias "$KS_ALIAS" \
+            --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_KEY_PASS" --out Aurore-Memoire.apk "$RUNNER_TEMP/aurore-memoire-aligned.apk"
           "$BT/apksigner" verify --verbose Aurore-Memoire.apk
           rm -f "$RUNNER_TEMP/aurore-memoire.jks"
 
       - name: Vérifier le fichier livré
         run: |
+          set -euo pipefail
           test -s Aurore-Memoire.apk
           sha256sum Aurore-Memoire.apk
           {
-            echo "## Aurore Mémoire — APK de test"
+            echo "## Aurore Mémoire — APK"
             echo ""
-            echo "- Compilation Capacitor : réussie."
-            echo "- Les pages et les dépendances KaTeX/Supabase sont embarquées."
-            echo "- Cette compilation n’est pas encore une validation du mode avion."
-            echo "- Vérifiez la signature stable dans les secrets avant de distribuer des mises à jour."
+            echo "- Le wrapper charge l’adresse stable du site de production."
+            echo "- La signature permanente a été vérifiée."
+            echo "- Le build ne publie pas d’APK si la clé de signature stable est absente."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Déposer l’APK en artefact
