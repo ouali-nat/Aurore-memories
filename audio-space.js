@@ -421,7 +421,7 @@ function render() {
   var box = $("audioLibraryList"); if (!box) return; box.textContent = "";
   if (!sequences.length) {
     var e = document.createElement("p"); e.className = "audio-empty";
-    e.textContent = "Aucune séquence enregistrée pour le moment. Utilise le formulaire « Créer une séquence » ci-dessus.";
+    e.textContent = document.body.dataset.page === "audio-sequences" ? "Aucune séquence enregistrée pour le moment. Appuie sur « Ajouter un audio » pour créer tes pistes, puis compose une séquence." : "Aucune séquence enregistrée pour le moment. Crée une séquence à partir de tes audios ci-dessus.";
     box.append(e); renderSequenceBuilder(); return;
   }
   sequences.forEach(function (seq) {
@@ -464,7 +464,7 @@ function bind() {
   on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
   on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.item) current.item.sequenceRepeat=current.sequenceRepeat; sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
-  on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + summary()); });
+  on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + (document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary())); });
   window.addEventListener("online", onOnline);
   if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = fillVoices; }
 }
