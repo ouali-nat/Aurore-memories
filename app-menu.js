@@ -13,6 +13,42 @@
       panel.hidden = true;
       toggle.setAttribute("aria-expanded", "false");
     }
+    function positionMenu() {
+      if (panel.hidden) return;
+      var margin = 10;
+      var gap = 8;
+      var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+      var vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+      var rect = toggle.getBoundingClientRect();
+      var width = Math.min(270, Math.max(180, vw - margin * 2));
+      panel.style.setProperty("position", "fixed", "important");
+      panel.style.setProperty("width", width + "px", "important");
+      panel.style.setProperty("max-width", (vw - margin * 2) + "px", "important");
+      panel.style.setProperty("max-height", (vh - margin * 2) + "px", "important");
+      panel.style.setProperty("overflow-x", "hidden", "important");
+      panel.style.setProperty("overflow-y", "auto", "important");
+      panel.style.setProperty("z-index", "1000", "important");
+
+      // Measure after making the panel visible, then choose the side with room.
+      var measured = panel.getBoundingClientRect();
+      var panelWidth = Math.min(width, measured.width || width);
+      var rightSpace = vw - rect.right - gap - margin;
+      var leftSpace = rect.left - gap - margin;
+      var left;
+      if (rightSpace >= panelWidth) left = rect.right + gap;
+      else if (leftSpace >= panelWidth) left = rect.left - gap - panelWidth;
+      else left = Math.max(margin, Math.min(rect.left, vw - panelWidth - margin));
+
+      var panelHeight = Math.min(panel.scrollHeight || measured.height || 220, vh - margin * 2);
+      var top = rect.top;
+      if (top + panelHeight > vh - margin) top = vh - panelHeight - margin;
+      top = Math.max(margin, top);
+
+      panel.style.setProperty("left", Math.round(left) + "px", "important");
+      panel.style.setProperty("right", "auto", "important");
+      panel.style.setProperty("top", Math.round(top) + "px", "important");
+      panel.style.setProperty("bottom", "auto", "important");
+    }
     function updateAuthMenu(session) {
       activeSession = session && session.user ? session : null;
       if (!signIn) return;
@@ -28,6 +64,10 @@
       var opening = panel.hidden;
       panel.hidden = !opening;
       toggle.setAttribute("aria-expanded", opening ? "true" : "false");
+      if (opening) {
+        positionMenu();
+        requestAnimationFrame(positionMenu);
+      }
     });
     panel.addEventListener("click", function (event) { event.stopPropagation(); });
     document.addEventListener("click", function (event) {
@@ -36,6 +76,11 @@
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") closeMenu();
     });
+    window.addEventListener("resize", positionMenu, { passive: true });
+    window.addEventListener("orientationchange", function () {
+      requestAnimationFrame(positionMenu);
+    }, { passive: true });
+    window.addEventListener("scroll", positionMenu, { passive: true, capture: true });
     if (signIn) signIn.addEventListener("click", async function (event) {
       event.preventDefault();
       closeMenu();
