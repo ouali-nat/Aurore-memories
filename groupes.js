@@ -84,7 +84,7 @@
       var controller = typeof AbortController === "function" ? new AbortController() : null;
       var timer = setTimeout(function () { if (controller) controller.abort(); }, 5500);
       try {
-        var response = await fetch(SUPABASE_URL + "/rest/v1/study_groups?select=" + GROUP_COLUMNS + "&visibility=eq.public&order=created_at.desc&limit=100", {
+        var response = await fetch(SUPABASE_URL + "/rest/v1/study_groups?select=*&visibility=eq.public&order=created_at.desc&limit=100", {
           headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, Accept: "application/json" },
           cache: "no-store",
           signal: controller ? controller.signal : undefined
