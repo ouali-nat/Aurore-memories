@@ -129,37 +129,24 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
 
-      - name: Vérifier la configuration de signature stable
-        env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          if [ -z "$KS_B64" ] || [ -z "$KS_PASS" ] || [ -z "$KS_ALIAS" ] || [ -z "$KS_KEY_PASS" ]; then
-            echo "::error::Secrets de signature stable manquants. Aucun APK à clé temporaire ne sera publié, car il ne pourrait pas mettre à jour de manière fiable l'application installée."
-            exit 1
-          fi
-          echo "Les quatre secrets de signature permanente sont présents."
-
-      - name: Signer et vérifier l’APK
-        env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Signer l’APK avec une clé temporaire
+        working-directory: android-app/android
         run: |
           set -euo pipefail
           BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
-          UNSIGNED="$(find android-app/android/app/build/outputs/apk/release -name '*.apk' | head -1)"
+          UNSIGNED="$(find app/build/outputs/apk/release -name '*.apk' | head -1)"
           test -n "$UNSIGNED" || { echo "APK de sortie introuvable"; exit 1; }
-          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/aurore-memoire.jks"
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/aurore-memoire-temp.jks" \
+            -storepass temp-build-only -keypass temp-build-only -alias aurore-temp \
+            -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=Aurore Memoire Temporary Build, OU=Development, O=Aurore, C=BF"
           "$BT/zipalign" -p -f 4 "$UNSIGNED" "$RUNNER_TEMP/aurore-memoire-aligned.apk"
-          "$BT/apksigner" sign --ks "$RUNNER_TEMP/aurore-memoire.jks" --ks-key-alias "$KS_ALIAS" \
-            --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_KEY_PASS" --out Aurore-Memoire.apk "$RUNNER_TEMP/aurore-memoire-aligned.apk"
-          "$BT/apksigner" verify --verbose Aurore-Memoire.apk
-          rm -f "$RUNNER_TEMP/aurore-memoire.jks"
-
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/aurore-memoire-temp.jks" --ks-key-alias aurore-temp \
+            --ks-pass pass:temp-build-only --key-pass pass:temp-build-only \
+            --out "$GITHUB_WORKSPACE/Aurore-Memoire.apk" "$RUNNER_TEMP/aurore-memoire-aligned.apk"
+          "$BT/apksigner" verify --verbose "$GITHUB_WORKSPACE/Aurore-Memoire.apk"
+          rm -f "$RUNNER_TEMP/aurore-memoire-temp.jks"
+          echo "::warning::APK signé avec une clé temporaire. Il ne pourra probablement pas mettre à jour une installation signée autrement."
       - name: Vérifier le fichier livré
         run: |
           set -euo pipefail
