@@ -1,0 +1,90 @@
+/* Cartes publiques — design blanc « soft UI » (relief doux, pilules, ombres claires/sombres) */
+html:has(body[data-page="public-cards"]) { background: #ecebea; color-scheme: light; }
+:root:root:root body[data-page="public-cards"] {
+  --neo-bg: #ecebea; --neo-hi: rgba(255,255,255,.95); --neo-lo: rgba(158,158,166,.5);
+  --neo-text: #24252a; --neo-muted: #6b6c74; --neo-accent: #2f7bf0; --neo-gray: #a3a4ab;
+  --bg: var(--neo-bg); --surface: #f1f0ef; --surface-raised: #f4f3f2; --text: var(--neo-text); --muted: var(--neo-muted);
+  --border: transparent; --soft: #e4e3e2; --soft-border: transparent;
+  background: var(--neo-bg) !important; color: var(--neo-text);
+}
+:root:root:root body[data-page="public-cards"] .ambient-bg { display: none !important; }
+
+/* En-tête */
+:root:root:root body[data-page="public-cards"] .topbar { background: var(--neo-bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 8px 18px -12px var(--neo-lo); }
+:root:root:root body[data-page="public-cards"] .topbar::after { display: none; }
+:root:root:root body[data-page="public-cards"] .brand strong { color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .brand small { color: var(--neo-muted); }
+:root:root:root body[data-page="public-cards"] .topbar .brand-mark { background: var(--neo-bg); color: var(--neo-text); box-shadow: 5px 5px 11px var(--neo-lo), -5px -5px 11px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .topbar .top-actions { border: 0; background: var(--neo-bg); box-shadow: 6px 6px 14px var(--neo-lo), -6px -6px 14px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .topbar .top-actions .nav-link { color: var(--neo-muted); }
+:root:root:root body[data-page="public-cards"] .topbar .top-actions .nav-link:hover { background: transparent; color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .topbar .top-actions .nav-link.active { color: var(--neo-text); background: var(--neo-bg); box-shadow: inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .topbar .top-actions .nav-link.active::after { background: var(--neo-accent); box-shadow: none; }
+:root:root:root body[data-page="public-cards"] .theme-btn, :root:root:root body[data-page="public-cards"] .app-menu-toggle { border: 0; background: var(--neo-bg); color: var(--neo-text); box-shadow: 4px 4px 9px var(--neo-lo), -4px -4px 9px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .theme-btn:active, :root:root:root body[data-page="public-cards"] .app-menu-toggle[aria-expanded="true"] { box-shadow: inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .color-theme-panel, :root:root:root body[data-page="public-cards"] .app-menu-panel { background: var(--neo-bg); border: 0; box-shadow: 10px 10px 24px var(--neo-lo), -8px -8px 20px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .color-theme-panel *, :root:root:root body[data-page="public-cards"] .app-menu-panel * { color: var(--neo-text); }
+
+/* Titre */
+:root:root:root body[data-page="public-cards"] .page-heading h1 { color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .page-heading p { color: var(--neo-muted); }
+:root:root:root body[data-page="public-cards"] .section-kicker { color: var(--neo-accent); }
+:root:root:root body[data-page="public-cards"] .back-link { display: inline-flex; align-items: center; padding: 9px 16px; border: 0; border-radius: 999px; background: var(--neo-bg); color: var(--neo-text); box-shadow: 5px 5px 11px var(--neo-lo), -5px -5px 11px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .back-link:active { box-shadow: inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi); }
+
+/* Recherche en creux + boutons pilule */
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar { gap: 14px; }
+:root:root:root body[data-page="public-cards"] .search-field { min-height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: #e8e7e6; color: var(--neo-muted); box-shadow: inset 4px 4px 9px var(--neo-lo), inset -4px -4px 9px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .search-field:focus-within { box-shadow: inset 4px 4px 9px var(--neo-lo), inset -4px -4px 9px var(--neo-hi), 0 0 0 2px var(--neo-accent); }
+:root:root:root body[data-page="public-cards"] .search-field input { color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .search-field input::placeholder { color: #8d8e96; }
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .secondary-btn,
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .primary-btn { min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; font-weight: 750; color: var(--neo-text); display: inline-flex; align-items: center; justify-content: center; transition: box-shadow .15s ease, transform .15s ease; }
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .secondary-btn { background: linear-gradient(145deg,#f6f5f4,#e6e5e4); box-shadow: 6px 6px 13px var(--neo-lo), -6px -6px 13px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .primary-btn { background: linear-gradient(145deg,#b0b1b8,#999aa1); box-shadow: 6px 6px 13px var(--neo-lo), -6px -6px 13px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .secondary-btn:active,
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .primary-btn:active { box-shadow: inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi); transform: none; }
+:root:root:root body[data-page="public-cards"] :is(a,button,input):focus-visible { outline: 2px solid var(--neo-accent); outline-offset: 3px; }
+
+/* États vides / chargement */
+:root:root:root body[data-page="public-cards"] .empty-state { border: 0; border-radius: 26px; background: var(--neo-bg); box-shadow: 8px 8px 18px var(--neo-lo), -8px -8px 18px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .empty-state h2, :root:root:root body[data-page="public-cards"] .empty-state h3 { color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .empty-state p { color: var(--neo-muted); }
+
+/* Cartes : plaques blanches en relief */
+:root:root:root body[data-page="public-cards"] .public-card-feed-grid { gap: 26px 16px !important; padding: 18px 6px 52px !important; }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready { border-radius: 26px !important; }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready::after { background: radial-gradient(closest-side, rgba(120,120,130,.45), transparent) !important; opacity: .35; }
+:root:root:root body[data-page="public-cards"] .pf-face { border-radius: 26px; box-shadow: 9px 9px 20px var(--neo-lo), -9px -9px 20px var(--neo-hi), inset 0 0 0 6px #f4f3f2; padding: 20px 18px 16px; }
+:root:root:root body[data-page="public-cards"] .pf-face::before { inset: 6px; border-radius: 20px; }
+:root:root:root body[data-page="public-cards"] .pf-face::after { inset: 6px; border-radius: 20px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+/* Cartes sans image : plaque blanche, texte sombre */
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-front,
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-back { background-color: var(--neo-bg); background-image: linear-gradient(145deg,#f7f6f5,#e7e6e5); color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-back { background-image: linear-gradient(145deg,#e9e8e7,#f6f5f4); }
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-face::before { background: none; }
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-face::after { box-shadow: none; }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) :is(.pf-q,.pf-a) { color: var(--neo-text) !important; text-shadow: none; }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-eyebrow { color: var(--neo-muted) !important; }
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-face .katex { color: var(--neo-text); }
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-chip { background: var(--neo-bg); border: 0; color: var(--neo-text); box-shadow: 3px 3px 7px var(--neo-lo), -3px -3px 7px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-domain { color: var(--neo-accent); }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-hint { color: var(--neo-muted) !important; }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-btn { border: 0; background: var(--neo-bg); color: var(--neo-text); box-shadow: 4px 4px 9px var(--neo-lo), -4px -4px 9px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-btn:active { box-shadow: inset 2px 2px 5px var(--neo-lo), inset -2px -2px 5px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready:not(.pf-has-image) .pf-add { background: var(--neo-accent); color: #fff; box-shadow: 4px 4px 9px var(--neo-lo), -4px -4px 9px var(--neo-hi); }
+/* Cartes avec image : cadre blanc, boutons clairs en relief */
+:root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready .pf-btn { box-shadow: 0 4px 10px rgba(0,0,0,.28); }
+
+@media (max-width: 520px) {
+  :root:root:root body[data-page="public-cards"] .public-card-feed-grid { gap: 20px 12px !important; padding-inline: 4px !important; }
+  :root:root:root body[data-page="public-cards"] .public-flashcard.pf-ready, :root:root:root body[data-page="public-cards"] .pf-face { border-radius: 20px !important; }
+  :root:root:root body[data-page="public-cards"] .pf-face { padding: 14px 11px 10px; box-shadow: 6px 6px 14px var(--neo-lo), -6px -6px 14px var(--neo-hi), inset 0 0 0 4px #f4f3f2; }
+  :root:root:root body[data-page="public-cards"] .pf-face::before, :root:root:root body[data-page="public-cards"] .pf-face::after { inset: 4px; border-radius: 16px; }
+  :root:root:root body[data-page="public-cards"] .public-cards-toolbar { grid-template-columns: minmax(0,1fr) auto; }
+}
+
+:root:root:root body[data-page="public-cards"] .theme-mode-choices { border: 0; border-radius: 999px; background: var(--neo-bg); box-shadow: inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .theme-mode-choices button { border: 0; border-radius: 999px; background: transparent; color: var(--neo-muted); box-shadow: none; }
+:root:root:root body[data-page="public-cards"] .theme-mode-choices button[aria-pressed="true"] { background: var(--neo-bg); color: var(--neo-text); box-shadow: 3px 3px 7px var(--neo-lo), -3px -3px 7px var(--neo-hi); }
+:root:root:root body[data-page="public-cards"] .color-dot { box-shadow: none; }
