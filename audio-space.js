@@ -153,7 +153,7 @@ function speak(text, sel, lang, rate) {
       if (done) return;
       if (i >= parts.length) { end({ ok: true }); return; }
       var u = new SpeechSynthesisUtterance(parts[i++]), started = false;
-      u.lang = lang || "fr-FR"; u.rate = Math.max(0.5, Math.min(2, (rate || 1) * cfg.rate)); u.pitch = cfg.pitch; if (cfg.voice) u.voice = cfg.voice;
+      u.lang = lang || "fr-FR"; u.rate = Math.max(0.5, Math.min(4, (rate || 1) * cfg.rate)); u.pitch = cfg.pitch; if (cfg.voice) u.voice = cfg.voice;
       u.onstart = function () { started = true; clearTimeout(wd); };
       u.onend = function () { clearTimeout(wd); next(); };
       u.onerror = function (e) { clearTimeout(wd); var er = e && e.error; end({ ok: false, reason: (er === "canceled" || er === "interrupted") ? "canceled" : (er || "error") }); };
@@ -462,7 +462,7 @@ function bind() {
   on("playerClose", "click", function () { stopPlayback(); $("audioPlayerPanel").hidden = true; });
   on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) { t.rate=Math.max(0.6,Math.min(4,v)); writeLocal(); } } if (playerAudio) playerAudio.playbackRate = v; });
   on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
-  on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); sequenceRound=1; showPlayer(); writeLocal(); });
+  on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.item) current.item.sequenceRepeat=current.sequenceRepeat; sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
   on("audioRefresh", "click", async function () { await loadCloud(); render(); status("audioAccountStatus", "Bibliothèque actualisée · " + summary()); });
   window.addEventListener("online", onOnline);
@@ -493,8 +493,9 @@ function init() {
   $("audioPlayerPanel").hidden = true;
   fillVoices(); initVoicePicker(); setTimeout(fillVoices, 600); setTimeout(fillVoices, 2000);
   bind(); render();
-  status("audioAccountStatus", summary());
-  loadCloud().then(function () { render(); status("audioAccountStatus", summary()); }).catch(function () {});
+  var accountSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary();
+  status("audioAccountStatus", accountSummary);
+  loadCloud().then(function () { render(); var updatedSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary(); status("audioAccountStatus", updatedSummary); }).catch(function () {});
   syncPending();
 }
 try { init(); } catch (e) { status("audioAccountStatus", "Erreur d’initialisation : " + e.message, true); }
