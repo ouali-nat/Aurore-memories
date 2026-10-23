@@ -1,11 +1,35 @@
-/* Cartes publiques — design blanc « soft UI » (relief doux, pilules, ombres claires/sombres) */
-html:has(body[data-page="public-cards"]) { background: #ecebea; color-scheme: light; }
+/* Cartes publiques — neumorphisme adaptatif : thème + accent du système global */
+:root {
+  --aurore-theme-bg: var(--bg);
+  --aurore-theme-surface: var(--surface);
+  --aurore-theme-surface-raised: var(--surface-raised);
+  --aurore-theme-text: var(--text);
+  --aurore-theme-muted: var(--muted);
+  --aurore-theme-border: var(--border);
+  --aurore-theme-accent: var(--accent);
+  --aurore-theme-accent-light: var(--accent-light);
+}
+html:has(body[data-page="public-cards"]) { background: var(--aurore-theme-bg); }
+html[data-theme="dark"]:has(body[data-page="public-cards"]) { color-scheme: dark; }
+html[data-theme="light"]:has(body[data-page="public-cards"]) { color-scheme: light; }
 :root:root:root body[data-page="public-cards"] {
-  --neo-bg: #ecebea; --neo-hi: rgba(255,255,255,.95); --neo-lo: rgba(158,158,166,.5);
-  --neo-text: #24252a; --neo-muted: #6b6c74; --neo-accent: #2f7bf0; --neo-gray: #a3a4ab;
-  --bg: var(--neo-bg); --surface: #f1f0ef; --surface-raised: #f4f3f2; --text: var(--neo-text); --muted: var(--neo-muted);
-  --border: transparent; --soft: #e4e3e2; --soft-border: transparent;
-  background: var(--neo-bg) !important; color: var(--neo-text);
+  --neo-bg: color-mix(in srgb, var(--aurore-theme-bg) 92%, var(--aurore-theme-accent) 8%);
+  --neo-hi: color-mix(in srgb, var(--aurore-theme-surface) 90%, #fff 10%);
+  --neo-lo: color-mix(in srgb, var(--aurore-theme-bg) 72%, #000 28%);
+  --neo-text: var(--aurore-theme-text);
+  --neo-muted: var(--aurore-theme-muted);
+  --neo-accent: var(--aurore-theme-accent);
+  --neo-gray: color-mix(in srgb, var(--aurore-theme-muted) 50%, var(--aurore-theme-surface));
+  --bg: var(--neo-bg);
+  --surface: color-mix(in srgb, var(--aurore-theme-surface) 92%, var(--aurore-theme-accent) 8%);
+  --surface-raised: color-mix(in srgb, var(--aurore-theme-surface-raised) 88%, var(--aurore-theme-accent) 12%);
+  --text: var(--aurore-theme-text);
+  --muted: var(--aurore-theme-muted);
+  --border: color-mix(in srgb, var(--aurore-theme-border) 72%, var(--aurore-theme-accent) 28%);
+  --soft: color-mix(in srgb, var(--aurore-theme-accent) 12%, transparent);
+  --soft-border: color-mix(in srgb, var(--aurore-theme-border) 65%, var(--aurore-theme-accent) 35%);
+  background: var(--neo-bg) !important;
+  color: var(--neo-text);
 }
 :root:root:root body[data-page="public-cards"] .ambient-bg { display: none !important; }
 
@@ -88,3 +112,51 @@ html:has(body[data-page="public-cards"]) { background: #ecebea; color-scheme: li
 :root:root:root body[data-page="public-cards"] .theme-mode-choices button { border: 0; border-radius: 999px; background: transparent; color: var(--neo-muted); box-shadow: none; }
 :root:root:root body[data-page="public-cards"] .theme-mode-choices button[aria-pressed="true"] { background: var(--neo-bg); color: var(--neo-text); box-shadow: 3px 3px 7px var(--neo-lo), -3px -3px 7px var(--neo-hi); }
 :root:root:root body[data-page="public-cards"] .color-dot { box-shadow: none; }
+
+
+/* Surfaces en creux : même thème et même accent que le reste de l'application. */
+:root:root:root body[data-page="public-cards"] .search-field {
+  background: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) !important;
+  color: var(--muted) !important;
+  box-shadow: inset 4px 4px 9px color-mix(in srgb, var(--bg) 30%, #000 70%),
+    inset -4px -4px 9px color-mix(in srgb, var(--surface) 88%, #fff 12%) !important;
+}
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .secondary-btn {
+  background: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) !important;
+  color: var(--text) !important;
+  box-shadow: 5px 5px 12px color-mix(in srgb, var(--bg) 28%, #000 72%),
+    -5px -5px 12px color-mix(in srgb, var(--surface) 88%, #fff 12%) !important;
+}
+:root:root:root body[data-page="public-cards"] .public-cards-toolbar .primary-btn {
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent)) !important;
+  color: #fff !important;
+  box-shadow: 5px 5px 12px color-mix(in srgb, var(--accent) 20%, var(--bg)) !important;
+}
+:root:root:root body[data-page="public-cards"] .pf-face {
+  box-shadow: 7px 7px 16px color-mix(in srgb, var(--bg) 28%, #000 72%),
+    -7px -7px 16px color-mix(in srgb, var(--surface) 90%, #fff 10%),
+    inset 0 0 0 5px color-mix(in srgb, var(--surface) 88%, var(--accent) 12%) !important;
+}
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-front,
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-back {
+  background-color: var(--neo-bg) !important;
+  background-image: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface-raised) 92%, var(--accent) 8%),
+    color-mix(in srgb, var(--bg) 88%, var(--accent) 12%)) !important;
+  color: var(--text) !important;
+}
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-chip,
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-btn {
+  background: color-mix(in srgb, var(--surface) 84%, var(--accent) 16%) !important;
+  color: var(--text) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)) !important;
+  box-shadow: 3px 3px 7px color-mix(in srgb, var(--bg) 28%, #000 72%),
+    -3px -3px 7px color-mix(in srgb, var(--surface) 90%, #fff 10%) !important;
+}
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-domain,
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-eyebrow {
+  color: var(--accent-light) !important;
+}
+:root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-hint {
+  color: var(--muted) !important;
+}
