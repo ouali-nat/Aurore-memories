@@ -45,6 +45,61 @@
       (lastError && lastError.message ? " (" + lastError.message + ")" : ""));
   }
 
+  function isNativeApp() {
+    return !!(window.Capacitor &&
+      typeof window.Capacitor.isNativePlatform === "function" &&
+      window.Capacitor.isNativePlatform());
+  }
+
+  function authRedirectUrl(path) {
+    // Android : revenir dans l'application installée, pas sur le site public.
+    if (isNativeApp()) return "app.aurore.memoire://auth/callback";
+    return new URL(path || "index.html", window.location.origin).toString();
+  }
+
+  function installNativeAuthCallback() {
+    if (!isNativeApp() || window.__auroreNativeAuthCallbackInstalled) return;
+    window.__auroreNativeAuthCallbackInstalled = true;
+    loadScript("vendor/capacitor-app-bridge.js").then(function () {
+      var nativeApp = window.auroreNativeApp;
+      if (!nativeApp || typeof nativeApp.addListener !== "function") {
+        throw new Error("Le gestionnaire de liens profonds Android est indisponible.");
+      }
+      nativeApp.addListener("appUrlOpen", async function (event) {
+        var rawUrl = event && event.url;
+        if (!rawUrl) return;
+        var callback;
+        try { callback = new URL(rawUrl); } catch (_) { return; }
+        if (callback.protocol !== "app.aurore.memoire:" ||
+            callback.hostname !== "auth" ||
+            callback.pathname !== "/callback") return;
+
+        var providerError = callback.searchParams.get("error_description") ||
+          callback.searchParams.get("error");
+        if (providerError) {
+          toast("La connexion Aurore ID a échoué : " + providerError);
+          return;
+        }
+        var code = callback.searchParams.get("code");
+        if (!code) {
+          toast("Aurore ID est revenu dans l’application sans code de connexion.");
+          return;
+        }
+        try {
+          var result = await client.auth.exchangeCodeForSession(code);
+          if (result.error) throw result.error;
+          updateHeader(result.data && result.data.session ? result.data.session : await currentSession());
+          // Efface tout paramètre d'authentification de l'adresse affichée dans la WebView.
+          try { history.replaceState(history.state, document.title, window.location.pathname + window.location.search); } catch (_) {}
+        } catch (error) {
+          toast(error && error.message ? error.message : "Impossible de terminer la connexion Aurore ID dans l’application.");
+        }
+      });
+    }).catch(function (error) {
+      console.error("Aurore Mémoire : gestion du retour Aurore ID indisponible.", error);
+    });
+  }
+
   function currentSession() {
     return client.auth.getSession().then(function (result) {
       if (result.error) throw result.error;
@@ -121,7 +176,7 @@
       button.disabled = true;
       button.textContent = "Connexion…";
       try {
-        var redirectTo = new URL("fichiers.html", window.location.origin).toString();
+        var redirectTo = authRedirectUrl("fichiers.html");
         var result = await client.auth.signInWithOAuth({
           provider: OIDC_PROVIDER,
           options: {
@@ -184,7 +239,7 @@
         var result = await client.auth.signInWithOAuth({
           provider: OIDC_PROVIDER,
           options: {
-            redirectTo: new URL(redirectPath || "fichiers.html", window.location.origin).toString(),
+            redirectTo: authRedirectUrl(redirectPath || "fichiers.html"),
             scopes: "openid email profile"
           }
         });
@@ -197,6 +252,7 @@
       signOut: function () { return client.auth.signOut(); }
     };
     window.auroreAuth = authApi;
+    installNativeAuthCallback();
 
     client.auth.onAuthStateChange(function (_event, session) {
       updateHeader(session);
