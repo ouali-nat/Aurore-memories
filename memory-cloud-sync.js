@@ -64,10 +64,8 @@
   function stamp() { return String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8); }
   function finishLegacyMigration() {
     if (window.location.hostname !== "aurore-memories-mu.vercel.app") return;
-    status("Sauvegarde vérifiée. Ouverture du site principal Aurore Mémoire…", "ok");
-    var target = new URL(window.location.href);
-    target.hostname = "aurore-memories-aurore9.vercel.app";
-    window.setTimeout(function () { window.location.replace(target.toString()); }, 700);
+    // La sauvegarde est terminée : rester sur le domaine canonique, sans redirection.
+    status("Sauvegarde vérifiée. Vous pouvez continuer sur Aurore Mémoire.", "ok");
   }
 
   function mountPanel() {
@@ -232,10 +230,7 @@
         savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(migrated));
         saveBase(migratedWrite.etag);
         conflict = null;
-        status("Vos contenus ont été réunis en toute sécurité. Ouverture du site principal…", "ok");
-        var targetUrl = new URL(window.location.href);
-        targetUrl.hostname = "aurore-memories-aurore9.vercel.app";
-        window.setTimeout(function () { window.location.replace(targetUrl.toString()); }, 900);
+        status("Vos contenus ont été réunis et sauvegardés en toute sécurité. Vous pouvez continuer sur Aurore Mémoire.", "ok");
         return;
       }
 
