@@ -42,6 +42,7 @@
   try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (error) {}
   if (!state || typeof state !== "object") state = { cards: [], log: {}, mode: "Rappel actif" };
   if (!Array.isArray(state.cards)) state.cards = [];
+  if (!Array.isArray(state.qcms)) state.qcms = [];
   if (!state.log || typeof state.log !== "object") state.log = {};
   if (!Array.isArray(state.performance)) state.performance = [];
   if (!Array.isArray(state.cardPerformance)) state.cardPerformance = [];
@@ -1001,9 +1002,10 @@
     if (!target) return;
     var params = new URLSearchParams(window.location.search);
     var view = params.get("view") || "all";
-    if (["all", "memories", "cards"].indexOf(view) === -1) view = "all";
+    if (["all", "memories", "cards", "qcm"].indexOf(view) === -1) view = "all";
     var search = normalizeSearch($("#memorySearch") && $("#memorySearch").value);
     var searched = state.cards.filter(function (card) {
+      if (view === "qcm") return false;
       if (view === "memories" && !isMemoryCard(card)) return false;
       if (view === "cards" && !isFlashcard(card)) return false;
       if (!search) return true; var haystack = normalizeSearch([card.deck, card.front, card.back].join(" ")); return haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; });
@@ -1053,7 +1055,10 @@
     var cardRows = '<section class="library-subsection"><h3>Mes cartes créées</h3><p>Les séries que vous avez composées vous-même.</p>' + rows(personalFlashNames,personalFlashGroups,"flashcard") + '</section>';
     if (communityFlashNames.length) cardRows += '<section class="library-subsection"><h3>Cartes de la communauté enregistrées</h3><p>Les cartes publiques que vous avez ajoutées à votre bibliothèque personnelle.</p>' + rows(communityFlashNames,communityFlashGroups,"flashcard") + '</section>';
     var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Vos cartes personnelles et vos cartes communautaires sont désormais séparées.</p></div>' + cardsAction + '</div>' + cardRows + '</section>';
-    target.innerHTML = (view === "cards" ? "" : memorySection) + (view === "memories" ? "" : cardSection);
+    var qs=(state.qcms||[]).filter(function(q){if(!search)return true;var h=normalizeSearch([q.title].concat((q.questions||[]).map(function(x){return [x.prompt,x.explanation].concat((x.options||[]).map(function(o){return o.text})).join(" ")})).join(" "));return h.indexOf(search)>=0});
+    var qr=qs.length?'<div class="memory-list">'+qs.map(function(q){return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">✓</div><div class="memory-row-main"><h3>'+escapeHtml(q.title||"QCM sans titre")+'</h3><p>'+(q.questions||[]).length+' question(s) · Auto-évaluation</p><small>'+escapeHtml(q.questions&&q.questions[0]?q.questions[0].prompt:"")+'</small></div><div class="memory-row-actions"><a class="primary-btn" href="qcm-study.html?deck='+encodeURIComponent(q.id)+'">M’auto-évaluer</a><a class="secondary-btn" href="qcm.html?deck='+encodeURIComponent(q.id)+'">Modifier</a><button class="subtle-danger" type="button" data-act="delete-qcm" data-qcm-id="'+escapeHtml(q.id)+'">Supprimer</button></div></article>'}).join("")+'</div>':'<div class="empty-state compact-empty"><h3>'+(search?'Aucun résultat':'Aucun QCM enregistré')+'</h3><p>'+(search?'Aucun QCM ne correspond à la recherche.':'Créez votre première séquence de questions et réponses.')+'</p></div>';
+    var qcmSection='<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">APPRENDRE ET S’ÉVALUER</p><h2>Mes QCM</h2><p>Des questions pour comprendre, réviser et mesurer vos acquis.</p></div><a class="primary-btn" href="qcm.html">＋ Créer un QCM</a></div>'+qr+'</section>';
+    target.innerHTML=view==="memories"?memorySection:view==="cards"?cardSection:view==="qcm"?qcmSection:memorySection+cardSection+qcmSection;
   }
 
   // Cache persistant du HTML KaTeX : la source originale reste la référence éditable.
@@ -1114,7 +1119,7 @@
     if (!root) return;
     var params = new URLSearchParams(window.location.search);
     var view = params.get("view") || "all";
-    if (["all","memories","cards"].indexOf(view) === -1) view = "all";
+    if (["all","memories","cards","qcm"].indexOf(view) === -1) view = "all";
     var memories = state.cards.filter(isMemoryCard), flashcards = state.cards.filter(isFlashcard);
     var memoryCount = Object.keys(memoryGroups(memories)).length, cardSeriesCount = Object.keys(memoryGroups(flashcards)).length;
     if (view === "all") {
@@ -1128,9 +1133,11 @@
       document.title = "Ma bibliothèque — Aurore Mémoire";
       var memoryCountForChoice = Object.keys(memoryGroups(memories)).length;
       var cardCountForChoice = Object.keys(memoryGroups(flashcards)).length;
+      var qcmCountForChoice = (state.qcms||[]).length;
       root.innerHTML = '<section class="library-choice-grid" aria-label="Choisir un espace de bibliothèque">' +
         '<a class="library-choice-card memory-choice" href="mes-memoires.html?view=memories"><span class="library-choice-top"><span class="library-choice-icon" aria-hidden="true">▤</span><span class="library-choice-arrow" aria-hidden="true">↗</span></span><span class="library-choice-copy"><strong>Mes mémorisations</strong><small>Retrouvez vos textes, passages et suivis individuels.</small><span class="library-choice-count">' + memoryCountForChoice + (memoryCountForChoice === 1 ? ' mémoire' : ' mémoires') + '</span></span></a>' +
         '<a class="library-choice-card cards-choice" href="mes-memoires.html?view=cards"><span class="library-choice-top"><span class="library-choice-icon" aria-hidden="true">▧</span><span class="library-choice-arrow" aria-hidden="true">↗</span></span><span class="library-choice-copy"><strong>Mes cartes</strong><small>Accédez aux séries de questions-réponses et aux révisions.</small><span class="library-choice-count">' + cardCountForChoice + (cardCountForChoice === 1 ? ' série de cartes' : ' séries de cartes') + '</span></span></a>' +
+        '<a class="library-choice-card" href="mes-memoires.html?view=qcm"><span class="library-choice-top"><span class="library-choice-icon" aria-hidden="true">✓</span><span class="library-choice-arrow" aria-hidden="true">↗</span></span><span class="library-choice-copy"><strong>Mes QCM</strong><small>Modifiez vos séquences et auto-évaluez-vous.</small><span class="library-choice-count">' + qcmCountForChoice + (qcmCountForChoice === 1 ? ' séquence' : ' séquences') + '</span></span></a>' +
         '</section>';
       return;
     }
@@ -1140,16 +1147,17 @@
     } else if (view === "cards") {
       summary = '<div><strong>' + cardSeriesCount + '</strong><span>séries</span></div><div><strong>' + flashcards.length + '</strong><span>cartes enregistrées</span></div><div><strong>' + dueCards(flashcards).length + '</strong><span>à réviser</span></div>';
     } else {
-      summary = '<div><strong>' + memoryCount + '</strong><span>mémoires</span></div><div><strong>' + cardSeriesCount + '</strong><span>séries de cartes</span></div><div><strong>' + state.cards.length + '</strong><span>éléments enregistrés</span></div>';
+      summary = view==="qcm"?'<div><strong>'+(state.qcms||[]).length+'</strong><span>séquences</span></div><div><strong>'+(state.qcms||[]).reduce(function(n,q){return n+(q.questions||[]).length},0)+'</strong><span>questions</span></div><div><strong>'+(state.qcms||[]).reduce(function(n,q){return n+(q.attempts||[]).length},0)+'</strong><span>tentatives</span></div>':'<div><strong>'+memoryCount+'</strong><span>mémoires</span></div><div><strong>'+cardSeriesCount+'</strong><span>séries de cartes</span></div><div><strong>'+state.cards.length+'</strong><span>éléments enregistrés</span></div>';
     }
     var shortcuts = view === "all" ? '<nav class="library-shortcuts" aria-label="Actions principales">' +
       '<a class="library-shortcut" href="editer-memoire.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▤</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une mémoire</strong><small>Préparer un texte à mémoriser.</small></span></a>' +
       '<a class="library-shortcut" href="creer-cartes.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">▧</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer une série</strong><small>Créer des cartes question-réponse.</small></span></a>' +
+      '<a class="library-shortcut" href="qcm.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">✓</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Créer un QCM</strong><small>Questions, réponses et explications.</small></span></a>' +
       '<a class="library-shortcut" href="progression.html"><span class="library-shortcut-top"><span class="library-shortcut-symbol" aria-hidden="true">↗</span><span class="library-shortcut-arrow" aria-hidden="true">↗</span></span><span class="library-shortcut-copy"><strong>Progression</strong><small>Consulter les résultats d’apprentissage.</small></span></a></nav>' : "";
-    var placeholder = view === "memories" ? "Rechercher une mémoire ou un passage…" : (view === "cards" ? "Rechercher une série, une question ou une réponse…" : "Rechercher dans les mémoires et les cartes…");
-    var kicker = view === "memories" ? "BIBLIOTHÈQUE DE TEXTES" : (view === "cards" ? "SÉRIES DE CARTES" : "BIBLIOTHÈQUE PERSONNELLE");
-    var heading = view === "memories" ? "Mes mémoires" : (view === "cards" ? "Mes cartes" : "Ma bibliothèque");
-    var description = view === "memories" ? "Consultez les textes enregistrés et leurs passages." : (view === "cards" ? "Consultez vos séries et recherchez une question ou une réponse." : "Organisez vos textes, vos cartes et vos révisions depuis un espace unique.");
+    var placeholder = view==="memories"?"Rechercher une mémoire ou un passage…":view==="cards"?"Rechercher une série, une question ou une réponse…":view==="qcm"?"Rechercher un QCM…":"Rechercher dans les mémoires, cartes et QCM…";
+    var kicker = view==="memories"?"BIBLIOTHÈQUE DE TEXTES":view==="cards"?"SÉRIES DE CARTES":view==="qcm"?"QUESTIONS À CHOIX MULTIPLES":"BIBLIOTHÈQUE PERSONNELLE";
+    var heading = view==="memories"?"Mes mémoires":view==="cards"?"Mes cartes":view==="qcm"?"Mes QCM":"Ma bibliothèque";
+    var description = view==="memories"?"Consultez les textes enregistrés et leurs passages.":view==="cards"?"Consultez vos séries et recherchez une question ou une réponse.":view==="qcm"?"Retrouvez vos séquences, modifiez-les ou lancez une auto-évaluation.":"Organisez vos textes, vos cartes, vos QCM et vos révisions depuis un espace unique.";
     var kickerNode = document.querySelector(".page-heading .section-kicker"), headingNode = document.querySelector(".page-heading h1"), descriptionNode = document.querySelector(".page-heading > p:last-child");
     if (kickerNode) kickerNode.textContent = kicker;
     if (headingNode) headingNode.textContent = heading;
@@ -1162,6 +1170,7 @@
     if (searchInput) searchInput.addEventListener("input", renderMemoryList);
   }
 
+  window.auroreDeleteQcm=function(id){state.qcms=(state.qcms||[]).filter(function(q){return String(q.id)!==String(id)});try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}renderLibrary()};
   function handleCreateForm() {
     var form = $("#memoryCreateForm");
     if (!form) return;

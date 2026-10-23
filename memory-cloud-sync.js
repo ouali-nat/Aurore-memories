@@ -42,7 +42,7 @@
     var d = dataOf(value);
     return d.cards.length > 0 || Object.keys(d.log).length > 0 ||
       d.performance.length > 0 || d.cardPerformance.length > 0 ||
-      Object.keys(d.deckSettings).length > 0 || Object.keys(d.deckStyles).length > 0;
+      Object.keys(d.deckSettings).length > 0 || Object.keys(d.deckStyles).length > 0 || (Array.isArray(d.rest.qcms) && d.rest.qcms.length > 0);
   }
   function stable(value) {
     if (value === null || typeof value !== "object") return JSON.stringify(value);
