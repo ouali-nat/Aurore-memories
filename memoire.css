@@ -1130,3 +1130,31 @@ body[data-page="library"] .memory-series-card .series-sharing-status{display:fle
 .deck-export-provenance{position:absolute;left:2mm;right:12mm;bottom:1mm;font:5pt Arial,sans-serif;opacity:.8;text-align:left;overflow-wrap:anywhere;line-height:1.1}
 .deck-export-number{z-index:1}
 @media(max-width:560px){.public-card-attribution{font-size:.56rem;max-width:66%}.public-card-attribution span:last-child{font-size:.48rem}}
+
+
+/* Correctifs mobiles ciblés — navigation lisible et cartes publiques claires */
+@media (max-width: 620px) {
+  .topbar .topbar-inner { flex-wrap: wrap; align-items: center; gap: 8px; }
+  .topbar .brand { flex: 0 0 auto; min-width: 0; }
+  .topbar .header-right { flex: 1 1 100%; width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 7px; }
+  .topbar .top-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); width: 100%; min-width: 0; gap: 4px; }
+  .topbar .top-actions .nav-link { min-width: 0; flex: initial; padding: 8px 4px; white-space: normal; text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
+  .topbar .top-actions .nav-link::before { display: block; margin: 0 auto 3px; }
+  .topbar .appearance { justify-content: flex-end; }
+}
+body[data-page="public-cards"] .public-flashcard {
+  background: #fff !important;
+  color: #24212b !important;
+  border: 1px solid #e2dce8 !important;
+  box-shadow: 0 8px 22px rgba(18, 14, 28, .10) !important;
+  text-shadow: none !important;
+}
+body[data-page="public-cards"] .public-flashcard-content { color: #24212b !important; }
+body[data-page="public-cards"] .public-flashcard h2,
+body[data-page="public-cards"] .public-flashcard h2 *,
+body[data-page="public-cards"] .public-card-answer,
+body[data-page="public-cards"] .public-card-answer p:last-child { color: #24212b !important; text-shadow: none !important; }
+body[data-page="public-cards"] .public-card-eyebrow,
+body[data-page="public-cards"] .public-card-hint { color: #6b6474 !important; text-shadow: none !important; }
+body[data-page="public-cards"] .public-flashcard-bottom { border-color: #e7e1eb !important; }
+body[data-page="public-cards"] .public-icon-button { background: #f5f2f8 !important; color: #30283a !important; border-color: #ded6e6 !important; }

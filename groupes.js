@@ -82,7 +82,7 @@
     var lastError = null;
     for (var attempt = 0; attempt < 2; attempt++) {
       var controller = typeof AbortController === "function" ? new AbortController() : null;
-      var timer = setTimeout(function () { if (controller) controller.abort(); }, 10000);
+      var timer = setTimeout(function () { if (controller) controller.abort(); }, 5500);
       try {
         var response = await fetch(SUPABASE_URL + "/rest/v1/study_groups?select=" + GROUP_COLUMNS + "&visibility=eq.public&order=created_at.desc&limit=100", {
           headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, Accept: "application/json" },
@@ -94,7 +94,7 @@
         return Array.isArray(data) ? data : [];
       } catch (error) {
         lastError = error;
-        await new Promise(function (resolve) { setTimeout(resolve, 600); });
+        if (attempt === 0) await new Promise(function (resolve) { setTimeout(resolve, 250); });
       } finally { clearTimeout(timer); }
     }
     throw lastError || new Error("Catalogue indisponible");
@@ -109,7 +109,7 @@
     }
     grid.setAttribute("aria-busy","true");
     var cached = activeFilter === "public" || !signedIn() ? readPublicCache() : null;
-    if (cached && cached.length) { groups = cached; renderGroups(); }
+    if (cached) { groups = cached; renderGroups(); grid.setAttribute("aria-busy","false"); }
     else grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
     try {
       var usePublicRead = activeFilter === "public" || !signedIn();
