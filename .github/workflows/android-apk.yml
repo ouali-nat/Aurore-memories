@@ -89,7 +89,7 @@ jobs:
           data.setdefault("server", {})
           data["server"]["url"] = "https://aurore-memories-mu.vercel.app"
           data["server"]["androidScheme"] = "https"
-          config.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\\n")
+          config.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
           print("Application Android reliée au site Aurore Mémoire de production.")
           PY
 
