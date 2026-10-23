@@ -68,31 +68,68 @@
     loginButton.title = signedIn() ? "Compte connecté" : "Se connecter avec Aurore ID";
     createButton.textContent = signedIn() ? "＋ Créer un groupe" : "＋ Créer un groupe";
   }
+  var PUBLIC_CACHE_KEY = "aurore-groups-public-cache-v1";
+  var GROUP_COLUMNS = "id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at";
+  function readPublicCache() {
+    try { var raw = JSON.parse(localStorage.getItem(PUBLIC_CACHE_KEY) || "null"); return raw && Array.isArray(raw.groups) ? raw.groups : null; } catch (_) { return null; }
+  }
+  function writePublicCache(list) {
+    try { localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify({ at: Date.now(), groups: list })); } catch (_) {}
+  }
+  // Lecture du catalogue public par simple requête HTTP : aucune dépendance à la
+  // bibliothèque Supabase chargée depuis un CDN, donc plus d'attente infinie.
+  async function fetchPublicGroups() {
+    var lastError = null;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var controller = typeof AbortController === "function" ? new AbortController() : null;
+      var timer = setTimeout(function () { if (controller) controller.abort(); }, 10000);
+      try {
+        var response = await fetch(SUPABASE_URL + "/rest/v1/study_groups?select=" + GROUP_COLUMNS + "&visibility=eq.public&order=created_at.desc&limit=100", {
+          headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, Accept: "application/json" },
+          cache: "no-store",
+          signal: controller ? controller.signal : undefined
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        var data = await response.json();
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        lastError = error;
+        await new Promise(function (resolve) { setTimeout(resolve, 600); });
+      } finally { clearTimeout(timer); }
+    }
+    throw lastError || new Error("Catalogue indisponible");
+  }
   async function loadGroups() {
     var requestId = ++loadToken;
-    if (!client) {
-      grid.setAttribute("aria-busy","false");
-      grid.innerHTML='<div class="groups-error"><strong>Connexion aux groupes indisponible</strong><p>Le service de données n’a pas pu être initialisé. Recharge la page dans quelques instants.</p><button class="groups-btn" type="button" id="retryGroups">Réessayer</button></div>';
-      var retry=document.getElementById("retryGroups"); if(retry)retry.addEventListener("click",loadGroups);
+    var needsClient = activeFilter !== "public" && signedIn();
+    if (needsClient && !client) {
+      grid.setAttribute("aria-busy","true");
+      grid.innerHTML='<div class="groups-loading"><strong>Connexion au service…</strong><p>Vos groupes s’afficheront dans un instant.</p></div>';
       return;
     }
     grid.setAttribute("aria-busy","true");
-    grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
+    var cached = activeFilter === "public" || !signedIn() ? readPublicCache() : null;
+    if (cached && cached.length) { groups = cached; renderGroups(); }
+    else grid.innerHTML='<div class="groups-loading"><strong>Chargement des groupes…</strong><p>Un instant.</p></div>';
     try {
       var usePublicRead = activeFilter === "public" || !signedIn();
-      var sourceClient = usePublicRead ? (publicClient || client) : client;
-      var query = sourceClient.from("study_groups").select("id,name,description,subject,level,visibility,join_policy,max_members,cover_url,created_by,created_at").order("created_at",{ascending:false}).limit(100);
-      // Le catalogue public utilise un client sans session persistée, même si Aurore ID a expiré.
-      if (usePublicRead) query = query.eq("visibility", "public");
-      var result = await withTimeout(query, 12000, "La récupération des groupes prend trop de temps.");
-      if (result.error) throw result.error;
-      if (requestId !== loadToken) return;
+      var result;
+      if (usePublicRead || !client) {
+        result = { data: await fetchPublicGroups() };
+        if (requestId !== loadToken) return;
+        writePublicCache(result.data);
+      } else {
+        var query = client.from("study_groups").select(GROUP_COLUMNS).order("created_at",{ascending:false}).limit(100);
+        result = await withTimeout(query, 12000, "La récupération des groupes prend trop de temps.");
+        if (result.error) throw result.error;
+        if (requestId !== loadToken) return;
+      }
       groups = result.data || [];
       joinedGroupIds = Object.create(null);
       // Afficher le catalogue public immédiatement : une requête de session ou
       // d'adhésions lente ne doit jamais laisser la page bloquée sur le chargement.
       renderGroups();
-      if (signedIn()) {
+      if (signedIn() && client) {
         var membershipUserId = session.user.id;
         try {
           var memberships = await withTimeout(
@@ -229,20 +266,20 @@
   search.addEventListener("input",renderGroups);
   document.querySelectorAll("[data-filter]").forEach(function(button){button.addEventListener("click",function(){setFilter(button.dataset.filter);});});
 
-  if(window.supabase && window.supabase.createClient){
+  function initClients() {
+    if (client || !(window.supabase && window.supabase.createClient)) return;
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    publicClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"aurore-public-groups-read-v1"}});
-    // Afficher d'abord le catalogue public avec un client anonyme indépendant de la session locale.
-    loadGroups();
     loadSession().then(function(){
       updateAuthButtons();
-      if (signedIn()) loadGroups();
+      if (signedIn() || activeFilter !== "public") loadGroups();
     }).catch(function(error){
       console.warn("Restauration de session indisponible ; les groupes publics restent consultables.",error);
       session = null;
       updateAuthButtons();
-      // Relancer la requête publique sans dépendre d'une session invalide ou expirée.
-      loadGroups();
     });
-  } else { loadGroups(); }
+  }
+  window.__auroreGroupsSupabaseReady = initClients;
+  // Le catalogue public s'affiche tout de suite, sans attendre la bibliothèque Supabase.
+  loadGroups();
+  initClients();
 })();
