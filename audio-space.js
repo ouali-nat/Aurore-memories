@@ -420,7 +420,7 @@ function render() {
   var box = $("audioLibraryList"); if (!box) return; box.textContent = "";
   if (!sequences.length) {
     var e = document.createElement("p"); e.className = "audio-empty";
-    e.textContent = "Aucune séquence enregistrée pour le moment. Crée d’abord une séquence dans Mes audios.";
+    e.textContent = "Aucune séquence enregistrée pour le moment. Utilise le formulaire « Créer une séquence » ci-dessus.";
     box.append(e); renderSequenceBuilder(); return;
   }
   sequences.forEach(function (seq) {
@@ -459,7 +459,7 @@ function bind() {
   on("playerNext", "click", function () { var n = selectedTracks().length; stopPlayback(); if (currentTrack < n - 1) currentTrack++; statusLine = ""; showPlayer(); playTrack(); });
   on("playerPrevious", "click", function () { stopPlayback(); currentTrack = Math.max(0, currentTrack - 1); statusLine = ""; showPlayer(); playTrack(); });
   on("playerClose", "click", function () { stopPlayback(); $("audioPlayerPanel").hidden = true; });
-  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) t.rate=v; } if (playerAudio) playerAudio.playbackRate = v; });
+  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) { t.rate=v; writeLocal(); } } if (playerAudio) playerAudio.playbackRate = v; });
   on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
   on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);
