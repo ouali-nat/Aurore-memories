@@ -4,3 +4,18 @@ body.science-keyboard-open{padding-bottom:calc(var(--asd-h,340px) + env(safe-are
 .asd{max-height:min(68dvh,620px);}
 .asd-body{min-height:96px;}
 @media(max-height:700px){.asd{max-height:72dvh}.asd-body{height:clamp(90px,19vh,160px)}}
+
+/* QCM mobile: champs confortables, retours à la ligne et grille des propositions corrigée */
+.qcm-field textarea{box-sizing:border-box;display:block;min-width:0;width:100%;min-height:104px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow-x:hidden;line-height:1.65;resize:vertical;}
+.qcm-prompt{min-height:120px!important;}
+.qcm-field #qExplain{min-height:170px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
+.qcm-options-editor{min-width:0;width:100%;}
+.qcm-option-edit{grid-template-columns:24px 28px minmax(0,1fr) 36px;align-items:start;gap:8px;padding:10px;min-width:0;}
+.qcm-option-edit .qcm-option-radio{grid-column:1;grid-row:1;margin:12px 0 0;}
+.qcm-option-edit .qcm-option-letter{grid-column:2;grid-row:1;padding-top:15px;}
+.qcm-option-edit textarea{grid-column:3;grid-row:1;min-height:100px;width:100%;font-size:1rem;}
+.qcm-option-edit .qcm-option-remove{grid-column:4;grid-row:1;align-self:start;}
+.qcm-option-preview{grid-column:3/5;grid-row:2;margin:0;min-width:0;overflow-wrap:anywhere;}
+.qcm-rendered-preview{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%;}
+.qcm-rendered-preview .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;}
+@media(max-width:520px){.qcm-question-editor{padding:12px;gap:18px}.qcm-option-edit{grid-template-columns:22px 24px minmax(0,1fr) 32px;gap:6px;padding:8px}.qcm-option-edit textarea{min-height:104px;padding:12px;font-size:16px}.qcm-field #qExplain{min-height:190px;font-size:16px}.qcm-field textarea{font-size:16px}}
