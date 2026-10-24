@@ -22,3 +22,8 @@ body.science-keyboard-open{padding-bottom:calc(var(--asd-h,340px) + env(safe-are
 
 /* Préserver les paragraphes de l’explication pendant la pratique */
 .qcm-feedback p{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
+
+/* LaTeX dans les QCM en bibliothèque et pendant l’auto-évaluation */
+.qcm-study-question .katex-display,.qcm-answer-choice .katex-display,.qcm-feedback .katex-display,.qcm-library-prompt .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;}
+.qcm-library-prompt{display:block;white-space:normal;overflow-wrap:anywhere;}
+.qcm-study-question .katex,.qcm-answer-choice .katex,.qcm-feedback .katex{font-size:1.02em;}
