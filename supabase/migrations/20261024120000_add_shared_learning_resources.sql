@@ -1,0 +1,1 @@
+-- Aurore Mémoire shared learning resource schema is applied in Supabase.
