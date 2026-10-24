@@ -50,6 +50,33 @@ box.querySelectorAll("[data-resource-download]").forEach(function(b){b.addEventL
 });
 }
 
+
+var shareForm=document.getElementById("shareGroupResourceForm");
+if(shareForm)shareForm.addEventListener("submit",async function(ev){
+ev.preventDefault();
+var statusEl=document.getElementById("shareGroupResourceStatus"),submit=shareForm.querySelector('button[type="submit"]');
+function setStatus(t){if(statusEl)statusEl.textContent=t;}
+if(!client||!currentGroup){setStatus("Le groupe n’est pas encore chargé.");return;}
+var sr=await client.auth.getSession(),sess=sr.data&&sr.data.session;
+if(sr.error||!sess){setStatus("Connecte-toi avec Aurore ID pour partager une ressource.");return;}
+var type=document.getElementById("shareGroupResourceType").value,title=document.getElementById("shareGroupResourceTitle").value.trim(),subject=document.getElementById("shareGroupResourceSubject").value.trim(),description=document.getElementById("shareGroupResourceDescription").value.trim(),raw=document.getElementById("shareGroupResourcePayload").value.trim(),file=document.getElementById("shareGroupResourceFile").files[0],payload={};
+if(!title){setStatus("Ajoute un titre.");return;}
+try{if(type==="memory"){if(!raw)throw Error("Ajoute le texte de la mémoire.");payload.text=raw;}else if(type==="qcm"){if(!raw)throw Error("Colle le JSON du QCM.");var q=JSON.parse(raw);if(!Array.isArray(q.questions)&&!Array.isArray(q.items))throw Error("Le JSON doit contenir un tableau questions ou items.");payload=q;}else{if(!file)throw Error("Sélectionne le fichier audio à partager.");if(file.size>10485760)throw Error("Le fichier audio dépasse 10 Mo.");if(!file.type.startsWith("audio/"))throw Error("Sélectionne un fichier audio valide.");}
+}catch(e){setStatus(e.message);return;}
+submit.disabled=true;setStatus("Partage en cours…");
+try{
+if(type==="audio"){
+var safeName=file.name.replace(/[^a-z0-9._-]+/gi,"-").slice(-90)||"audio.webm",path=currentGroup.id+"/"+sess.user.id+"/"+Date.now()+"-"+safeName;
+var uploaded=await client.storage.from("aurore-group-learning-audio").upload(path,file,{contentType:file.type,upsert:false});
+if(uploaded.error)throw uploaded.error;payload.storage_path=path;payload.mime_type=file.type;payload.size=file.size;payload.file_name=file.name;
+}
+var result=await client.from("study_group_shared_resources").insert({group_id:currentGroup.id,shared_by:sess.user.id,resource_type:type,title:title,description:description,subject:subject,payload:payload});
+if(result.error)throw result.error;
+shareForm.reset();setStatus("Ressource partagée avec le groupe.");await loadSharedResources();
+}catch(e){console.error("Share group resource:",e);setStatus("Partage impossible : "+(e.message||"vérifie tes droits et ta connexion."));}
+finally{submit.disabled=false;}
+});
+
 async function loadOwnerTools(){
 if(!session||!currentGroup||session.user.id!==currentGroup.created_by){ownerTools.hidden=true;return;}
 ownerTools.hidden=false;
