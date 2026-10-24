@@ -29,6 +29,27 @@ var rows=result.data||[];
 if(!rows.length){seriesGrid.innerHTML='<div class="groups-empty"><strong>Pas encore de cartes partagées</strong><p>Les séries de révision partagées avec le groupe apparaîtront ici.</p></div>';return;}
 seriesGrid.innerHTML=rows.map(function(s){var count=Array.isArray(s.cards)?s.cards.length:0;return '<article class="group-card"><div class="group-card-top"><span class="group-card-symbol" aria-hidden="true">▤</span><span class="group-visibility">'+count+' carte'+(count>1?"s":"")+'</span></div><h2>'+escapeHtml(s.title)+'</h2><p>'+escapeHtml(s.description||"Série de révision partagée avec le groupe.")+'</p><div class="group-meta">'+(s.subject?'<span>'+escapeHtml(s.subject)+'</span>':"")+'</div></article>';}).join("");
 }
+
+async function loadSharedResources(){
+var reader=currentGroup&&currentGroup.visibility==="public"?(publicClient||client):client;
+var result=await reader.from("study_group_shared_resources").select("id,resource_type,title,description,subject,payload,created_at").eq("group_id",id).order("created_at",{ascending:false}).limit(100);
+var targets={memory:document.getElementById("sharedMemoryResources"),audio:document.getElementById("sharedAudioResources"),qcm:document.getElementById("sharedQcmResources")};
+if(result.error){console.warn("Shared learning resources unavailable:",result.error);Object.keys(targets).forEach(function(k){if(targets[k])targets[k].innerHTML='<div class="groups-empty"><p>Ces ressources ne sont pas disponibles pour le moment.</p></div>';});return;}
+var rows=result.data||[];
+Object.keys(targets).forEach(function(type){
+var box=targets[type];if(!box)return;
+var list=rows.filter(function(r){return r.resource_type===type;});
+if(!list.length){box.innerHTML='<div class="groups-empty"><p>Aucune '+(type==="memory"?"mémoire":type==="audio"?"piste audio":"série de QCM")+' partagée pour le moment.</p></div>';return;}
+box.innerHTML=list.map(function(r){
+var p=r.payload||{},preview=type==="memory"?(p.text||p.content||r.description||"Mémoire partagée") :type==="audio"?(p.text||"Fichier audio"):(Array.isArray(p.questions)?p.questions.length+" question(s)":"QCM partagé");
+var url=typeof p.download_url==="string"&&/^https:\/\//i.test(p.download_url)?p.download_url:"";
+var json=JSON.stringify({title:r.title,subject:r.subject,description:r.description,payload:p},null,2);
+return '<article class="group-card"><div class="group-card-top"><span class="group-visibility">'+(type==="memory"?"MÉMOIRE":type==="audio"?"AUDIO":"QCM")+'</span></div><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(String(preview).slice(0,500))+'</p><div class="group-meta">'+(r.subject?'<span>'+escapeHtml(r.subject)+'</span>':"")+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+(url?'<a class="groups-btn" href="'+escapeHtml(url)+'" download> Télécharger audio</a>':"")+'<button class="groups-btn" type="button" data-resource-download="'+escapeHtml(r.id)+'">Télécharger '+(type==="qcm"?"QCM JSON":type==="audio"?"les informations":"le texte")+'</button></div></article>';
+}).join("");
+box.querySelectorAll("[data-resource-download]").forEach(function(b){b.addEventListener("click",function(){var r=list.find(function(x){return String(x.id)===b.dataset.resourceDownload;});if(!r)return;var p=r.payload||{},type=r.resource_type,txt=type==="memory"?(p.text||p.content||r.description||""):JSON.stringify({title:r.title,subject:r.subject,description:r.description,payload:p},null,2);var blob=new Blob([txt],{type:type==="qcm"?"application/json;charset=utf-8":"text/plain;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=(String(r.title||"aurore-ressource").replace(/[^a-z0-9_-]+/gi,"-").slice(0,70)||"aurore-ressource")+(type==="qcm"?".json":".txt");document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);});});
+});
+}
+
 async function loadOwnerTools(){
 if(!session||!currentGroup||session.user.id!==currentGroup.created_by){ownerTools.hidden=true;return;}
 ownerTools.hidden=false;
@@ -126,6 +147,7 @@ try{
   message("Groupe privé · accès réservé à son propriétaire et aux membres autorisés.");
  }
  // Les cartes d'un groupe public utilisent le client anonyme indépendant.
+ loadSharedResources().catch(function(resourceError){console.warn("Loading shared resources:",resourceError);});
  loadSeries().catch(function(seriesError){
   console.error("Loading shared study series:",seriesError);
   seriesGrid.innerHTML='<div class="groups-empty"><strong>Les cartes partagées ne sont pas disponibles</strong><p>Les informations du groupe restent consultables. Réessayez pour afficher les séries partagées.</p></div>';
