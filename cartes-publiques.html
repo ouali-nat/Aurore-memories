@@ -57,6 +57,20 @@
       <button class="secondary-btn" type="button" data-learning-filter="audio" aria-pressed="false">Audios</button>
       <button class="secondary-btn" type="button" data-learning-filter="qcm" aria-pressed="false">QCM</button>
     </nav>
+
+    <section class="form-panel" style="padding:18px;margin:22px 0" aria-labelledby="publishLearningTitle">
+      <h2 id="publishLearningTitle">Publier une ressource</h2>
+      <p>Partage une mémoire, un audio ou un QCM avec la communauté. Une copie publique est créée ; ton original reste dans ta bibliothèque.</p>
+      <form id="publishLearningForm" style="display:grid;gap:12px">
+        <label>Type<select id="publishLearningType" class="text-field" required><option value="memory">Mémoire / notes</option><option value="audio">Audio</option><option value="qcm">QCM (JSON)</option></select></label>
+        <label>Titre<input id="publishLearningTitle" class="text-field" maxlength="160" required></label>
+        <label>Matière<input id="publishLearningSubject" class="text-field" maxlength="100"></label>
+        <label>Description<input id="publishLearningDescription" class="text-field" maxlength="1000"></label>
+        <label>Texte de mémoire ou JSON du QCM<textarea id="publishLearningPayload" class="text-field" rows="5" placeholder="Écris la mémoire ou colle un QCM au format JSON."></textarea></label>
+        <label>Fichier audio (audio seulement, 10 Mo maximum)<input id="publishLearningFile" class="text-field" type="file" accept="audio/*"></label>
+        <button class="primary-btn" type="submit">Publier</button><p id="publishLearningStatus" role="status" aria-live="polite"></p>
+      </form>
+    </section>
     <section id="publicLearningFeed" aria-live="polite" aria-label="Mémoires, audios et QCM publics">
       <div class="empty-state compact-empty"><h3>Chargement des ressources…</h3><p>Les mémoires, audios et QCM publics apparaîtront ici.</p></div>
     </section>
