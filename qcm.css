@@ -27,3 +27,6 @@ body.science-keyboard-open{padding-bottom:calc(var(--asd-h,340px) + env(safe-are
 .qcm-study-question .katex-display,.qcm-answer-choice .katex-display,.qcm-feedback .katex-display,.qcm-library-prompt .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;}
 .qcm-library-prompt{display:block;white-space:normal;overflow-wrap:anywhere;}
 .qcm-study-question .katex,.qcm-answer-choice .katex,.qcm-feedback .katex{font-size:1.02em;}
+
+/* Respecter l’attribut hidden même face aux styles des boutons */
+[hidden]{display:none!important;}
