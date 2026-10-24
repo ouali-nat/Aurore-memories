@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ecebea">
   <meta name="description" content="Découvrez et ajoutez à votre bibliothèque des cartes de révision partagées publiquement.">
-  <title>Cartes publiques — Aurore Mémoire</title>
+  <title>Ressources publiques — Aurore Mémoire</title>
   <link rel="stylesheet" href="style.css?v=20261021-network-status-v3">
   <link rel="stylesheet" href="memoire.css?v=20261021-certificate-registry-v1">
   <link rel="stylesheet" href="cartes-publiques-flip.css?v=20261021-two-column-cards">
@@ -45,11 +45,27 @@
       <div class="empty-state compact-empty"><h3>Chargement des cartes publiques…</h3><p>Les cartes publiées apparaîtront ici une par une.</p></div>
     </section>
   </main>
+
+    <section class="page-heading" id="publicLearningHeading">
+      <p class="section-kicker">RESSOURCES DE LA COMMUNAUTÉ</p>
+      <h2>Mémoires, audios et QCM publics</h2>
+      <p>Explore les ressources publiées en complément des cartes. Les téléchargements sont disponibles lorsque le format est fourni par l’auteur.</p>
+    </section>
+    <nav aria-label="Types de ressources publiques" style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0">
+      <button class="secondary-btn" type="button" data-learning-filter="all" aria-pressed="true">Toutes</button>
+      <button class="secondary-btn" type="button" data-learning-filter="memory" aria-pressed="false">Mémoires</button>
+      <button class="secondary-btn" type="button" data-learning-filter="audio" aria-pressed="false">Audios</button>
+      <button class="secondary-btn" type="button" data-learning-filter="qcm" aria-pressed="false">QCM</button>
+    </nav>
+    <section id="publicLearningFeed" aria-live="polite" aria-label="Mémoires, audios et QCM publics">
+      <div class="empty-state compact-empty"><h3>Chargement des ressources…</h3><p>Les mémoires, audios et QCM publics apparaîtront ici.</p></div>
+    </section>
   <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore Mémoire</strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="math-render.js?v=20261015-katex-fast"></script><script src="app.js?v=20261023-theme-adaptive-v1"></script>
   <script src="memoire.js?v=20261021-community-filter-provenance"></script>
   <script src="public-card-flip.js?v=20261019-public-flip"></script>
+  <script src="public-learning-resources.js?v=20261024-v1"></script>
   <script src="network-status.js?v=20261021-network-status-v2"></script>
   <script src="spa-router.js?v=20261021-network-status-v2"></script>
 </body>
