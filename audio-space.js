@@ -442,7 +442,10 @@ function render() {
     main.append(title, meta);
     var actions = document.createElement("div"); actions.className = "audio-item-actions";
     var open = document.createElement("button"); open.className = "primary-btn"; open.type = "button"; open.textContent = "Ouvrir la séquence"; open.addEventListener("click", function () { openPlayer("sequence", seq); });
-    actions.append(open); row.append(main, actions); box.append(row);
+    actions.append(open);
+    var share = document.createElement("button"); share.className = "secondary-btn"; share.type = "button"; share.textContent = "Partager au groupe"; share.setAttribute("data-share-audio-sequence", seq.id); share.setAttribute("data-share-audio-title", seq.name); actions.append(share);
+    var publish = document.createElement("button"); publish.className = "secondary-btn"; publish.type = "button"; publish.textContent = "Publier"; publish.setAttribute("data-publish-audio-sequence", seq.id); actions.append(publish);
+    row.append(main, actions); box.append(row);
   });
   renderSequenceBuilder();
 }
@@ -455,6 +458,11 @@ async function downloadAudio(r) {
   } catch (e) { status("audioAccountStatus", e.message, true); }
 }
 function summary() { return records.length + " audio(s) · " + sequences.length + " séquence(s). Tout reste accessible hors ligne sur cet appareil."; }
+// Interface limitée au partage : les blobs restent dans IndexedDB et ne sont jamais copiés en base64 dans le manifeste.
+window.auroreAudioShare = {
+  list: function () { return { records: records.map(publicMeta), sequences: sequences.map(function (s) { return JSON.parse(JSON.stringify(s)); }) }; },
+  getBlob: async function (recordId) { var record = records.find(function (r) { return String(r.id) === String(recordId); }); if (!record) throw Error("Piste audio introuvable."); return { record: publicMeta(record), blob: record.kind === "speech" ? null : await loadBlob(record) }; }
+};
 
 /* ---------- Initialisation ---------- */
 function onOnline() { syncPending().then(loadCloudWithRetry).then(function () { render(); }).catch(function () {}); }

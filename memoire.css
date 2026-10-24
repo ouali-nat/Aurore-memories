@@ -1213,3 +1213,24 @@ body[data-page="public-cards"] .secondary-btn {
   border-color: color-mix(in srgb, var(--border) 60%, var(--accent) 40%) !important;
   color: var(--text) !important;
 }
+
+
+/* Partage multi-format : catégories compactes et lisibles sur téléphone. */
+.public-resource-tabs,.group-resource-tabs{display:flex;gap:8px;overflow-x:auto;padding:8px 0 12px;margin:12px 0;scrollbar-width:thin}
+.public-resource-tabs button,.group-resource-tabs a{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border,rgba(150,140,190,.3));border-radius:999px;padding:9px 13px;background:var(--surface,rgba(30,28,43,.7));color:var(--text,inherit);font:inherit;text-decoration:none;cursor:pointer}
+.public-resource-tabs button[aria-pressed="true"]{background:var(--accent,rgba(110,80,220,.2));border-color:var(--accent,#8067d8)}
+.group-resource-tabs span{font-size:.8em;opacity:.75}
+.public-learning-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.public-learning-card{min-width:0;border:1px solid var(--border,rgba(150,140,190,.25));border-radius:16px;padding:16px;background:var(--surface,rgba(30,28,43,.75));overflow-wrap:anywhere}
+.public-learning-card h2{font-size:1.08rem;margin:.35rem 0 .5rem}
+.public-learning-card p{line-height:1.5}
+.public-learning-preview{padding:10px;border-radius:10px;background:var(--surface-raised,rgba(120,110,150,.1));white-space:pre-wrap;max-height:7em;overflow:hidden}
+.public-learning-actions{display:flex;gap:8px;flex-wrap:wrap}
+.public-learning-actions button{flex:1 1 auto}
+.group-resource-tabs{margin-bottom:20px}
+#groupSharedCards,#groupSharedMemories,#groupSharedAudios,#groupSharedQcms{scroll-margin-top:18px;margin-top:20px}
+#groupSharedCards>h3,#groupSharedMemories>h3,#groupSharedAudios>h3,#groupSharedQcms>h3{margin-bottom:10px}
+
+.group-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.group-card-actions .groups-btn{flex:1 1 auto}.group-resource-preview{font-size:.9rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-height:6em;overflow:hidden;padding:9px;border-radius:9px;background:var(--surface,rgba(120,110,150,.1))}
+
+.shared-qcm-options{display:grid;gap:8px;margin:14px 0}.shared-qcm-options button{text-align:left;white-space:normal;line-height:1.5}.shared-qcm-options button.is-correct{border-color:#16a34a;background:rgba(22,163,74,.14)}.shared-qcm-options button.is-wrong{border-color:#dc2626;background:rgba(220,38,38,.12)}.shared-qcm-options button:disabled{opacity:1}

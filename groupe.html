@@ -7,9 +7,9 @@
 <meta name="description" content="Espace de groupe Aurore Mémoire.">
 <title>Espace du groupe — Aurore Mémoire</title>
 <link rel="stylesheet" href="style.css?v=20261021-network-status-v3">
-<link rel="stylesheet" href="memoire.css?v=20261019-group-settings-compact">
+<link rel="stylesheet" href="memoire.css?v=20261024-group-resource-tabs-v1">
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
-  <link rel="prefetch" href="groupe.js?v=20261021-public-catalog-v2" as="script">
+  <link rel="prefetch" href="groupe.js?v=20261024-shared-resource-types-v1" as="script">
 </head>
 <body data-page="group-detail">
 <div class="ambient-bg" aria-hidden="true"></div>
@@ -38,12 +38,17 @@
 <div class="group-settings-panel" id="groupSettingsPanel" role="tabpanel" hidden><p class="group-settings-hint">Les paramètres de confidentialité et d’adhésion du groupe sont définis lors de sa création. Les invitations WhatsApp ne sont disponibles que pour un groupe privé.</p></div>
 </section></div>
 <section class="groups-detail-content">
-<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Cartes partagées</h2><button class="groups-btn primary" id="joinCurrentGroup" type="button" hidden>Rejoindre le groupe</button></div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Contenus partagés</h2><button class="groups-btn primary" id="joinCurrentGroup" type="button" hidden>Rejoindre le groupe</button></div>
 <p id="groupStatus" style="color:var(--muted);line-height:1.6">Chargement des informations du groupe…</p>
-<div id="sharedSeriesGrid" class="groups-grid" style="margin-top:14px"></div>
-<p class="groups-note">Les séries affichées sont des copies partagées dans ce groupe. Les liens d’invitation sont propres à ce groupe : partage-les uniquement avec les personnes que tu souhaites accueillir.</p>
+<nav class="group-resource-tabs" aria-label="Catégories de contenus partagés"><a href="#groupSharedCards">Cartes <span id="groupCardsCount">0</span></a><a href="#groupSharedMemories">Mémoires <span id="groupMemoriesCount">0</span></a><a href="#groupSharedAudios">Audios <span id="groupAudiosCount">0</span></a><a href="#groupSharedQcms">QCM <span id="groupQcmsCount">0</span></a></nav>
+<section id="groupSharedCards"><h3>Cartes</h3><div id="sharedSeriesGrid" class="groups-grid" style="margin-top:14px"></div></section>
+<section id="groupSharedMemories"><h3>Mémoires</h3><div id="sharedMemoriesGrid" class="groups-grid" style="margin-top:14px"></div></section>
+<section id="groupSharedAudios"><h3>Audios</h3><div id="sharedAudiosGrid" class="groups-grid" style="margin-top:14px"></div></section>
+<section id="groupSharedQcms"><h3>QCM</h3><div id="sharedQcmsGrid" class="groups-grid" style="margin-top:14px"></div></section>
+<p class="groups-note">Chaque contenu partagé est une copie indépendante. Les fichiers audio des groupes privés restent réservés aux membres autorisés.</p>
 </section>
 </main>
+<script src="math-render.js?v=20261024-shared-qcm-math-v1"></script>
 <script src="network-status.js?v=20261021-network-status-v2"></script>
   <script src="spa-router.js?v=20261021-network-status-v2"></script>
 <script src="app.js?v=20261023-theme-adaptive-v1"></script>
@@ -70,7 +75,7 @@
     appStarted = true;
     if (timeoutId) window.clearTimeout(timeoutId);
     var app = document.createElement("script");
-    app.src = "groupe.js?v=20261021-public-catalog-v2";
+    app.src = "groupe.js?v=20261024-shared-resource-types-v1";
     app.onerror = function () {
       showFailure("Service indisponible", "Le script de l’espace collectif n’a pas pu être chargé. Vérifiez la connexion puis rechargez la page.");
     };
