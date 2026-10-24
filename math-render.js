@@ -24,11 +24,9 @@
   };
   function asElement(root) { if (!root) return null; return root.nodeType === 3 ? root.parentElement : root; }
   function isInsideMath(root) { return !!(root && root.closest && root.closest(".katex, .katex-display")); }
-  function hasMathSource(root) {
-    var text = root && (root.nodeType === 3 ? root.nodeValue : root.textContent);
-    if (!text) return false;
-    return /\\\[|\\\(|\$\$/.test(text) || /(^|[^$])\$[^$\n]+\$(?!\$)/.test(text);
-  }
+  function bareMathPattern(text) { if (!text || /\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(text)) return false; return /\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|mathrm|mathbf|mathbb|mathcal|left|right|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|psi|omega|kappa|iota|zeta|xi|eta|nu|chi|Gamma|Delta|Sigma|Omega|times|cdot|pm|mp|leq|geq|neq|infty|partial|nabla|circ|to|rightarrow|leftarrow|overline|vec|hat|bar|text|begin|end)\b/.test(text) || /(?:^|\s)[A-Za-z][A-Za-z0-9]*\s*(?:\^\{[^}]+\}|_\{[^}]+\})/.test(text); }
+  function hasMathSource(root) { var text = root && (root.nodeType === 3 ? root.nodeValue : root.textContent); if (!text) return false; return /\\\[|\\\(|\$\$/.test(text) || /(^|[^$])\$[^$\n]+\$(?!\$)/.test(text) || bareMathPattern(text); }
+  function normalizeBareLatex(root) { var target = asElement(root); if (!target || !document.createTreeWalker || isInsideMath(target)) return; var walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT), nodes = [], node; while ((node = walker.nextNode())) { var parent = node.parentElement; if (!parent || /^(SCRIPT|STYLE|TEXTAREA|PRE|CODE|NOSCRIPT|OPTION|INPUT|BUTTON|SELECT)$/.test(parent.tagName) || parent.closest(".katex, .katex-display, [contenteditable='true'], [data-no-math-normalize]")) continue; if (bareMathPattern(node.nodeValue)) nodes.push(node); } nodes.forEach(function (textNode) { var raw = textNode.nodeValue || ""; if (/\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(raw)) return; var match = /\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|mathrm|mathbf|mathbb|mathcal|left|right|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|psi|omega|kappa|iota|zeta|xi|eta|nu|chi|Gamma|Delta|Sigma|Omega|times|cdot|pm|mp|leq|geq|neq|infty|partial|nabla|circ|to|rightarrow|leftarrow|overline|vec|hat|bar|text|begin|end)\b/.exec(raw); var start = match ? match.index : 0, prefix = raw.slice(0, start), formula = raw.slice(start).trim(); if (formula) textNode.nodeValue = prefix + "\\(" + formula + "\\)"; }); }
   function addRoot(collection, root) {
     var target = asElement(root);
     if (!target || isInsideMath(target) || !hasMathSource(target)) return;
@@ -41,7 +39,9 @@
     if (collection.length > 100) collection.splice(0, collection.length - 100);
   }
   function renderTarget(target) {
-    if (!target || isInsideMath(target) || !window.renderMathInElement || !hasMathSource(target)) return;
+    if (!target || isInsideMath(target) || !hasMathSource(target)) return;
+    normalizeBareLatex(target);
+    if (!window.renderMathInElement || !hasMathSource(target)) return;
     try {
       window.renderMathInElement(target, options);
       if (typeof window.auroreMathRendered === "function") window.auroreMathRendered(target);
