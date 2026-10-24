@@ -19,3 +19,6 @@ body.science-keyboard-open{padding-bottom:calc(var(--asd-h,340px) + env(safe-are
 .qcm-rendered-preview{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%;}
 .qcm-rendered-preview .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;}
 @media(max-width:520px){.qcm-question-editor{padding:12px;gap:18px}.qcm-option-edit{grid-template-columns:22px 24px minmax(0,1fr) 32px;gap:6px;padding:8px}.qcm-option-edit textarea{min-height:104px;padding:12px;font-size:16px}.qcm-field #qExplain{min-height:190px;font-size:16px}.qcm-field textarea{font-size:16px}}
+
+/* Préserver les paragraphes de l’explication pendant la pratique */
+.qcm-feedback p{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
