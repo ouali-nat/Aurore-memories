@@ -1,3 +1,11 @@
+(function () {
+  "use strict";
+  if (document.querySelector('script[src*="math-render.js"]')) return;
+  var script = document.createElement("script");
+  script.src = "math-render.js?v=20261024-global-math-normalizer-v1";
+  script.defer = true;
+  document.head.appendChild(script);
+})();
 // Aurore Mémoire — design « pilule flottante » : feuille de style chargée sur toutes les pages, en dernier.
 (function () {
   if (document.querySelector('link[data-aurore-pill]')) return;
