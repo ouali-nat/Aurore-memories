@@ -44,6 +44,18 @@
 <p class="groups-note">Les séries affichées sont des copies partagées dans ce groupe. Les liens d’invitation sont propres à ce groupe : partage-les uniquement avec les personnes que tu souhaites accueillir.</p>
 </section>
 
+<section class="groups-detail-content" aria-labelledby="shareResourceTitle">
+<h2 id="shareResourceTitle">Partager une ressource avec ce groupe</h2>
+<p class="groups-note">Le partage crée une copie pour le groupe et ne supprime pas ton original. Pour les audios, sélectionne un fichier audio (10 Mo maximum).</p>
+<form id="shareGroupResourceForm" class="form-panel" style="padding:16px;display:grid;gap:12px">
+<label>Type de ressource<select id="shareGroupResourceType" class="text-field" required><option value="memory">Mémoire / notes</option><option value="qcm">QCM (JSON)</option><option value="audio">Audio</option></select></label>
+<label>Titre<input id="shareGroupResourceTitle" class="text-field" maxlength="160" required></label>
+<label>Matière (facultatif)<input id="shareGroupResourceSubject" class="text-field" maxlength="100"></label>
+<label>Description (facultatif)<input id="shareGroupResourceDescription" class="text-field" maxlength="1000"></label>
+<label>Texte de la mémoire ou contenu JSON du QCM<textarea id="shareGroupResourcePayload" class="text-field" rows="5" placeholder="Écris tes notes ou colle le JSON d’un QCM. Pour un audio, ce champ est facultatif."></textarea></label>
+<label>Fichier audio (pour le type Audio)<input id="shareGroupResourceFile" class="text-field" type="file" accept="audio/*"></label>
+<button class="groups-btn primary" type="submit">Partager avec le groupe</button><p id="shareGroupResourceStatus" class="groups-status" role="status" aria-live="polite"></p>
+</form></section>
 <section class="groups-detail-content" aria-labelledby="sharedMemoriesTitle">
 <h2 id="sharedMemoriesTitle">Mémoires partagées</h2><p class="groups-note">Mémoires ajoutées par les membres à cet espace.</p><div id="sharedMemoryResources" class="groups-grid"><div class="groups-empty"><p>Chargement des mémoires partagées…</p></div></div>
 </section>
