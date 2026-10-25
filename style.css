@@ -840,3 +840,7 @@ html[data-theme="dark"] .aurore-network-status-copy span{color:var(--muted,#b8b2
   body[data-page="home"] .home-action-card.is-coming { opacity: .72; background: color-mix(in srgb, var(--surface) 86%, var(--line)); }
   body[data-page="home"] .coming-label { align-self: flex-start; margin-top: 1px; padding: 4px 7px; border-radius: 999px; font-size: .62rem; }
 }
+
+/* Logo Aurore original : utiliser la même identité sur les pages du site. */
+.brand-mark{overflow:hidden;background:var(--surface);border:1px solid var(--soft-border);box-shadow:none;border-radius:11px;flex:0 0 40px}
+.brand-mark .brand-logo{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit}
