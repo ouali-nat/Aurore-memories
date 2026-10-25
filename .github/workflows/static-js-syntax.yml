@@ -1,0 +1,30 @@
+name: Aurore Mémoire JavaScript syntax
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Check card library scripts
+        run: |
+          node --check memoire.js
+          node --check learning-sharing.js
+          node --check public-card-flip.js
+      - name: Validate web app manifest
+        run: node -e "JSON.parse(require('node:fs').readFileSync('site.webmanifest', 'utf8'))"

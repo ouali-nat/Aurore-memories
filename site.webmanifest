@@ -1,0 +1,13 @@
+{
+  "name": "Aurore Mémoire",
+  "short_name": "Aurore",
+  "description": "Apprendre à son rythme avec Aurore Mémoire.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#171622",
+  "theme_color": "#171622",
+  "icons": [
+    {"src": "/assets/aurore-logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}

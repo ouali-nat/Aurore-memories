@@ -11,6 +11,9 @@
   var SHARE_TOKEN_KEY = "aurore-memory-public-owner-tokens-v1";
   var shareTokens = {};
   try { shareTokens = JSON.parse(localStorage.getItem(SHARE_TOKEN_KEY) || "{}"); } catch (error) { shareTokens = {}; }
+  var SHARE_LINK_SECRET_KEY = "aurore-memory-share-link-secrets-v1";
+  var shareLinkSecrets = {};
+  try { shareLinkSecrets = JSON.parse(localStorage.getItem(SHARE_LINK_SECRET_KEY) || "{}"); } catch (error) { shareLinkSecrets = {}; }
   var publicFeedCards = [];
   var PUBLIC_MATH_CACHE_KEY = "aurore-public-card-math-cache-v1";
   var PUBLIC_MATH_CACHE_VERSION = "katex-0.16.22-v1";
@@ -292,6 +295,9 @@
   function persistShareTokens() {
     try { localStorage.setItem(SHARE_TOKEN_KEY, JSON.stringify(shareTokens)); } catch (error) {}
   }
+  function persistShareLinkSecrets() {
+    try { localStorage.setItem(SHARE_LINK_SECRET_KEY, JSON.stringify(shareLinkSecrets)); } catch (error) {}
+  }
 
   async function shareRpc(functionName, payload) {
     var response = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + functionName, {
@@ -449,44 +455,223 @@
     notify("Série conservée dans votre bibliothèque privée.");
   }
 
-  async function shareDeckLink(deck) {
-    var settings = deckSettingsFor(deck);
-    if (settings.visibility !== "public" || !settings.published || !settings.publicId) {
-      openVisibilityDialog(deck);
-      notify("Publiez d’abord la série pour partager son lien.");
-      return;
-    }
-    var url = "https://aurore-memories-aurore9.vercel.app/cartes-publiques.html?series=" + encodeURIComponent(settings.publicId);
-    var title = "Cartes publiques — " + deck;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: title, text: "Découvrez cette série de cartes sur Aurore.", url: url });
-        return;
-      } catch (error) {
-        if (error && error.name === "AbortError") return;
-      }
-    }
-    openSharingDialog("Partager cette série", 
-      '<p class="sharing-modal-intro">Copiez ce lien pour ouvrir directement les cartes de cette série.</p>' +
-      '<label class="share-link-label" for="publicShareUrl">Lien public<input id="publicShareUrl" type="url" readonly value="' + escapeHtml(url) + '"></label>' +
-      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="close-sharing-modal">Fermer</button><button type="button" class="primary-btn" data-act="copy-share-link">Copier le lien</button></div>');
+  function shareLinkBaseUrl(token) {
+    return "https://aurore-memories-mu.vercel.app/cartes-publiques.html?share=" + encodeURIComponent(token);
   }
 
-  async function copyPublicShareLink() {
+  function shareOwnerFor(deck) {
+    var settings = deckSettingsFor(deck);
+    if (!settings.shareOwnerId) settings.shareOwnerId = randomUuid();
+    if (!shareTokens[settings.shareOwnerId]) shareTokens[settings.shareOwnerId] = randomHex(32);
+    persistShareTokens();
+    save();
+    return { key: settings.shareOwnerId, token: shareTokens[settings.shareOwnerId] };
+  }
+
+  function openCreateShareLinkDialog(deck) {
+    var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
+    if (!cards.length) { notify("Cette série ne contient aucune carte à partager."); return; }
+    if (cards.length > 100) { notify("Une série partagée peut contenir au maximum 100 cartes."); return; }
+    shareOwnerFor(deck);
+    openSharingDialog("Créer un lien de partage",
+      '<p class="sharing-modal-intro">Créez un lien direct à envoyer sur WhatsApp, Facebook ou une autre application. Cette copie n’apparaît pas dans le flux public.</p>' +
+      '<label class="share-link-label" for="shareExpiryDays">Durée de validité<select id="shareExpiryDays"><option value="1">24 heures</option><option value="7" selected>7 jours</option><option value="30">30 jours</option><option value="90">90 jours</option></select></label>' +
+      '<p class="sharing-modal-note">À expiration, le lien cesse automatiquement de fonctionner. Vous pouvez aussi le révoquer avant cette date.</p>' +
+      '<p id="shareLinkCreateStatus" class="sharing-modal-note" role="status" aria-live="polite"></p>' +
+      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="manage-share-links" data-deck="' + escapeHtml(deck) + '">Gérer les liens existants</button><button type="button" class="secondary-btn" data-act="close-sharing-modal">Annuler</button><button type="button" class="primary-btn" data-act="create-share-link" data-deck="' + escapeHtml(deck) + '">Créer le lien</button></div>');
+  }
+
+  function externalShareCardPayload(deck, cards) {
+    var settings = deckSettingsFor(deck);
+    var deckStyle = state.deckStyles && state.deckStyles["flashcard:" + deck] ? state.deckStyles["flashcard:" + deck] : {};
+    function imageValue(value) {
+      return typeof value === "string" && value.length <= 2500000 && /^data:image\/(?:jpeg|png|webp);base64,/i.test(value) ? value : "";
+    }
+    var payloadCards = cards.map(function (card, index) {
+      if (!auroreCertificateCodeFromId(card.certificateId)) card.certificateId = randomUuid();
+      card.certificateCode = auroreCertificateCodeFromId(card.certificateId);
+      var ownImage = card.backgroundMode === "image" ? imageValue(card.backgroundImage) : "";
+      return {
+        certificateId: card.certificateId,
+        certificateCode: card.certificateCode || auroreCardIdentifier(card, index),
+        front: String(card.front || ""),
+        back: String(card.back || ""),
+        cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
+        backgroundMode: ownImage ? "image" : (imageValue(deckStyle.backgroundImage) ? "image" : "color"),
+        backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : "",
+        backgroundImage: ownImage
+      };
+    });
+    var backgroundColor = /^#[0-9a-f]{6}$/i.test(deckStyle.backgroundColor || "") ? deckStyle.backgroundColor : "#4937a6";
+    var backgroundImage = imageValue(deckStyle.backgroundImage);
+    if (payloadCards.some(function (card) { return !card.front.trim() || !card.back.trim(); })) {
+      throw new Error("Chaque carte doit avoir une question et une réponse avant le partage.");
+    }
+    return {
+      name: String(deck || "").trim().slice(0, 120),
+      authorName: String(settings.authorName || "Auteur Aurore").trim().slice(0, 120),
+      domain: String(settings.domain || "Révisions").trim().slice(0, 100),
+      description: String(settings.description || "").trim().slice(0, 600),
+      cards: payloadCards,
+      backgroundColor: backgroundColor,
+      backgroundImage: backgroundImage
+    };
+  }
+
+  async function createShareLink(deck) {
+    var modal = $("#sharingModal");
+    var button = modal && $("[data-act='create-share-link']", modal);
+    var status = modal && $("#shareLinkCreateStatus", modal);
+    var days = Number(modal && $("#shareExpiryDays", modal) && $("#shareExpiryDays", modal).value || 7);
+    if ([1, 7, 30, 90].indexOf(days) < 0) days = 7;
+    var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
+    if (!cards.length || cards.length > 100) {
+      if (status) status.textContent = "La série doit contenir entre 1 et 100 cartes.";
+      else notify("La série doit contenir entre 1 et 100 cartes.");
+      return;
+    }
+    var owner = shareOwnerFor(deck);
+    var shareToken = randomHex(32);
+    var expiresAt = new Date(Date.now() + days * DAY_MS).toISOString();
+    var payload;
+    try { payload = externalShareCardPayload(deck, cards); }
+    catch (error) { if (status) status.textContent = error.message; else notify(error.message); return; }
+    if (button) { button.disabled = true; button.textContent = "Création…"; }
+    try {
+      var responseText = await shareRpc("create_public_card_share_link", {
+        p_owner_key: owner.key, p_owner_token: owner.token, p_share_token: shareToken,
+        p_name: payload.name, p_author_name: payload.authorName, p_domain: payload.domain,
+        p_description: payload.description, p_cards: payload.cards, p_background_color: payload.backgroundColor,
+        p_background_image: payload.backgroundImage, p_expires_at: expiresAt
+      });
+      var linkId = JSON.parse(responseText);
+      if (typeof linkId !== "string" || !linkId) throw new Error("Le serveur n’a pas confirmé la création du lien.");
+      var url = shareLinkBaseUrl(shareToken);
+      shareLinkSecrets[linkId] = { token: shareToken, url: url, name: payload.name, expiresAt: expiresAt };
+      persistShareLinkSecrets();
+      openSharingDialog("Lien de partage créé",
+        '<p class="sharing-modal-intro">Votre lien est prêt. Il sera valide jusqu’au <strong>' + escapeHtml(new Date(expiresAt).toLocaleString("fr-FR")) + '</strong>, sauf révocation anticipée.</p>' +
+        '<label class="share-link-label" for="publicShareUrl">Lien à partager<input id="publicShareUrl" type="url" readonly value="' + escapeHtml(url) + '"></label>' +
+        '<div class="share-link-channel-grid"><button type="button" class="secondary-btn" data-act="share-link-whatsapp">WhatsApp</button><button type="button" class="secondary-btn" data-act="share-link-facebook">Facebook</button><button type="button" class="secondary-btn" data-act="share-link-native">Autres applications…</button></div>' +
+        '<p class="sharing-modal-note">Si le lien expire ou est révoqué, son contenu ne sera plus accessible par cette adresse.</p>' +
+        '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="manage-share-links" data-deck="' + escapeHtml(deck) + '">Gérer les liens</button><button type="button" class="secondary-btn" data-act="copy-share-link">Copier le lien</button><button type="button" class="primary-btn" data-act="close-sharing-modal">Terminer</button></div>');
+    } catch (error) {
+      console.error("Échec de création du lien de partage :", error);
+      if (status) status.textContent = "Création impossible : " + String(error && error.message || "vérifiez la connexion puis réessayez.");
+      else notify("Création du lien impossible : " + String(error && error.message || "vérifiez la connexion."));
+      if (button) { button.disabled = false; button.textContent = "Réessayer"; }
+    }
+  }
+
+  function parseShareRpcResponse(responseText) {
+    try { return JSON.parse(responseText || "[]"); }
+    catch (error) { throw new Error("Réponse inattendue du service de partage."); }
+  }
+
+  async function openShareLinkManager(deck) {
+    var owner = shareOwnerFor(deck);
+    openSharingDialog("Gérer les liens de partage",
+      '<p class="sharing-modal-intro">Vous pouvez réutiliser les liens actifs ou les révoquer. Les liens expirés restent listés.</p>' +
+      '<div id="shareLinksManager"><p class="sharing-modal-note">Chargement des liens…</p></div>' +
+      '<div class="sharing-modal-actions"><button type="button" class="secondary-btn" data-act="create-share-link-dialog" data-deck="' + escapeHtml(deck) + '">Créer un autre lien</button><button type="button" class="primary-btn" data-act="close-sharing-modal">Fermer</button></div>');
+    try {
+      var text = await shareRpc("list_public_card_share_links", { p_owner_key: owner.key, p_owner_token: owner.token });
+      var links = parseShareRpcResponse(text);
+      renderShareLinkManager(deck, Array.isArray(links) ? links : []);
+    } catch (error) {
+      var target = $("#shareLinksManager");
+      if (target) target.innerHTML = '<p class="sharing-modal-note">Impossible de charger les liens : ' + escapeHtml(error.message || "réessayez") + '</p>';
+    }
+  }
+
+  function renderShareLinkManager(deck, links) {
+    var target = $("#shareLinksManager");
+    if (!target) return;
+    if (!links.length) {
+      target.innerHTML = '<div class="sharing-empty"><strong>Aucun lien créé</strong><p>Créez un lien, définissez sa durée, puis partagez-le.</p></div>';
+      return;
+    }
+    target.innerHTML = '<div class="share-link-manager-list">' + links.map(function (link) {
+      var expiresAt = new Date(link.expires_at);
+      var expired = !isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
+      var revoked = !!link.revoked_at;
+      var active = !expired && !revoked;
+      var status = revoked ? "Révoqué" : (expired ? "Expiré" : "Actif");
+      var secret = shareLinkSecrets[link.id];
+      var escapedId = escapeHtml(link.id);
+      var actions = "";
+      if (active && secret && secret.url) {
+        actions += '<label class="share-link-label" for="shareLinkUrl-' + escapedId + '">Lien<input id="shareLinkUrl-' + escapedId + '" type="url" readonly value="' + escapeHtml(secret.url) + '"></label>' +
+          '<div class="share-link-channel-grid"><button type="button" class="secondary-btn" data-act="copy-share-link" data-link-id="' + escapedId + '">Copier</button><button type="button" class="secondary-btn" data-act="share-link-whatsapp" data-link-id="' + escapedId + '">WhatsApp</button><button type="button" class="secondary-btn" data-act="share-link-facebook" data-link-id="' + escapedId + '">Facebook</button></div>';
+      } else if (active) actions += '<p class="sharing-modal-note">Le lien complet n’est plus conservé sur cet appareil. Vous pouvez encore le révoquer.</p>';
+      if (active) actions += '<button type="button" class="secondary-btn revoke-share-link-button" data-act="revoke-share-link" data-link-id="' + escapedId + '" data-deck="' + escapeHtml(deck) + '">Révoquer ce lien</button>';
+      return '<article class="share-link-manager-item"><div class="share-link-manager-head"><strong>' + escapeHtml(link.name || deck) + '</strong><span class="share-link-status ' + (active ? "is-active" : "") + '">' + status + '</span></div><p>Créé le ' + escapeHtml(new Date(link.created_at).toLocaleString("fr-FR")) + '</p><p>' + (revoked ? 'Révoqué le ' + escapeHtml(new Date(link.revoked_at).toLocaleString("fr-FR")) : 'Expire le ' + escapeHtml(isFinite(expiresAt.getTime()) ? expiresAt.toLocaleString("fr-FR") : "date inconnue")) + '</p>' + actions + '</article>';
+    }).join("") + '</div>';
+  }
+
+  async function revokeShareLink(button) {
+    var linkId = button.dataset.linkId || "";
+    var deck = button.dataset.deck || "";
+    var owner = shareOwnerFor(deck);
+    if (!linkId || !window.confirm("Révoquer ce lien ? Toute personne qui l’utilise perdra l’accès à cette copie partagée.")) return;
+    button.disabled = true; button.textContent = "Révocation…";
+    try {
+      await shareRpc("revoke_public_card_share_link", { p_id: linkId, p_owner_key: owner.key, p_owner_token: owner.token });
+      notify("Lien de partage révoqué.");
+      await openShareLinkManager(deck);
+    } catch (error) {
+      notify("La révocation a échoué : " + String(error && error.message || "vérifiez la connexion."));
+      button.disabled = false; button.textContent = "Révoquer ce lien";
+    }
+  }
+
+  function currentShareUrl(button) {
+    var linkId = button && button.dataset.linkId;
+    if (linkId && shareLinkSecrets[linkId] && shareLinkSecrets[linkId].url) return shareLinkSecrets[linkId].url;
+    if (linkId) {
+      var stored = $("#shareLinkUrl-" + linkId);
+      if (stored) return stored.value;
+    }
     var input = $("#publicShareUrl");
-    if (!input) return;
+    return input ? input.value : "";
+  }
+
+  async function shareLinkToChannel(button, channel) {
+    var url = currentShareUrl(button);
+    if (!url) { notify("Le lien complet n’est pas disponible sur cet appareil."); return; }
+    var title = "Cartes partagées sur Aurore Mémoire";
+    if (channel === "native") {
+      if (navigator.share) {
+        try { await navigator.share({ title: title, text: "Consulte cette série sur Aurore Mémoire.", url: url }); return; }
+        catch (error) { if (error && error.name === "AbortError") return; }
+      }
+      channel = "whatsapp";
+    }
+    var target = channel === "facebook"
+      ? "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(url)
+      : "https://wa.me/?text=" + encodeURIComponent("Découvre cette série de cartes sur Aurore Mémoire : " + url);
+    window.open(target, "_blank", "noopener,noreferrer");
+  }
+
+  async function shareDeckLink(deck) {
+    openCreateShareLinkDialog(deck);
+  }
+
+  async function copyPublicShareLink(button) {
+    var url = currentShareUrl(button);
+    if (!url) { notify("Le lien complet n’est pas disponible sur cet appareil."); return; }
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(input.value);
-        notify("Lien public copié.");
+        await navigator.clipboard.writeText(url);
+        notify("Lien de partage copié.");
       } else {
-        input.focus();
-        input.select();
+        var input = button && button.dataset.linkId ? $("#shareLinkUrl-" + button.dataset.linkId) : $("#publicShareUrl");
+        if (input) { input.focus(); input.select(); }
         notify("Sélectionnez le lien puis copiez-le.");
       }
     } catch (error) {
-      input.focus();
-      input.select();
+      var fallback = button && button.dataset.linkId ? $("#shareLinkUrl-" + button.dataset.linkId) : $("#publicShareUrl");
+      if (fallback) { fallback.focus(); fallback.select(); }
       notify("Sélectionnez le lien puis copiez-le.");
     }
   }
@@ -533,7 +718,7 @@
     }catch(error){console.error(error);if(status)status.textContent=String(error.message||"Le partage a échoué.");if(button){button.disabled=false;button.textContent="Réessayer le partage";}}
   }
   function openSeriesShareOptions(deck){openSharingDialog("Partager « "+deck+" »",'<p class="sharing-modal-intro">Téléchargez d’abord vos cartes ou choisissez de les imprimer.</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="export-series-pdf" data-deck="'+escapeHtml(deck)+'"><span>⬇</span><strong>Télécharger le PDF</strong><small>Enregistre un fichier PDF sur votre appareil.</small></button><button type="button" class="series-export-choice" data-act="print-series" data-deck="'+escapeHtml(deck)+'"><span>▤</span><strong>Imprimer les cartes</strong><small>Ouvre les réglages d’impression séparément.</small></button><button type="button" class="series-export-choice" data-act="export-series-images" data-deck="'+escapeHtml(deck)+'"><span>▧</span><strong>Télécharger les images</strong><small>Une image PNG par recto et par verso.</small></button><button type="button" class="series-export-choice" data-act="share-deck" data-deck="'+escapeHtml(deck)+'"><span>↗</span><strong>Partager le lien</strong><small>Partager le lien public de la série.</small></button></div>');}
-  function exportCardMarkup(card, index, side) {
+  function exportCardMarkup(card, index, side, includeProvenance) {
     var style = state.deckStyles && state.deckStyles["flashcard:" + card.deck] || {};
     var background = /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor :
       (/^#[0-9a-f]{6}$/i.test(style.backgroundColor || "") ? style.backgroundColor : "#4937a6");
@@ -542,8 +727,9 @@
     var image = card.backgroundMode === "image" && validImage(card.backgroundImage) ? card.backgroundImage :
       (validImage(style.backgroundImage) ? style.backgroundImage : "");
     var value = side === "front" ? card.front : card.back;
+    var provenance = includeProvenance === false ? "" : '<span class="deck-export-provenance" style="position:absolute;left:2mm;bottom:1mm;max-width:78%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:4.5pt/1.1 Arial,sans-serif;letter-spacing:.01em;text-align:left;opacity:.58;color:rgba(255,255,255,.86)">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || card.authorName || (card.deck && deckSettingsFor(card.deck).authorName) || "Aurore Mémoire") + '</span>';
     return '<article class="deck-export-card" data-card-index="' + index + '" data-side="' + side + '" style="--card-bg:' + background + ';' + (image ? 'background-image:linear-gradient(0deg,rgba(0,0,0,.12),rgba(0,0,0,.12)),url(&quot;' + escapeHtml(image) + '&quot;);' : '') + '">' +
-      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span><span class="deck-export-provenance" style="position:absolute;left:2mm;bottom:1mm;max-width:78%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:4.5pt/1.1 Arial,sans-serif;letter-spacing:.01em;text-align:left;opacity:.58;color:rgba(255,255,255,.86)">' + escapeHtml(auroreCardIdentifier(card, index)) + ' · ' + escapeHtml(card.sourceAuthor || card.authorName || (card.deck && deckSettingsFor(card.deck).authorName) || "Aurore Mémoire") + '</span></article>';
+      '<span class="deck-export-label">' + (side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE") + '</span><div class="deck-export-content">' + formatCardMathText(value, card) + '</div><span class="deck-export-number">' + (index + 1) + '</span>' + provenance + '</article>';
   }
 
   function deckExportDocument(deck, cards, imageMode) {
@@ -604,11 +790,11 @@
     });
   }
 
-  async function prepareDeckExportWindow(deck, cards, imageMode) {
+  async function prepareDeckExportWindow(deck, cards, imageMode, pdfReadable) {
     var w = window.open("", "_blank");
     if (!w) throw new Error("Autorisez l’ouverture de la fenêtre pour préparer l’export.");
     w.document.open();
-    w.document.write(deckExportDocument(deck, cards, imageMode));
+    w.document.write(pdfReadable ? deckPdfDocument(deck, cards) : deckExportDocument(deck, cards, imageMode));
     w.document.close();
     await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js");
     await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js");
@@ -621,6 +807,7 @@
       w.document.head.appendChild(link);
     });
     renderDeckExportMath(w);
+    if (pdfReadable) fitReadablePdfText(w);
     var formulaNodes = w.document.querySelectorAll(".deck-export-content");
     var rawLatex = Array.prototype.some.call(formulaNodes, function (node) { return /\\(?:frac|sqrt|sum|int|begin|alpha|beta|theta|pi|lim|mathrm|text)\b/.test(node.textContent); });
     var renderedMath = w.document.querySelectorAll(".deck-export-content .katex").length;
@@ -629,31 +816,61 @@
     return w;
   }
 
+  function deckPdfDocument(deck, cards) {
+    var pages = [];
+    ["front", "back"].forEach(function (side) {
+      cards.forEach(function (card, index) {
+        var cardMarkup = exportCardMarkup(card, index, side, false).replace('class="deck-export-card"', 'class="deck-export-card deck-pdf-card"');
+        var label = side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE";
+        var identifier = auroreCardIdentifier(card, index);
+        var author = card.sourceAuthor || card.authorName || deckSettingsFor(deck).authorName || "Aurore Mémoire";
+        pages.push('<section class="deck-export-page deck-pdf-sheet">' +
+          '<header class="deck-pdf-heading"><strong>' + escapeHtml(deck) + '</strong><span>' + label + ' · CARTE ' + (index + 1) + ' / ' + cards.length + '</span></header>' +
+          '<div class="deck-pdf-card-holder">' + cardMarkup + '</div>' +
+          '<footer class="deck-pdf-identifier"><span>Identifiant Aurore</span><strong>' + escapeHtml(identifier) + '</strong><span class="deck-pdf-author">Auteur : ' + escapeHtml(author) + '</span></footer></section>');
+      });
+    });
+    var css = 'html,body{margin:0;padding:0;color:#171421;font-family:Georgia,"Times New Roman",serif;background:#fff}*{box-sizing:border-box}.deck-export-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;padding:12mm 14mm 10mm;position:relative;page-break-after:always;break-after:page;background:#fff;overflow:hidden}.deck-export-page:last-child{page-break-after:auto;break-after:auto}.deck-export-card{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;min-height:0;overflow:hidden;padding:6mm;border:.5mm solid rgba(255,255,255,.45);border-radius:7mm;background-color:var(--card-bg,#4937a6);background-size:cover;background-position:center;color:#fff;text-align:center;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck-export-label{position:absolute;top:5mm;left:6mm;right:6mm;font:700 9pt Arial,sans-serif;letter-spacing:.08em;opacity:.9}.deck-export-content{width:100%;max-height:100%;overflow:hidden;font-size:25pt;line-height:1.35;overflow-wrap:anywhere;word-break:break-word}.deck-export-content .katex-display{margin:.3em 0}.deck-export-content .katex{font-size:1em}.deck-export-number{position:absolute;right:5mm;bottom:4mm;font:9pt Arial,sans-serif;opacity:.9}.deck-export-card .katex,.deck-export-card .katex *{color:inherit}.deck-pdf-sheet{display:flex;flex-direction:column}.deck-pdf-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:10mm;color:#625c70;font:8pt Arial,sans-serif}.deck-pdf-heading strong{max-width:66%;color:#171421;font-size:10pt;overflow-wrap:anywhere}.deck-pdf-heading span{text-align:right}.deck-pdf-card-holder{display:flex;flex:1;min-height:0;margin:8mm 0 6mm}.deck-pdf-card{width:100%;height:100%;min-height:0;flex:1;padding:18mm 15mm;border-radius:8mm}.deck-pdf-card .deck-export-content{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;max-height:none;overflow:hidden;font-size:25pt;line-height:1.4}.deck-pdf-identifier{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:11mm;padding:2mm 1mm 0;border-top:.3mm solid #ddd;color:#514c5c;font:9pt/1.35 Arial,sans-serif;overflow-wrap:anywhere}.deck-pdf-identifier>span:first-child{font-weight:700;color:#767082}.deck-pdf-identifier strong{font-size:10pt;color:#1d1830;letter-spacing:.025em}.deck-pdf-author{margin-left:auto;color:#767082}@page{size:A4 portrait;margin:0}@media screen{body{background:#eceaf1}.deck-export-page{margin:12px auto;box-shadow:0 4px 22px #0002}}';
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(deck) + ' — PDF des cartes</title><style>' + css + '</style></head><body>' + pages.join("") + '</body></html>';
+  }
+
+  function fitReadablePdfText(targetWindow) {
+    Array.prototype.forEach.call(targetWindow.document.querySelectorAll(".deck-pdf-card .deck-export-content"), function (node) {
+      var size = 25;
+      node.style.fontSize = size + "pt";
+      while (size > 12 && (node.scrollHeight > node.clientHeight + 3 || node.scrollWidth > node.clientWidth + 3)) {
+        size -= 1;
+        node.style.fontSize = size + "pt";
+      }
+    });
+  }
+
   async function exportDeckPdf(deck) {
     var cards = state.cards.filter(function (card) { return isFlashcard(card) && card.deck === deck; });
     if (!cards.length) { notify("Cette série ne contient aucune carte."); return; }
     var w = null;
     try {
-      w = await prepareDeckExportWindow(deck, cards, false);
+      w = await prepareDeckExportWindow(deck, cards, false, true);
       await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
       await loadDeckExportScript(w, "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
-      var pages = Array.prototype.slice.call(w.document.querySelectorAll(".deck-export-page"));
-      if (pages.length !== 2) throw new Error("L’export doit contenir exactement deux pages : rectos et versos.");
+      var pages = Array.prototype.slice.call(w.document.querySelectorAll(".deck-pdf-sheet"));
+      if (pages.length !== cards.length * 2) throw new Error("L’export doit contenir un recto et un verso pour chaque carte.");
       var PDF = w.jspdf && w.jspdf.jsPDF;
       if (!PDF) throw new Error("Le moteur PDF n’a pas pu être chargé.");
       var doc = new PDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
       for (var i = 0; i < pages.length; i++) {
         var page = pages[i];
         page.style.cssText += ";width:210mm;height:297mm;min-height:297mm;max-height:297mm;margin:0;box-sizing:border-box;overflow:hidden;background:#fff;break-after:auto;page-break-after:auto";
-        var canvas = await w.html2canvas(page, {scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false,windowWidth:794,windowHeight:1123});
-        var image = canvas.toDataURL("image/jpeg",0.98);
+        var canvas = await w.html2canvas(page, {scale:1.6,useCORS:true,backgroundColor:"#ffffff",logging:false,windowWidth:794,windowHeight:1123});
+        var image = canvas.toDataURL("image/jpeg",0.96);
         if (i > 0) doc.addPage("a4","portrait");
         doc.addImage(image,"JPEG",0,0,210,297,undefined,"FAST");
+        canvas.width = 1; canvas.height = 1;
       }
       var filename = deck.replace(/[^a-z0-9_-]+/gi,"-").replace(/^-|-$/g,"") || "aurore-cartes";
       doc.save(filename + "-recto-verso.pdf");
       w.setTimeout(function(){if(w&&!w.closed)w.close();},1200);
-      notify("PDF prêt : 2 pages, rectos puis versos.");
+      notify("PDF prêt : " + cards.length + " recto(s), puis " + cards.length + " verso(s), avec police agrandie et identifiants sous chaque carte.");
     } catch (error) {
       console.error("Échec du téléchargement PDF :",error);
       if (w && !w.closed) {
@@ -849,6 +1066,7 @@
     var search = normalizeSearch($("#publicCardSearch") && $("#publicCardSearch").value);
     var params = new URLSearchParams(window.location.search);
     var selectedSeries = params.get("series") || "";
+    var isLinkShare = !!params.get("share");
     var visible = [];
     publicFeedCards.forEach(function (card, index) {
       card._feedIndex = index;
@@ -857,16 +1075,16 @@
       var alreadySaved = state.cards.some(function (saved) {
         return String(saved.sourcePublicKey || "") === String(card.sourcePublicKey || "");
       });
-      if (alreadySaved) return;
+      if (alreadySaved && !isLinkShare) return;
       if (selectedSeries && card.seriesId !== selectedSeries) return;
       var haystack = normalizeSearch([card.seriesName, card.authorName, card.domain, card.description, card.front, card.back].join(" "));
       if (search && !(haystack.indexOf(search) !== -1 || search.split(/\s+/).filter(Boolean).every(function (term) { return haystack.indexOf(term) !== -1; }))) return;
       visible.push(card);
     });
     if (!visible.length) {
-      var message = selectedSeries ? "Cette série n’est plus publique ou aucune de ses cartes n’est disponible." :
-        (search ? "Aucune carte ne correspond à cette recherche." : "Aucune carte n’a encore été publiée. Depuis « Mes cartes », choisissez Visibilité puis Public pour publier une série.");
-      root.innerHTML = '<div class="empty-state compact-empty"><h3>Aucune carte à afficher</h3><p>' + message + '</p><a class="secondary-btn" href="mes-memoires.html?view=cards">Accéder à Mes cartes</a></div>';
+      var message = isLinkShare ? "Ce lien n’est plus valide. Demandez à son propriétaire d’en créer un nouveau." : (selectedSeries ? "Cette série n’est plus publique ou aucune de ses cartes n’est disponible." :
+        (search ? "Aucune carte ne correspond à cette recherche." : "Aucune carte n’a encore été publiée. Depuis « Mes cartes », choisissez Visibilité puis Public pour publier une série."));
+      root.innerHTML = '<div class="empty-state compact-empty"><h3>' + (isLinkShare ? "Lien expiré ou révoqué" : "Aucune carte à afficher") + '</h3><p>' + message + '</p><a class="secondary-btn" href="mes-memoires.html?view=cards">Accéder à Mes cartes</a></div>';
       return;
     }
     root.innerHTML = '<div class="public-card-feed-grid">' + visible.map(function (card) {
@@ -905,8 +1123,49 @@
 
   async function loadPublicCards() {
     var root = $("#publicCardFeed");
-    if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Chargement des cartes publiques…</h3><p>Les cartes publiées apparaîtront ici une par une.</p></div>';
+    var query = new URLSearchParams(window.location.search);
+    var shareToken = query.get("share") || "";
+    if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>' + (shareToken ? 'Ouverture du lien de partage…' : 'Chargement des cartes publiques…') + '</h3><p>Veuillez patienter.</p></div>';
     try {
+      if (shareToken) {
+        var sharedResponse = await fetch(SUPABASE_URL + "/rest/v1/rpc/get_public_card_share_link", {
+          method: "POST",
+          headers: {"apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json"},
+          body: JSON.stringify({ p_share_token: shareToken }),
+          cache: "no-store"
+        });
+        var sharedText = await sharedResponse.text();
+        if (!sharedResponse.ok) throw new Error(sharedText || "Le lien de partage n’est pas disponible.");
+        var shared = JSON.parse(sharedText || "null");
+        if (!shared || !Array.isArray(shared.cards) || !shared.cards.length) {
+          if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Lien expiré ou révoqué</h3><p>Ce lien n’est plus valide. Demandez à son propriétaire d’en créer un nouveau.</p><a class="secondary-btn" href="cartes-publiques.html">Explorer les cartes publiques</a></div>';
+          return;
+        }
+        publicFeedCards = shared.cards.filter(function (card) { return card && typeof card.front === "string" && typeof card.back === "string"; }).map(function (card, index) {
+          return {
+            sourcePublicKey: "share:" + String(shared.id) + ":" + index,
+            seriesId: String(shared.owner_key || shared.id),
+            seriesName: String(shared.name || "Série partagée"),
+            authorName: String(shared.author_name || "Auteur non renseigné"),
+            domain: String(shared.domain || "Domaine non précisé"),
+            description: String(shared.description || ""),
+            createdAt: shared.created_at,
+            certificateId: String(card.certificateId || ""),
+            certificateCode: String(card.certificateCode || ""),
+            originalCardId: String(card.originalCardId || ""),
+            allowVariants: false,
+            front: card.front,
+            back: card.back,
+            cardMode: card.cardMode === "scientific" ? "scientific" : "simple",
+            backgroundMode: card.backgroundMode === "image" || card.backgroundMode === "color" ? card.backgroundMode : ((card.backgroundImage || shared.background_image) ? "image" : "color"),
+            backgroundColor: /^#[0-9a-f]{6}$/i.test(card.backgroundColor || "") ? card.backgroundColor : (shared.background_color || "#4937a6"),
+            backgroundImage: typeof card.backgroundImage === "string" ? card.backgroundImage : "",
+            seriesBackgroundImage: shared.background_image || ""
+          };
+        });
+        renderPublicCards();
+        return;
+      }
       var response = await fetch(SUPABASE_URL + "/rest/v1/public_card_series?select=id,name,author_name,domain,description,cards,background_color,background_image,created_at,visibility&visibility=eq.public&order=created_at.desc&limit=200", {
         headers: {
           "apikey": SUPABASE_PUBLISHABLE_KEY,
@@ -1852,7 +2111,21 @@
     } else if (action === "share-deck") {
       shareDeckLink(button.dataset.deck || "");
     } else if (action === "copy-share-link") {
-      copyPublicShareLink();
+      copyPublicShareLink(button);
+    } else if (action === "create-share-link") {
+      createShareLink(button.dataset.deck || "");
+    } else if (action === "create-share-link-dialog") {
+      openCreateShareLinkDialog(button.dataset.deck || "");
+    } else if (action === "manage-share-links") {
+      openShareLinkManager(button.dataset.deck || "");
+    } else if (action === "revoke-share-link") {
+      revokeShareLink(button);
+    } else if (action === "share-link-whatsapp") {
+      shareLinkToChannel(button, "whatsapp");
+    } else if (action === "share-link-facebook") {
+      shareLinkToChannel(button, "facebook");
+    } else if (action === "share-link-native") {
+      shareLinkToChannel(button, "native");
     } else if (action === "series-menu") {
       openSharingDialog("Options de la série", '<p class="sharing-modal-intro">Que souhaitez-vous faire avec cette série ?</p><div class="series-export-options"><button type="button" class="series-export-choice" data-act="group-deck" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>♧</span><strong>Partager avec un groupe</strong><small>Sélectionner un ou plusieurs groupes.</small></button><button type="button" class="series-export-choice" data-act="series-share-options" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>↗</span><strong>Partager la série</strong><small>Télécharger le PDF, les images ou partager un lien.</small></button><button type="button" class="series-export-choice" data-act="print-series" data-deck="'+escapeHtml(button.dataset.deck||"")+'"><span>▤</span><strong>Imprimer les cartes</strong><small>Ouvrir l’aperçu d’impression sans lancer de téléchargement.</small></button></div>');
     } else if (action === "group-deck") {

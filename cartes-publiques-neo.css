@@ -160,3 +160,18 @@ html[data-theme="light"]:has(body[data-page="public-cards"]) { color-scheme: lig
 :root:root:root body[data-page="public-cards"] .public-flashcard:not(.pf-has-image) .pf-hint {
   color: var(--muted) !important;
 }
+
+/* 20261025-mobile-grid-share-logo: garder deux colonnes et une barre d'action stable sur mobile. */
+@media(max-width:680px){
+ body[data-page="public-cards"] .public-card-feed-grid,
+ body[data-page="public-cards"] .public-learning-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+ body[data-page="public-cards"] .public-cards-toolbar{grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}
+ body[data-page="public-cards"] .public-cards-toolbar .search-field{grid-column:1/-1;grid-row:1;min-width:0;width:100%}
+ body[data-page="public-cards"] .public-cards-toolbar [data-act="refresh-public-cards"]{grid-column:1;grid-row:2;min-width:0}
+ body[data-page="public-cards"] .public-cards-toolbar>a{grid-column:2;grid-row:2;min-width:0;text-align:center}
+ body[data-page="public-cards"] .topbar-inner{flex-wrap:wrap;gap:10px;padding-block:10px}
+ body[data-page="public-cards"] .header-right{flex:1 1 100%;flex-wrap:wrap;gap:7px}
+ body[data-page="public-cards"] .top-actions{flex-wrap:wrap;min-width:0}
+ body[data-page="public-cards"] .page-heading h1{font-size:clamp(1.45rem,6vw,2rem);line-height:1.2}
+ body[data-page="public-cards"] .page-heading p{font-size:.88rem;line-height:1.55}
+}
