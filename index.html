@@ -20,15 +20,17 @@
   <title>Accueil — Aurore Mémoire</title>
   <link rel="preconnect" href="https://oegxxndiuovisustjstp.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="style.css?v=20261021-menu-right-v3">
-  <link rel="stylesheet" href="memory-access.css?v=20261018-auth-menu">
+  <link rel="stylesheet" href="style.css?v=20261025-original-logo">
+  <link rel="stylesheet" href="memory-access.css?v=20261025-original-logo">
   <!-- L'accueil n'a pas besoin de memoire.css pour s'afficher : chargement non bloquant, prêt pour les pages suivantes. -->
-  <link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="memoire.css?v=20261025-share-pdf-logo" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="cloud-files.css?v=20261017-r2" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="memoire.css?v=20261016-groups-foundation"><link rel="stylesheet" href="cloud-files.css?v=20261017-r2"></noscript>
+  <noscript><link rel="stylesheet" href="memoire.css?v=20261025-share-pdf-logo"><link rel="stylesheet" href="cloud-files.css?v=20261017-r2"></noscript>
   <link rel="prefetch" href="memoire.js" as="script">
   <link rel="prefetch" href="math-render.js?v=20261016-lazy-katex" as="script">
   <link rel="prefetch" href="reviser-cartes.js?v=20261015-katex-newline-fix" as="script">
+  <link rel="icon" type="image/svg+xml" href="/assets/aurore-logo.svg">
+  <link rel="manifest" href="/site.webmanifest">
 </head>
 <body data-page="home">
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -36,7 +38,7 @@
     <div class="memory-access-card">
       <div class="memory-access-card-body">
         <div class="memory-access-institution">
-          <div class="memory-access-logo" aria-hidden="true">A</div>
+          <div class="memory-access-logo" aria-hidden="true"><img src="/assets/aurore-logo.svg" alt=""></div>
           <div>
             <div class="memory-access-brand">Aurore Mémoire</div>
             <div class="memory-access-tagline">Un espace personnel pour apprendre et se souvenir.</div>
@@ -83,7 +85,7 @@
         <a class="app-menu-item" href="revisions.html">Révisions</a>
       </div>
     </div>
-    <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="30" height="30" focusable="false"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-opacity=".32" stroke-width="1.4"/><path d="M10 25a10 10 0 0 1 20 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 9v5M11.8 13.2l3.1 3.1M28.2 13.2l-3.1 3.1M8.5 29.5h23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="22" r="3.2" fill="currentColor"/></svg></span><span class="brand-copy"><strong>Aurore</strong><small>Mémoire</small></span></a>
+    <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark" aria-hidden="true"><img class="brand-logo" src="/assets/aurore-logo.svg" alt=""></span><span class="brand-copy"><strong>Aurore</strong><small>Mémoire</small></span></a>
     <div class="header-right">
       <nav class="top-actions" aria-label="Navigation principale"><a class="nav-link active" data-nav="home" href="index.html">Accueil</a><a class="nav-link" data-nav="library" href="choisir.html">Bibliothèque</a><a class="nav-link" data-nav="reviews" href="revisions.html">Révisions</a></nav>
       <div class="appearance">
