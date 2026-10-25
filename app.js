@@ -335,7 +335,7 @@
     function label(url){var p=url.pathname.split("/").pop()||"index.html",v=url.searchParams.get("view")||"all";
       if(p==="index.html")return "← Accueil";if(p==="choisir.html")return "← Choisir un espace";
       if(p==="mes-memoires.html")return v==="memories"?"← Mes mémoires":v==="cards"?"← Mes cartes":"← Bibliothèque";
-      if(p==="cartes-publiques.html")return "← Cartes publiques";if(p==="revisions.html")return "← Révisions";
+      if(p==="cartes-publiques.html")return "← Bibliothèque communautaire";if(p==="revisions.html")return "← Révisions";
       if(p==="reviser-cartes.html")return "← Étude des cartes";if(p==="memoire-blocs.html")return "← Passages à mémoriser";
       if(p==="creer-cartes.html")return "← Mes cartes";if(p==="editer-memoire.html")return "← Mes mémoires";return "← Retour";
     }

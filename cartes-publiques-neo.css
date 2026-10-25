@@ -175,3 +175,19 @@ html[data-theme="light"]:has(body[data-page="public-cards"]) { color-scheme: lig
  body[data-page="public-cards"] .page-heading h1{font-size:clamp(1.45rem,6vw,2rem);line-height:1.2}
  body[data-page="public-cards"] .page-heading p{font-size:.88rem;line-height:1.55}
 }
+
+/* Aperçus de la bibliothèque communautaire et espace d'importation séparé */
+.public-learning-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.public-learning-actions button{min-width:0;white-space:normal}
+.public-memory-reader{display:grid;gap:12px;max-height:min(65vh,680px);overflow:auto}
+.public-memory-reader-block,.public-audio-preview-track{padding:14px;border:1px solid var(--line,rgba(150,145,170,.22));border-radius:14px;background:var(--surface,rgba(120,115,145,.08));overflow-wrap:anywhere}
+.public-memory-reader-block p{white-space:pre-wrap;line-height:1.65}
+.public-audio-preview-track audio{width:100%;max-width:100%}
+.community-imported-shelf{margin:20px 0 26px;padding:18px;border:1px solid var(--line,rgba(150,145,170,.22));border-radius:18px;background:var(--surface,rgba(120,115,145,.07))}
+.community-imported-group{margin-top:18px}
+.community-imported-group h3{margin-bottom:10px}
+.community-imported-item{margin:10px 0}
+.community-imported-item audio{display:block;width:100%;margin:10px 0}
+
+/* Contenus importés : espace indépendant des créations personnelles */
+.community-imported-shelf{margin:22px 0;padding:20px;border:1px solid var(--line,rgba(130,125,150,.24));border-radius:18px;background:var(--panel,rgba(130,125,150,.06))}.community-imported-shelf .audio-section-heading{margin-bottom:16px}.community-imported-group{margin-top:18px}.community-imported-group>h3{margin-bottom:10px}.community-imported-item{margin:10px 0;padding:14px}.community-imported-item h3,.community-imported-item h4{overflow-wrap:anywhere}.community-imported-item audio{display:block;width:100%;margin:8px 0}.community-imported-item .public-learning-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.community-imported-item .public-learning-actions button{flex:1 1 140px;min-width:0}.public-memory-reader{display:grid;gap:12px;max-height:65vh;overflow:auto}.public-memory-reader-block{padding:14px;border:1px solid var(--line,rgba(130,125,150,.24));border-radius:12px;background:var(--panel,rgba(130,125,150,.06))}.public-memory-reader-block p{white-space:pre-wrap;overflow-wrap:anywhere}.public-audio-preview-track{display:grid;gap:8px;padding:12px 0;border-bottom:1px solid var(--line,rgba(130,125,150,.2))}.public-audio-preview-track audio{width:100%;max-width:100%}.public-learning-actions{display:flex;flex-wrap:wrap;gap:8px}.public-learning-actions button{flex:1 1 130px;min-width:0}@media(max-width:560px){.community-imported-shelf{padding:14px}.community-imported-item .public-learning-actions button,.public-learning-actions button{flex-basis:100%}}

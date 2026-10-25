@@ -325,6 +325,9 @@ function showPlayer() {
     var t = document.createElement("strong"); t.textContent = track.record.name;
     var s = document.createElement("small"); s.textContent = (track.record.kind === "speech" ? "Texte lu" : "Enregistrement") + " · " + track.repeat + " lecture(s)";
     main.append(t, s); box.append(main);
+    var download = document.createElement("button"); download.type = "button"; download.className = "secondary-btn"; download.textContent = track.record.kind === "speech" ? "Télécharger les réglages et le texte" : "Télécharger l’audio";
+    download.addEventListener("click", function () { downloadAudio(track.record); });
+    box.append(download);
     $("playerRepeat").value = String(track.repeat || 1);
   }
   $("playerRepeat").disabled = false;

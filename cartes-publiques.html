@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ecebea">
-  <meta name="description" content="Découvrez et ajoutez à votre bibliothèque des cartes de révision partagées publiquement.">
-  <title>Cartes publiques — Aurore Mémoire</title>
+  <meta name="description" content="Explorez et ajoutez des cartes, mémoires, audios et QCM partagés par la communauté.">
+  <title>Bibliothèque communautaire — Aurore Mémoire</title>
   <link rel="stylesheet" href="style.css?v=20261025-original-logo">
-  <link rel="stylesheet" href="memoire.css?v=20261025-share-pdf-logo">
+  <link rel="stylesheet" href="memoire.css?v=20261025-community-imports">
   <link rel="stylesheet" href="cartes-publiques-flip.css?v=20261021-two-column-cards">
-  <link rel="stylesheet" href="cartes-publiques-neo.css?v=20261025-mobile-share-logo">
-  <link rel="icon" type="image/svg+xml" href="/assets/aurore-logo.png">
+  <link rel="stylesheet" href="cartes-publiques-neo.css?v=20261025-community-imports">
+  <link rel="icon" type="image/png" href="/assets/aurore-logo.png">
   <link rel="manifest" href="/site.webmanifest">
 </head>
 <body data-page="public-cards">
@@ -18,7 +18,7 @@
   <header class="topbar"><div class="wrap topbar-inner">
     <a class="brand" href="index.html" aria-label="Aurore Mémoire, accueil"><span class="brand-mark" aria-hidden="true"><img class="brand-logo" src="/assets/aurore-logo.png" alt=""></span><span class="brand-copy"><strong>Aurore</strong><small>Mémoire</small></span></a>
     <div class="header-right">
-      <nav class="top-actions" aria-label="Navigation principale"><a class="nav-link" data-nav="home" href="index.html">Accueil</a><a class="nav-link active" href="cartes-publiques.html">Cartes publiques</a><a class="nav-link" data-nav="reviews" href="revisions.html">Révisions</a></nav>
+      <nav class="top-actions" aria-label="Navigation principale"><a class="nav-link" data-nav="home" href="index.html">Accueil</a><a class="nav-link active" href="cartes-publiques.html">Bibliothèque communautaire</a><a class="nav-link" data-nav="reviews" href="revisions.html">Révisions</a></nav>
       <div class="appearance">
         <button class="theme-btn" id="themeToggle" type="button" aria-label="Basculer entre le thème sombre et le thème clair" title="Mode clair / sombre">◐</button>
         <div class="color-theme-wrap">
@@ -34,14 +34,14 @@
   <main class="wrap main-content">
     <section class="page-heading">
       <a class="back-link" href="choisir.html">← Bibliothèque</a>
-      <p class="section-kicker">PARTAGE PUBLIC</p>
-      <h1>Explorer les cartes publiques</h1>
-      <p>Découvrez des cartes individuelles publiées par la communauté. Consultez les informations sur leur auteur, puis ajoutez les cartes utiles à votre bibliothèque.</p>
+      <p class="section-kicker">PARTAGE COMMUNAUTAIRE</p>
+      <h1>Bibliothèque communautaire</h1>
+      <p>Explore des cartes, des mémoires, des audios et des QCM publiés par la communauté. Consulte leur aperçu, puis ajoute les contenus utiles à ton espace dédié.</p>
     </section>
-    <section class="public-cards-toolbar" aria-label="Rechercher les cartes publiques">
-      <label class="search-field"><span aria-hidden="true">⌕</span><input id="publicCardSearch" type="search" placeholder="Rechercher une question, une réponse ou un domaine…" aria-label="Rechercher dans les cartes publiques"></label>
+    <section class="public-cards-toolbar" aria-label="Rechercher dans la bibliothèque communautaire">
+      <label class="search-field"><span aria-hidden="true">⌕</span><input id="publicCardSearch" type="search" placeholder="Rechercher un contenu, une matière ou un auteur…" aria-label="Rechercher dans la bibliothèque communautaire"></label>
       <button class="secondary-btn" type="button" data-act="refresh-public-cards">Actualiser</button>
-      <a class="primary-btn" href="mes-memoires.html?view=cards">Mes cartes</a>
+      <a class="primary-btn" href="mes-memoires.html#communityImportedShelf">Mes contenus ajoutés</a><a class="secondary-btn" href="mes-memoires.html?view=cards">Mes cartes</a>
     </section>
     <section id="publicCardFeed" aria-live="polite" aria-label="Cartes de la communauté">
       <div class="empty-state compact-empty"><h3>Chargement des cartes publiques…</h3><p>Les cartes publiées apparaîtront ici une par une.</p></div>
@@ -49,10 +49,10 @@
   </main>
   <footer class="site-footer"><div class="wrap footer-inner"><strong>Aurore Mémoire</strong><small>Apprendre à son rythme, sans frais pour les fonctions essentielles.</small></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="math-render.js?v=20261015-katex-fast"></script><script src="app.js?v=20261023-theme-adaptive-v1"></script>
-  <script src="memoire.js?v=20261025-share-pdf-logo"></script>
+  <script src="math-render.js?v=20261015-katex-fast"></script><script src="app.js?v=20261025-community-library-name"></script>
+  <script src="memoire.js?v=20261025-community-library-name"></script>
   <script src="public-card-flip.js?v=20261019-public-flip"></script>
-  <script src="learning-sharing.js?v=20261024-share-resources-v1"></script>
+  <script src="learning-sharing.js?v=20261025-community-library-imports-preview"></script>
   <script src="network-status.js?v=20261021-network-status-v2"></script>
   <script src="spa-router.js?v=20261021-network-status-v2"></script>
 </body>

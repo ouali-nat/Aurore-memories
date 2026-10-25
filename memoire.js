@@ -344,7 +344,7 @@
       '<p class="sharing-modal-intro">Choisissez qui peut consulter cette série de questions-réponses.</p>' +
       '<div class="visibility-choice-list">' +
       '<button type="button" class="visibility-choice" data-act="choose-visibility" data-value="public" data-deck="' + safeDeck + '">' +
-      '<span class="visibility-choice-icon">◎</span><span><strong>Public</strong><small>Chaque carte sera affichée séparément dans l’espace Cartes publiques. Les visiteurs pourront voir l’auteur déclaré et ajouter une carte à leur bibliothèque.</small></span><span class="visibility-choice-status">' + (settings.visibility === "public" ? "Actif" : "Choisir") + '</span></button>' +
+      '<span class="visibility-choice-icon">◎</span><span><strong>Public</strong><small>Chaque carte sera affichée séparément dans la Bibliothèque communautaire. Les visiteurs pourront voir l’auteur déclaré et ajouter une carte à leur bibliothèque.</small></span><span class="visibility-choice-status">' + (settings.visibility === "public" ? "Actif" : "Choisir") + '</span></button>' +
       '<button type="button" class="visibility-choice" data-act="choose-visibility" data-value="private" data-deck="' + safeDeck + '">' +
       '<span class="visibility-choice-icon">◉</span><span><strong>Privé</strong><small>La série reste dans votre bibliothèque personnelle et n’apparaît plus dans l’exploration publique.</small></span><span class="visibility-choice-status">' + (settings.visibility === "private" ? "Actif" : "Choisir") + '</span></button>' +
       '</div><p class="sharing-modal-note">Le choix Public publie le contenu de la série. Le choix Privé retire sa publication de l’espace public.</p>');
@@ -1125,7 +1125,7 @@
     var root = $("#publicCardFeed");
     var query = new URLSearchParams(window.location.search);
     var shareToken = query.get("share") || "";
-    if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>' + (shareToken ? 'Ouverture du lien de partage…' : 'Chargement des cartes publiques…') + '</h3><p>Veuillez patienter.</p></div>';
+    if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>' + (shareToken ? 'Ouverture du lien de partage…' : 'Chargement des cartes de la communauté…') + '</h3><p>Veuillez patienter.</p></div>';
     try {
       if (shareToken) {
         var sharedResponse = await fetch(SUPABASE_URL + "/rest/v1/rpc/get_public_card_share_link", {
@@ -1138,7 +1138,7 @@
         if (!sharedResponse.ok) throw new Error(sharedText || "Le lien de partage n’est pas disponible.");
         var shared = JSON.parse(sharedText || "null");
         if (!shared || !Array.isArray(shared.cards) || !shared.cards.length) {
-          if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Lien expiré ou révoqué</h3><p>Ce lien n’est plus valide. Demandez à son propriétaire d’en créer un nouveau.</p><a class="secondary-btn" href="cartes-publiques.html">Explorer les cartes publiques</a></div>';
+          if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Lien expiré ou révoqué</h3><p>Ce lien n’est plus valide. Demandez à son propriétaire d’en créer un nouveau.</p><a class="secondary-btn" href="cartes-publiques.html">Explorer la bibliothèque communautaire</a></div>';
           return;
         }
         publicFeedCards = shared.cards.filter(function (card) { return card && typeof card.front === "string" && typeof card.back === "string"; }).map(function (card, index) {
@@ -1206,7 +1206,7 @@
       publicFeedCards = publicFeedCards.slice(0, 400);
       renderPublicCards();
     } catch (error) {
-      if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Impossible de charger les cartes publiques</h3><p>Vérifiez votre connexion, puis réessayez.</p><button type="button" class="secondary-btn" data-act="refresh-public-cards">Réessayer</button></div>';
+      if (root) root.innerHTML = '<div class="empty-state compact-empty"><h3>Impossible de charger les cartes de la communauté</h3><p>Vérifiez votre connexion, puis réessayez.</p><button type="button" class="secondary-btn" data-act="refresh-public-cards">Réessayer</button></div>';
       notify("Chargement public impossible : " + String(error && error.message || "vérifiez votre connexion."));
     }
   }
@@ -1312,7 +1312,7 @@
     var cardsAction = view === "all" ? '<a class="section-link" href="mes-memoires.html?view=cards">Toutes les séries <span aria-hidden="true">↗</span></a>' : '<a class="primary-btn" href="creer-cartes.html">＋ Créer une série</a>';
     var memorySection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">TEXTES À MÉMORISER</p><h2>' + (view === "memories" ? "Tous les textes" : "Mes mémoires") + '</h2><p>Des textes organisés en passages avec un suivi individuel.</p></div>' + memoryAction + '</div>' + rows(memoryNames,memoryGroupsByDeck,"memory") + '</section>';
     var cardRows = '<section class="library-subsection"><h3>Mes cartes créées</h3><p>Les séries que vous avez composées vous-même.</p>' + rows(personalFlashNames,personalFlashGroups,"flashcard") + '</section>';
-    if (communityFlashNames.length) cardRows += '<section class="library-subsection"><h3>Cartes de la communauté enregistrées</h3><p>Les cartes publiques que vous avez ajoutées à votre bibliothèque personnelle.</p>' + rows(communityFlashNames,communityFlashGroups,"flashcard") + '</section>';
+    if (communityFlashNames.length) cardRows += '<section class="library-subsection"><h3>Cartes de la communauté ajoutées</h3><p>Ces cartes ajoutées sont conservées séparément de vos créations personnelles.</p>' + rows(communityFlashNames,communityFlashGroups,"flashcard") + '</section>';
     var cardSection = '<section class="library-section"><div class="library-section-head"><div><p class="section-kicker">QUESTIONS ET RÉPONSES</p><h2>' + (view === "cards" ? "Toutes les séries" : "Mes cartes") + '</h2><p>Vos cartes personnelles et vos cartes communautaires sont désormais séparées.</p></div>' + cardsAction + '</div>' + cardRows + '</section>';
     var qs=(state.qcms||[]).filter(function(q){if(!search)return true;var h=normalizeSearch([q.title].concat((q.questions||[]).map(function(x){return [x.prompt,x.explanation].concat((x.options||[]).map(function(o){return o.text})).join(" ")})).join(" "));return h.indexOf(search)>=0});
     var qr=qs.length?'<div class="memory-list">'+qs.map(function(q){return '<article class="memory-row"><div class="memory-row-mark" aria-hidden="true">✓</div><div class="memory-row-main"><h3>'+escapeHtml(q.title||"QCM sans titre")+'</h3><p>'+(q.questions||[]).length+' question(s) · Auto-évaluation</p><small class="qcm-library-prompt">'+escapeHtml(q.questions&&q.questions[0]?q.questions[0].prompt:"")+'</small></div><div class="memory-row-actions"><a class="primary-btn" href="qcm-study.html?deck='+encodeURIComponent(q.id)+'">M’auto-évaluer</a><a class="secondary-btn" href="qcm.html?deck='+encodeURIComponent(q.id)+'">Modifier</a><button class="subtle-danger" type="button" data-act="delete-qcm" data-qcm-id="'+escapeHtml(q.id)+'">Supprimer</button></div></article>'}).join("")+'</div>':'<div class="empty-state compact-empty"><h3>'+(search?'Aucun résultat':'Aucun QCM enregistré')+'</h3><p>'+(search?'Aucun QCM ne correspond à la recherche.':'Créez votre première séquence de questions et réponses.')+'</p></div>';

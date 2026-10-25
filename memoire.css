@@ -1248,3 +1248,20 @@ body[data-page="public-cards"] .secondary-btn {
 .revoke-share-link-button{justify-self:start;border-color:rgba(205,60,84,.32)!important;color:#cf4660!important}
 #shareExpiryDays{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
 @media(max-width:420px){.share-link-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.share-link-manager-head{align-items:flex-start;flex-direction:column}}
+
+/* Espace séparé pour les contenus importés depuis la bibliothèque communautaire */
+.community-imported-shelf{margin:20px 0 26px;padding:18px;border:1px solid var(--line,rgba(150,145,170,.22));border-radius:18px;background:var(--surface,rgba(120,115,145,.07))}
+.community-imported-group{margin-top:18px}
+.community-imported-group h3{margin-bottom:10px}
+.community-imported-item{margin:10px 0}
+.community-imported-item audio{display:block;width:100%;max-width:100%;margin:10px 0}
+.public-learning-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.public-learning-actions button{min-width:0;white-space:normal}
+.public-memory-reader{display:grid;gap:12px;max-height:min(65vh,680px);overflow:auto}
+.public-memory-reader-block,.public-audio-preview-track{padding:14px;border:1px solid var(--line,rgba(150,145,170,.22));border-radius:14px;background:var(--surface,rgba(120,115,145,.08));overflow-wrap:anywhere}
+.public-memory-reader-block p{white-space:pre-wrap;line-height:1.65}
+.public-audio-preview-track audio{width:100%;max-width:100%}
+
+/* Préserver les espaces et paragraphes saisis dans le texte des cartes. */
+.flashcard-face strong{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;line-height:1.65;padding-inline:2px}
+.flashcard-face{box-sizing:border-box;scrollbar-width:thin}
