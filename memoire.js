@@ -820,7 +820,7 @@
     var pages = [];
     ["front", "back"].forEach(function (side) {
       cards.forEach(function (card, index) {
-        var cardMarkup = exportCardMarkup(card, index, side, false);
+        var cardMarkup = exportCardMarkup(card, index, side, false).replace('class="deck-export-card"', 'class="deck-export-card deck-pdf-card"');
         var label = side === "front" ? "RECTO · QUESTION" : "VERSO · RÉPONSE";
         var identifier = auroreCardIdentifier(card, index);
         var author = card.sourceAuthor || card.authorName || deckSettingsFor(deck).authorName || "Aurore Mémoire";
