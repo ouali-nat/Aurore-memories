@@ -849,3 +849,31 @@ html[data-theme="dark"] .aurore-network-status-copy span{color:var(--muted,#b8b2
 .brand-mark{font-size:0;color:transparent;background-image:url("/assets/aurore-logo.png");background-size:contain;background-position:center;background-repeat:no-repeat;width:48px;height:48px;min-width:48px;flex:0 0 48px;box-sizing:border-box;padding:3px;border-radius:12px;overflow:visible}
 .brand-mark .brand-logo{width:100%;height:100%;object-fit:contain;object-position:center}
 .topbar .brand{min-width:0;gap:10px}.topbar .brand-copy{min-width:0}
+
+
+/* Menus d’actions compacts partagés par les cartes, mémoires, audios et ressources de groupe. */
+.has-compact-actions{position:relative;min-width:0;}
+.has-compact-actions > .compact-action-trigger{position:absolute;z-index:5;top:8px;right:8px;display:grid;place-items:center;width:34px;height:34px;min-width:34px;min-height:34px;padding:0;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:1rem;font-weight:850;letter-spacing:2px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.has-compact-actions > .compact-action-trigger:hover,.has-compact-actions > .compact-action-trigger:focus-visible{border-color:var(--accent);background:var(--soft);outline:none;}
+.has-compact-actions > .memory-row-actions,.has-compact-actions > .audio-item-actions,.has-compact-actions > .public-learning-actions,.has-compact-actions > .group-card-actions,.has-compact-actions > .memory-block-actions{display:none!important;}
+.has-compact-actions .memory-row-main{padding-right:38px;}
+.has-compact-actions.audio-sequence-card{padding-right:52px;}
+.compact-action-dialog{width:min(440px,calc(100vw - 28px));max-width:440px;max-height:min(84dvh,760px);overflow:auto;margin:auto;padding:0;border:1px solid var(--border);border-radius:21px;background:var(--surface);color:var(--text);box-shadow:0 28px 90px rgba(0,0,0,.38);overscroll-behavior:contain;}
+.compact-action-dialog::backdrop{background:rgba(8,7,15,.68);backdrop-filter:blur(5px);}
+.compact-action-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:19px 19px 13px;border-bottom:1px solid var(--border);}
+.compact-action-heading{min-width:0;flex:1;}
+.compact-action-heading .section-kicker{margin:0 0 5px;font-size:.62rem;letter-spacing:.13em;}
+.compact-action-heading h2{margin:0;font-size:1.05rem;line-height:1.4;overflow-wrap:anywhere;}
+.compact-action-close{flex:0 0 36px;width:36px;height:36px;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:11px;background:var(--bg);color:var(--text);font-size:1.35rem;line-height:1;}
+.compact-action-content{display:grid;gap:10px;padding:16px;}
+.compact-action-download{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;}
+.compact-action-extra{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.compact-action-extra button{min-width:0;min-height:42px;padding:9px 10px;font-size:.78rem;white-space:normal;}
+.compact-action-dialog .compact-action-list{display:grid!important;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;margin:0;padding:0;}
+.compact-action-dialog .compact-action-list>*{display:flex;align-items:center;justify-content:flex-start;width:100%;min-width:0;min-height:43px;flex:none;padding:10px 12px;text-align:left;white-space:normal;overflow-wrap:anywhere;}
+.compact-action-dialog .compact-action-list .groups-btn{border-radius:12px;}
+.compact-action-error{margin:0;color:var(--danger,#d55261);font-size:.8rem;line-height:1.5;}
+@media(max-width:560px){.compact-action-dialog{width:calc(100vw - 20px);max-height:88dvh;border-radius:18px}.compact-action-header{padding:16px 16px 12px}.compact-action-content{padding:13px}.compact-action-extra{grid-template-columns:1fr}.has-compact-actions > .compact-action-trigger{top:7px;right:7px;width:32px;height:32px;min-width:32px;min-height:32px}.has-compact-actions .memory-row-main{padding-right:30px;}}
+.has-compact-actions.group-card .group-card-top{padding-right:38px;}
+.has-compact-actions.memory-block-card .memory-block-card-head{padding-right:38px;}
+.has-compact-actions.public-learning-card>.section-kicker{padding-right:38px;}

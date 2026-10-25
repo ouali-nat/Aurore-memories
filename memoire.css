@@ -1265,3 +1265,17 @@ body[data-page="public-cards"] .secondary-btn {
 /* Préserver les espaces et paragraphes saisis dans le texte des cartes. */
 .flashcard-face strong{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;line-height:1.65;padding-inline:2px}
 .flashcard-face{box-sizing:border-box;scrollbar-width:thin}
+
+
+/* Les aperçus KaTeX ne doivent pas hériter du clamp de deux lignes des descriptions. */
+body[data-page="library"] .memory-row-main small.card-math-preview{display:block;-webkit-box-orient:initial;-webkit-line-clamp:unset;white-space:normal;overflow:visible;line-height:1.5;letter-spacing:normal;font-size:.82rem;overflow-wrap:normal;max-width:100%;}
+body[data-page="library"] .card-math-preview .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;margin:.25em 0;}
+body[data-page="library"] .card-math-preview .katex{white-space:normal;}
+.latex-preview,.latex-preview-content{box-sizing:border-box;min-width:0;max-width:100%;}
+.latex-preview-content{overflow-x:auto;overflow-y:hidden;overflow-wrap:normal;word-break:normal;white-space:normal;line-height:1.8;letter-spacing:normal;}
+.latex-preview-content .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;white-space:normal;}
+.latex-preview-content .katex,.latex-preview-content .katex *{letter-spacing:normal;}
+
+/* Logo dans un carré arrondi : dimensions stables et centrage malgré les règles de navigation mobile. */
+.topbar .brand-mark{display:grid;place-items:center;width:48px;height:48px;min-width:48px;flex:0 0 48px;align-self:center;padding:3px;border-radius:12px;overflow:hidden;background:var(--surface);background-image:none;box-sizing:border-box;}
+.topbar .brand-mark .brand-logo{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;border-radius:inherit;}
