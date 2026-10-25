@@ -846,4 +846,4 @@ html[data-theme="dark"] .aurore-network-status-copy span{color:var(--muted,#b8b2
 .brand-mark .brand-logo{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit}
 
 /* Remplace l'ancien monogramme par le logo officiel dans tous les en-têtes. */
-.brand-mark{font-size:0;color:transparent;background-image:url("/assets/aurore-logo.svg");background-size:cover;background-position:center;background-repeat:no-repeat}
+.brand-mark{font-size:0;color:transparent;background-image:url("/assets/aurore-logo.png");background-size:cover;background-position:center;background-repeat:no-repeat}
