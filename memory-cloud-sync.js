@@ -76,7 +76,7 @@
     panel.id = "auroreMemoryCloudPanel";
     panel.setAttribute("aria-live", "polite");
     panel.innerHTML =
-      '<div id="auroreMemoryCloudStatus">Sauvegarde des mémorisations : initialisation…</div>' +
+      '<div id="auroreMemoryCloudStatus">Vérification de la sauvegarde… Vos données locales restent accessibles pendant ce contrôle.</div>' +
       '<div id="auroreMemoryCloudActions" hidden>' +
       '<button type="button" data-cloud-action="merge">Fusionner les deux sauvegardes</button>' +
       '<button type="button" data-cloud-action="local">Garder cet appareil</button>' +
@@ -411,20 +411,55 @@
     getStatus: function () { return lastMessage; }
   };
   mountPanel();
+
+  // L'événement INITIAL_SESSION de Supabase et freshSession() peuvent arriver
+  // presque simultanément au démarrage. Regrouper ces deux signaux évite de
+  // lancer deux lectures complètes de la sauvegarde cloud à chaque page.
+  var startupSyncTimer = null;
+  var startupSyncFinished = false;
+  function scheduleStartupSync() {
+    if (startupSyncFinished) return;
+    if (startupSyncTimer) window.clearTimeout(startupSyncTimer);
+    startupSyncTimer = window.setTimeout(function () {
+      startupSyncTimer = null;
+      if (startupSyncFinished) return;
+      startupSyncFinished = true;
+      runSync();
+    }, 350);
+  }
+
   window.addEventListener("aurore:auth-changed", function (event) {
-    if (event.detail && event.detail.session && event.detail.session.user) runSync();
-    else {
-      active = false;
-      status("Vous êtes hors ligne : vos cartes et mémoires restent sur cet appareil.", "info");
+    if (event.detail && event.detail.session && event.detail.session.user) {
+      if (!startupSyncFinished) scheduleStartupSync();
+      else runSync();
+    } else {
+      // Laisser freshSession() terminer la décision initiale : l'événement
+      // INITIAL_SESSION peut précéder la restauration finale de la session.
+      if (startupSyncFinished) {
+        active = false;
+        status("Vous êtes hors ligne : vos cartes et mémoires restent sur cet appareil.", "info");
+      }
     }
   });
   window.addEventListener("storage", function (event) {
     if (event.key === DATA_KEY) queueSave();
   });
   freshSession().then(function (session) {
-    if (session && session.user) runSync();
-    else status("Connectez-vous avec Aurore ID pour enregistrer automatiquement vos cartes, mémoires et progrès.", "info");
+    if (session && session.user) scheduleStartupSync();
+    else {
+      if (!startupSyncFinished) {
+        startupSyncFinished = true;
+        if (startupSyncTimer) window.clearTimeout(startupSyncTimer);
+        startupSyncTimer = null;
+      }
+      status("Connectez-vous avec Aurore ID pour enregistrer automatiquement vos cartes, mémoires et progrès.", "info");
+    }
   }).catch(function () {
+    if (!startupSyncFinished) {
+      startupSyncFinished = true;
+      if (startupSyncTimer) window.clearTimeout(startupSyncTimer);
+      startupSyncTimer = null;
+    }
     status("La connexion Aurore ID sera vérifiée à l’ouverture de session. Tes données locales restent intactes.", "warn");
   });
 })();
