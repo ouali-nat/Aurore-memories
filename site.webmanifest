@@ -7,7 +7,5 @@
   "display": "standalone",
   "background_color": "#171622",
   "theme_color": "#171622",
-  "icons": [
-    {"src": "/assets/aurore-logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
-  ]
+  "icons": [{"src": "/assets/aurore-logo.png", "sizes": "1500x1500", "type": "image/png", "purpose": "any maskable"}]
 }
