@@ -10,6 +10,8 @@
   var active = false;
   var busy = false;
   var syncAgain = false;
+  var startupSyncTimer = null;
+  var startupSyncFinished = false;
   var timer = null;
   var conflict = null;
   var lastMessage = "";
@@ -76,7 +78,8 @@
     panel.id = "auroreMemoryCloudPanel";
     panel.setAttribute("aria-live", "polite");
     panel.innerHTML =
-      '<div id="auroreMemoryCloudStatus">Sauvegarde des mémorisations : initialisation…</div>' +
+      '<div class="aurore-cloud-heading"><span class="aurore-cloud-dot" aria-hidden="true"></span><div class="aurore-cloud-copy"><strong>Synchronisation des mémorisations</strong>' +
+      '<div id="auroreMemoryCloudStatus">Vérification de la sauvegarde… Vos données locales restent accessibles pendant ce contrôle.</div></div></div>' +
       '<div id="auroreMemoryCloudActions" hidden>' +
       '<button type="button" data-cloud-action="merge">Fusionner les deux sauvegardes</button>' +
       '<button type="button" data-cloud-action="local">Garder cet appareil</button>' +
@@ -84,8 +87,15 @@
       '</div>';
     var style = document.createElement("style");
     style.textContent =
-      '#auroreMemoryCloudPanel{box-sizing:border-box;position:relative;z-index:3;width:calc(100% - 28px);max-width:1120px;margin:10px auto 0;padding:10px 13px;border:1px solid var(--border,rgba(150,140,190,.28));border-radius:12px;background:var(--surface,rgba(24,22,36,.94));color:var(--text,#eee);font:500 13px/1.5 system-ui,sans-serif}' +
-      '#auroreMemoryCloudActions{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}' +
+      '#auroreMemoryCloudPanel{box-sizing:border-box;position:relative;z-index:3;width:calc(100% - 28px);max-width:1120px;margin:10px auto 0;padding:12px 14px;border:1px solid var(--border,rgba(150,140,190,.28));border-radius:15px;background:var(--surface,rgba(24,22,36,.94));color:var(--text,#eee);font:500 13px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.07)}' +
+      '#auroreMemoryCloudPanel .aurore-cloud-heading{display:flex;align-items:flex-start;gap:10px}' +
+      '#auroreMemoryCloudPanel .aurore-cloud-dot{flex:0 0 9px;width:9px;height:9px;margin-top:6px;border-radius:50%;background:#8b8ca7;box-shadow:0 0 0 4px rgba(139,140,167,.12)}' +
+      '#auroreMemoryCloudPanel .aurore-cloud-copy{min-width:0;flex:1}' +
+      '#auroreMemoryCloudPanel .aurore-cloud-copy strong{display:block;margin-bottom:2px;font-size:13px;font-weight:700;letter-spacing:.01em}' +
+      '#auroreMemoryCloudStatus{color:var(--muted,var(--text,#eee));opacity:.88;overflow-wrap:anywhere}' +
+      '#auroreMemoryCloudPanel[data-state="ok"] .aurore-cloud-dot{background:#32a879;box-shadow:0 0 0 4px rgba(50,168,121,.14)}' +
+      '#auroreMemoryCloudPanel[data-state="warn"] .aurore-cloud-dot{background:#d49a2e;box-shadow:0 0 0 4px rgba(212,154,46,.16)}' +
+      '#auroreMemoryCloudActions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;padding-left:19px}' +
       '#auroreMemoryCloudActions[hidden]{display:none}' +
       '#auroreMemoryCloudActions button{border:1px solid var(--border,rgba(150,140,190,.4));border-radius:8px;padding:7px 10px;background:transparent;color:inherit;font:inherit;cursor:pointer}' +
       '#auroreMemoryCloudActions button:disabled{opacity:.55;cursor:wait}' +
@@ -168,6 +178,15 @@
     if (!window.auroreAuth) return null;
     return window.auroreAuth.getSession();
   }
+  function scheduleStartupSync() {
+    if (startupSyncFinished || startupSyncTimer !== null) return;
+    startupSyncTimer = window.setTimeout(function () {
+      startupSyncTimer = null;
+      startupSyncFinished = true;
+      runSync();
+    }, 350);
+  }
+
   async function runSync() {
     if (busy) { syncAgain = true; return; }
     var session;
@@ -412,8 +431,10 @@
   };
   mountPanel();
   window.addEventListener("aurore:auth-changed", function (event) {
-    if (event.detail && event.detail.session && event.detail.session.user) runSync();
-    else {
+    if (event.detail && event.detail.session && event.detail.session.user) {
+      if (startupSyncFinished) runSync();
+      else scheduleStartupSync();
+    } else {
       active = false;
       status("Vous êtes hors ligne : vos cartes et mémoires restent sur cet appareil.", "info");
     }
@@ -422,9 +443,13 @@
     if (event.key === DATA_KEY) queueSave();
   });
   freshSession().then(function (session) {
-    if (session && session.user) runSync();
-    else status("Connectez-vous avec Aurore ID pour enregistrer automatiquement vos cartes, mémoires et progrès.", "info");
+    if (session && session.user) scheduleStartupSync();
+    else {
+      startupSyncFinished = true;
+      status("Connectez-vous avec Aurore ID pour enregistrer automatiquement vos cartes, mémoires et progrès.", "info");
+    }
   }).catch(function () {
+    startupSyncFinished = true;
     status("La connexion Aurore ID sera vérifiée à l’ouverture de session. Tes données locales restent intactes.", "warn");
   });
 })();
