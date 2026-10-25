@@ -1234,3 +1234,17 @@ body[data-page="public-cards"] .secondary-btn {
 .group-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.group-card-actions .groups-btn{flex:1 1 auto}.group-resource-preview{font-size:.9rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-height:6em;overflow:hidden;padding:9px;border-radius:9px;background:var(--surface,rgba(120,110,150,.1))}
 
 .shared-qcm-options{display:grid;gap:8px;margin:14px 0}.shared-qcm-options button{text-align:left;white-space:normal;line-height:1.5}.shared-qcm-options button.is-correct{border-color:#16a34a;background:rgba(22,163,74,.14)}.shared-qcm-options button.is-wrong{border-color:#dc2626;background:rgba(220,38,38,.12)}.shared-qcm-options button:disabled{opacity:1}
+
+/* Liens externes à durée limitée et gestion de leur révocation. */
+.share-link-channel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.share-link-channel-grid>*{min-width:0}
+.share-link-manager-list{display:grid;gap:10px}
+.share-link-manager-item{display:grid;gap:8px;min-width:0;padding:13px;border:1px solid var(--border);border-radius:13px;background:var(--surface)}
+.share-link-manager-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.share-link-manager-head strong{min-width:0;font-size:.82rem;overflow-wrap:anywhere}
+.share-link-manager-item>p{margin:0;color:var(--muted);font-size:.72rem;line-height:1.45}
+.share-link-status{display:inline-flex;align-items:center;flex:0 0 auto;padding:4px 8px;border:1px solid var(--border);border-radius:100px;color:var(--muted);font-size:.65rem;font-weight:800}
+.share-link-status.is-active{border-color:rgba(38,162,105,.35);color:#279d75;background:rgba(38,162,105,.09)}
+.revoke-share-link-button{justify-self:start;border-color:rgba(205,60,84,.32)!important;color:#cf4660!important}
+#shareExpiryDays{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+@media(max-width:420px){.share-link-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.share-link-manager-head{align-items:flex-start;flex-direction:column}}
