@@ -433,13 +433,12 @@
       if (!startupSyncFinished) scheduleStartupSync();
       else runSync();
     } else {
-      if (!startupSyncFinished) {
-        startupSyncFinished = true;
-        if (startupSyncTimer) window.clearTimeout(startupSyncTimer);
-        startupSyncTimer = null;
+      // Laisser freshSession() terminer la décision initiale : l'événement
+      // INITIAL_SESSION peut précéder la restauration finale de la session.
+      if (startupSyncFinished) {
+        active = false;
+        status("Vous êtes hors ligne : vos cartes et mémoires restent sur cet appareil.", "info");
       }
-      active = false;
-      status("Vous êtes hors ligne : vos cartes et mémoires restent sur cet appareil.", "info");
     }
   });
   window.addEventListener("storage", function (event) {
