@@ -79,13 +79,24 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
   }
   // Workers AI may return either its native {result:{response}} shape or an
   // OpenAI-compatible chat.completion shape ({choices:[{message:{content}}]}).
-  const choice = Array.isArray(aiData?.choices) ? aiData.choices[0] : undefined;
-  const reply = aiData?.result?.response
-    ?? aiData?.result?.output_text
-    ?? aiData?.result?.response?.content
-    ?? choice?.message?.content
-    ?? choice?.text;
-  const finishReason = choice?.finish_reason ?? choice?.finishReason ?? aiData?.result?.finish_reason;
+  const providerResult = aiData?.result;
+  const choice = Array.isArray(aiData?.choices)
+    ? aiData.choices[0]
+    : Array.isArray(providerResult?.choices) ? providerResult.choices[0] : undefined;
+  // Cloudflare's response can wrap the OpenAI-compatible payload inside result.
+  // Select the first actual string instead of letting a non-string response
+  // object mask a valid choices[0].message.content value.
+  const replyCandidates = [
+    providerResult?.response,
+    providerResult?.output_text,
+    providerResult?.response?.content,
+    choice?.message?.content,
+    choice?.text,
+    aiData?.response,
+    aiData?.output_text
+  ];
+  const reply = replyCandidates.find((candidate) => typeof candidate === "string" && candidate.trim().length > 0);
+  const finishReason = choice?.finish_reason ?? choice?.finishReason ?? providerResult?.finish_reason;
   if (typeof reply !== "string" || !reply.trim()) {
     console.error("aurore-grok: réponse Cloudflare vide ou format inattendu", JSON.stringify({
       topLevelKeys: Object.keys(aiData || {}),
