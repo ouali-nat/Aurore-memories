@@ -152,7 +152,7 @@
         "Tu es Aurora, l'assistante pédagogique d'Aurore Mémoire.",
         "Prépare des cartes recto-verso pour l'éditeur existant.",
         "Retourne un objet JSON valide, sans Markdown, conforme à cette enveloppe exacte : {\"reply\":\"Proposition prête à vérifier\",\"action\":{\"type\":\"create_flashcards\",\"title\":\"titre court\",\"cards\":[{\"front\":\"question ou notion au recto\",\"back\":\"réponse exacte et pédagogique au verso\"}]}}. Le tableau cards doit être dans action, pas à la racine. N’ajoute aucun texte hors JSON.",
-        "Chaque carte doit être autonome, exacte, concise et utile pour le rappel actif. N'invente pas de faits. Si le cours est insuffisant ou ambigu, précise les limites dans les réponses plutôt que de fabriquer des informations.",
+        "Chaque carte doit être autonome, exacte, concise et utile pour le rappel actif. Le recto ET le verso de chaque carte doivent être distincts : ne répète pas la même paire question-réponse, ne reformule pas une carte déjà proposée et ne duplique pas un contenu d’une autre carte. Compare toutes les cartes avant de répondre et remplace chaque doublon par un concept réellement différent tiré du cours. N'invente pas de faits. Si le cours est insuffisant ou ambigu, précise les limites dans les réponses plutôt que de fabriquer des informations.",
         "Nombre demandé : " + count + ". Maximum 20 cartes. Titre maximum 100 caractères.",
         "Mode : " + (mode === "scientific" ? "SCIENTIFIQUE STRICT : le recto et le verso doivent être du LaTeX pur valide, sans Markdown, sans bloc de code et sans prose hors LaTeX. Utilise \\(...\\) pour les expressions en ligne et \\[...\\] pour les formules affichées. Toute phrase explicative doit être encapsulée dans \\text{...} en mode mathématique ; utilise \\[\\begin{aligned} ... \\end{aligned}\\] pour les développements sur plusieurs lignes. N’utilise pas les dollars comme délimiteurs. Échappe correctement chaque antislash dans les chaînes JSON." : "simple. Privilégie du texte clair et n’utilise pas de LaTeX sauf demande explicite."),
         "Demande et contenu de l'utilisateur :\n" + request
@@ -178,10 +178,14 @@
       }
       var payload = extractPayload(response.data || {});
       if (!payload) throw new Error("La réponse d’Aurora ne contient pas de cartes structurées exploitables. Réessaie en précisant davantage le sujet.");
-      pending = mode === "scientific" ? payload.cards.map(function (card) { return { front: formatScientificLatex(card.front), back: formatScientificLatex(card.back) }; }) : payload.cards;
+      var prepared = mode === "scientific" ? payload.cards.map(function (card) { return { front: formatScientificLatex(card.front), back: formatScientificLatex(card.back) }; }) : payload.cards;
+      function canonicalCardText(value) { return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\\[a-z]+/g, " ").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " "); }
+      var seen = new Set(), duplicates = 0;
+      pending = prepared.filter(function (card) { var front = canonicalCardText(card.front), back = canonicalCardText(card.back), key = front + "\u241f" + back; if (!front || !back) return false; if (seen.has(key)) { duplicates += 1; return false; } seen.add(key); return true; });
+      if (!pending.length) throw new Error("Aurora a proposé des cartes vides ou toutes identiques. Rien n’a été ajouté ; reformule le sujet et réessaie.");
       pendingTitle = payload.title || "";
       renderResults();
-      message("Proposition prête : relis l’aperçu, puis ajoute les cartes à l’éditeur.");
+      message("Proposition prête : relis l’aperçu, puis ajoute les cartes à l’éditeur." + (duplicates ? " " + duplicates + " carte(s) strictement identique(s) ont été écartées." : ""));
     } catch (error) {
       message(error && error.message ? error.message : "Impossible de générer les cartes pour le moment.", true);
     } finally { setBusy(false); }

@@ -452,6 +452,7 @@ function cloudflareDialog() {
       const record = {
         id, kind:"recording", name, key:"audios/" + id + ".mp3", mime:"audio/mpeg",
         size:blob.size, durationMs:Number.isFinite(player.duration) ? Math.round(player.duration * 1000) : null,
+        rate:Math.max(0.7, Math.min(1.3, Number($("audioCloudflareRate").value) || 1)),
         createdAt:new Date().toISOString(), public:false, repeat:1, synced:false, neural:true, cloudflare:true
       };
       await cacheBlob(id, blob);
