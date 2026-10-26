@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr" data-theme="dark" data-color-theme="rose">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111019"><meta name="description" content="Assistant pédagogique d’Aurore Mémoire">
+<title>Assistant — Aurore Mémoire</title>
+<link rel="stylesheet" href="style.css?v=20261026-navigation-spacing-v1">
+<link rel="stylesheet" href="memoire.css?v=20261026-sitewide-math-v1">
+<link rel="stylesheet" href="aurora-assistant.css?v=20261026-aurora-clone-v1">
+<style>
+/* Adaptation d’Aurora aux couleurs et à la navigation d’Aurore Mémoire. */
+#screen-aurore-ia{display:block!important;position:fixed;inset:0;z-index:120;width:100%;height:100dvh;background:#09070f;overflow:hidden}
+#screen-aurore-ia .aurore-ia-app{height:100%;width:100%;}
+#screen-aurore-ia .aurore-ia-main{grid-template-columns:minmax(0,1fr);}
+#screen-aurore-ia .aurore-ia-sidebar{display:none}
+#screen-aurore-ia .aurore-ia-brand-copy span{max-width:42vw}
+#screen-aurore-ia .aurore-ia-top-actions{gap:6px}
+#screen-aurore-ia .aurore-ia-new{white-space:nowrap}
+#screen-aurore-ia .aurore-ia-minimize{display:none}
+#screen-aurore-ia .aurore-ia-conversation{padding:clamp(16px,4vw,38px);}
+#screen-aurore-ia .aurore-ia-welcome h1{font-size:clamp(1.7rem,5vw,2.8rem)}
+#screen-aurore-ia .aurore-ia-composer-zone{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+#screen-aurore-ia .aurore-ia-message-content{white-space:pre-wrap;overflow-wrap:anywhere}
+#screen-aurore-ia .aurore-ia-history-panel{z-index:20}
+#screen-aurore-ia .aurore-ia-history-overlay{z-index:19}
+#screen-aurore-ia .aurore-ia-login{border:1px solid var(--ia-border);background:rgba(255,255,255,.05);color:#f7f4ff;border-radius:12px;padding:9px 11px;font:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
+#screen-aurore-ia .aurore-ia-login[hidden]{display:none}
+#screen-aurore-ia .aurore-ia-status i{background:#d6a3ff}
+#screen-aurore-ia .aurore-ia-tool-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px auto;max-width:620px}
+#screen-aurore-ia .aurore-ia-tool-actions button{border:1px solid var(--ia-border);background:rgba(255,255,255,.035);color:#e9e2f2;border-radius:999px;padding:9px 13px;font:inherit;font-size:.76rem;cursor:pointer}
+#screen-aurore-ia .aurore-ia-action-confirm{margin:10px 0;padding:12px;border:1px solid color-mix(in srgb,var(--ia-accent-3) 30%,transparent);border-radius:14px;background:rgba(255,255,255,.035)}
+#screen-aurore-ia .aurore-ia-action-confirm button{margin:8px 8px 0 0;border:1px solid var(--ia-border);border-radius:10px;padding:8px 12px;background:rgba(255,255,255,.06);color:#fff}
+@media(max-width:620px){#screen-aurore-ia .aurore-ia-topbar{gap:6px;padding:0 10px;height:64px;min-height:64px;flex-basis:64px}#screen-aurore-ia .aurore-ia-brand{gap:7px}#screen-aurore-ia .aurore-ia-mark{width:34px;height:34px;flex-basis:34px;border-radius:12px}#screen-aurore-ia .aurore-ia-brand-copy strong{font-size:.9rem}#screen-aurore-ia .aurore-ia-brand-copy span{font-size:.61rem;max-width:33vw}#screen-aurore-ia .aurore-ia-status{padding:6px 7px;font-size:.6rem}#screen-aurore-ia .aurore-ia-new{min-height:34px;padding:0 8px;font-size:.65rem}#screen-aurore-ia .aurore-ia-back{display:none}#screen-aurore-ia .aurore-ia-status span{display:none}#screen-aurore-ia .aurore-ia-new span:last-child{display:none}#screen-aurore-ia .aurore-ia-login{padding:8px 9px;font-size:.65rem}#screen-aurore-ia .aurore-ia-tool-actions button{font-size:.7rem;padding:8px 10px}}
+</style>
+</head>
+<body data-page="grok-assistant">
+<section aria-labelledby="auroreIATitle" class="screen aurore-ia-screen" id="screen-aurore-ia">
+<div class="aurore-ia-app">
+<header class="aurore-ia-topbar"><div class="aurore-ia-left">
+<button aria-label="Ouvrir l’historique des discussions" aria-expanded="false" class="aurore-ia-menu-btn" id="auroreIAMenuBtn" type="button"><span class="aurore-ia-menu-btn-icon"><span></span><span></span><span></span></span></button>
+<div class="aurore-ia-brand"><div class="aurore-ia-mark" id="auroreIAMark" aria-hidden="true"><span>A</span></div><div class="aurore-ia-brand-copy"><strong id="auroreIATitle">Aurora</strong><span>Votre assistante dans Aurore Mémoire</span></div></div></div>
+<div class="header-right" style="display:none" aria-hidden="true"></div><div class="aurore-ia-top-actions"><span class="aurore-ia-status"><i></i><span id="auroreIAStatusText">Initialisation…</span></span><button class="aurore-ia-login" id="auroreAssistantLogin" type="button">Connexion Aurore ID</button><button class="aurore-ia-new" id="auroreIANew" type="button"><span>＋</span><span>Nouvelle discussion</span></button><a class="aurore-ia-back" href="index.html"><span>←</span><span>Retour</span></a></div></header>
+<div class="aurore-ia-history-overlay" hidden id="auroreIAHistoryOverlay"></div>
+<aside aria-hidden="true" aria-label="Historique des discussions Aurora" class="aurore-ia-history-panel" id="auroreIAHistoryPanel"><div class="aurore-ia-history-head"><div><p class="aurore-ia-kicker">Aurora</p><h2>Historique des discussions</h2></div><button class="aurore-ia-history-close" id="auroreIAHistoryClose" type="button" aria-label="Fermer l’historique">✕</button></div><button class="aurore-ia-history-new" id="auroreIAHistoryNew" type="button">＋ Nouvelle discussion</button><div class="aurore-ia-history-list" id="auroreIAHistoryList"><p class="aurore-ia-history-empty">Aucune discussion pour le moment.</p></div></aside>
+<div class="aurore-ia-main"><section aria-label="Conversation avec Aurora" class="aurore-ia-chat"><div aria-live="polite" class="aurore-ia-conversation" id="auroreIAConversation"><div class="aurore-ia-welcome"><div class="aurore-ia-welcome-orbit" aria-hidden="true"><div class="aurore-ia-welcome-mark">A</div></div><p class="aurore-ia-kicker">Aurora · Aurore Mémoire</p><h1>Le savoir, <span>simplement.</span></h1><p>Comprends tes cours, crée des cartes de révision, prépare des QCM et fais le point sur tes progrès.</p><div class="aurore-ia-tool-actions"><button type="button" data-prompt="Aide-moi à comprendre une notion de mon cours.">Comprendre un cours</button><button type="button" data-prompt="Prépare des cartes mémoire à partir du cours que je vais coller. Propose le recto et le verso de chaque carte. Ne dis pas qu’elles sont enregistrées tant que je ne l’ai pas confirmé.">Créer des cartes</button><button type="button" data-prompt="Crée un QCM de révision à partir du cours que je vais coller, avec quatre choix, la bonne réponse et une explication.">Créer un QCM</button><button type="button" data-prompt="Analyse ma progression et mes résultats de révision dans Aurore Mémoire. Utilise les données disponibles, sinon explique ce qui manque.">Ma progression</button></div></div></div>
+<div class="aurore-ia-composer-zone"><form autocomplete="off" class="aurore-ia-composer" id="auroreIAForm"><div class="aurore-ia-input-shell"><textarea aria-label="Message à Aurora" id="auroreIAInput" maxlength="12000" placeholder="Écris à Aurora…" rows="1" required></textarea><button aria-label="Envoyer" class="aurore-ia-send" id="auroreIASend" type="submit"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 3 10.2 13.8"></path><path d="m21 3-6.2 18-4.6-7.2L3 9.2 21 3Z"></path></svg></button><button aria-label="Arrêter Aurora" class="aurore-ia-stop" hidden id="auroreIAStop" type="button">■</button></div><div class="aurore-ia-composer-bottom"><span>Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span><span>Aurora</span></div></form><p class="aurore-ia-disclaimer">Les réponses peuvent contenir des erreurs. Vérifie les informations importantes avant de les mémoriser.</p></div></section></div>
+</div></section>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js?v=20261023-canonical-lock-v2"></script>
+<script src="grok-assistant.js?v=20261026-aurora-clone-v1"></script>
+<script src="app.js?v=20261026-sitewide-math-v3"></script>
+<script src="spa-router.js?v=20261023-login-gate-route-fix"></script>
+</body></html>
