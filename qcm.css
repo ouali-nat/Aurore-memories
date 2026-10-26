@@ -30,3 +30,9 @@ body.science-keyboard-open{padding-bottom:calc(var(--asd-h,340px) + env(safe-are
 
 /* Respecter l’attribut hidden même face aux styles des boutons */
 [hidden]{display:none!important;}
+
+
+/* Préserver les paragraphes saisis dans les questions et propositions pendant la révision. */
+.qcm-study-question{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;}
+.qcm-answer-choice span:not(.qcm-answer-letter){white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;min-width:0;}
+.qcm-feedback p{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;}
