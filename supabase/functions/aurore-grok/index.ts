@@ -1,12 +1,22 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-const allowedOrigins = new Set(["https://aurore-memories-mu.vercel.app", "https://aurore-memories-aurore9.vercel.app"]);
-function corsHeaders(origin: string | null) { const allowed = origin && allowedOrigins.has(origin) ? origin : "https://aurore-memories-mu.vercel.app"; return { "Access-Control-Allow-Origin": allowed, "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", "Vary": "Origin" }; }
+const allowedOrigins = new Set([
+  "https://aurore-memories-mu.vercel.app",
+  "https://aurore-memories-aurore9.vercel.app",
+  // Capacitor WebView origins (Android uses https://localhost in this app).
+  "http://localhost",
+  "https://localhost",
+  "capacitor://localhost"
+]);
+function isAllowedOrigin(origin: string) {
+  return allowedOrigins.has(origin) || /^https:\/\/aurore-memories-[a-z0-9-]+-aurore9\.vercel\.app$/i.test(origin);
+}
+function corsHeaders(origin: string | null) { const allowed = origin && isAllowedOrigin(origin) ? origin : "https://aurore-memories-mu.vercel.app"; return { "Access-Control-Allow-Origin": allowed, "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", "Vary": "Origin" }; }
 function json(body: unknown, status = 200, origin: string | null = null) { return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(origin), "Content-Type": "application/json; charset=utf-8" } }); }
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (req.method !== "POST") return json({ error: "Méthode non autorisée." }, 405, origin);
-  if (origin && !allowedOrigins.has(origin)) return json({ error: "Origine non autorisée." }, 403, origin);
+  if (origin && !isAllowedOrigin(origin)) return json({ error: "Origine non autorisée." }, 403, origin);
   const cloudflareToken = Deno.env.get("CLOUDFLARE_API_TOKEN"), cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID"), supabaseUrl = Deno.env.get("SUPABASE_URL"), anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const authHeader = req.headers.get("authorization") || "", token = authHeader.replace(/^Bearer\s+/i, "");
   if (!cloudflareToken || !cloudflareAccountId) return json({ error: "Les identifiants Workers AI ne sont pas configurés côté serveur." }, 503, origin);
@@ -40,6 +50,10 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
   }
   if (generationPurpose === "draft_flashcards_in_existing_editor") system.content += "\n\nMODE CRÉATION DE CARTES DANS L'ÉDITEUR : la demande est explicitement une demande de création de cartes recto-verso. Tu DOIS renvoyer action.type=\"create_flashcards\" et action.cards sous forme de tableau non vide contenant exactement le nombre demandé si celui-ci est précisé. Chaque élément doit avoir deux chaînes non vides : front et back. N'utilise jamais action=null pour cette tâche. Respecte le format enveloppe JSON déjà imposé : {\"reply\":\"Proposition de cartes prête à vérifier\",\"action\":{\"type\":\"create_flashcards\",\"title\":\"...\",\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]}}. N'enregistre rien toi-même : l'éditeur présente un brouillon que l'utilisateur pourra vérifier.";
   const latestUserMessage = [...messages].reverse().find((message: any) => message.role === "user")?.content || "";
+  const directQcm = appTask.task === "direct-create" && appTask.kind === "qcm";
+  const qcmCountMatch = latestUserMessage.match(/\b(\d{1,2})\s*(?:qcm\b|questions?\b|questionnaires?\b|quiz\b)/i);
+  const requestedQcmCount = qcmCountMatch ? Math.max(1, Math.min(30, Number.parseInt(qcmCountMatch[1], 10) || 10)) : 10;
+  if (directQcm) system.content += `\n\nMODE CRÉATION DE QCM DANS L'ÉDITEUR : la demande est une création de QCM, pas une conversation. Tu DOIS renvoyer action.type="create_qcm" et action.questions sous forme d'un tableau contenant EXACTEMENT ${requestedQcmCount} questions. Chaque question doit contenir prompt, 4 options distinctes et plausibles, correctIndex entier entre 0 et 3 et explanation. N'écris pas les questions uniquement dans reply, ne renvoie jamais action=null et ne réduis pas le nombre demandé. Retourne uniquement l'enveloppe JSON imposée, sans balises Markdown.`;
   const cardTask = /\b(cartes?|flashcards?)\b/i.test(latestUserMessage)
     || generationPurpose === "draft_flashcards_in_existing_editor"
     || (appTask.task === "direct-create" && /^(?:cards|flashcards|cartes)$/i.test(String(appTask.kind || "")));
