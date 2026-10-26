@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr" data-theme="dark" data-color-theme="rose">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111019"><meta name="description" content="Assistant pédagogique d’Aurore Mémoire">
+<title>Assistant — Aurore Mémoire</title>
+<link rel="stylesheet" href="style.css?v=20261026-navigation-spacing-v1">
+<link rel="stylesheet" href="memoire.css?v=20261026-sitewide-math-v1">
+<style>
+.grok-wrap{max-width:900px;margin:0 auto;padding:18px 14px 34px}.grok-head{margin:8px 0 18px}.grok-head h1{margin:.35rem 0}.grok-sub{color:var(--muted,#aaa)}.grok-chat{border:1px solid var(--border,rgba(150,150,170,.3));border-radius:18px;overflow:hidden;background:var(--surface,rgba(120,120,140,.07))}.grok-messages{display:flex;flex-direction:column;gap:12px;padding:16px;min-height:260px;max-height:58vh;overflow:auto}.grok-message{max-width:92%;padding:12px 14px;border:1px solid var(--border,rgba(150,150,170,.24));border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}.grok-message.user{align-self:flex-end;background:var(--accent-soft,rgba(210,90,150,.12))}.grok-message.assistant{align-self:flex-start}.grok-composer{border-top:1px solid var(--border,rgba(150,150,170,.3));padding:12px;display:flex;gap:9px;align-items:flex-end}.grok-composer textarea{flex:1;min-width:0;resize:vertical;min-height:48px;max-height:180px;border:1px solid var(--border,rgba(150,150,170,.3));border-radius:12px;padding:12px;background:var(--surface,#181722);color:inherit;font:inherit}.grok-send{border:0;border-radius:12px;padding:13px 16px;background:var(--accent,#bb548d);color:white;font:inherit;cursor:pointer}.grok-send:disabled{opacity:.55;cursor:wait}.grok-status{padding:0 14px 12px;font-size:.88rem;color:var(--muted,#aaa)}.grok-shortcuts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}.grok-shortcuts button{border:1px solid var(--border,rgba(150,150,170,.3));border-radius:999px;padding:8px 12px;background:transparent;color:inherit;cursor:pointer}.grok-warning{font-size:.88rem;opacity:.8;margin-top:12px}@media(max-width:520px){.grok-composer{align-items:stretch}.grok-send{padding:10px}.grok-message{max-width:100%}}
+</style>
+</head>
+<body data-page="grok-assistant">
+<header class="topbar"><div class="wrap topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Mémoire</small></span></a><div class="header-right"><nav class="top-actions"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link" href="mes-memoires.html">Mes mémorisations</a><a class="nav-link active" href="assistant.html">Assistant</a></nav></div></div></header>
+<main class="grok-wrap">
+<section class="grok-head"><p class="section-kicker">TUTEUR PERSONNEL</p><h1>Assistant Aurore</h1><p class="grok-sub">Pose une question sur ton cours, demande une explication ou prépare des cartes et des QCM.</p></section>
+<div class="grok-shortcuts"><button type="button" data-prompt="Aide-moi à comprendre une notion difficile.">Comprendre un cours</button><button type="button" data-prompt="Aide-moi à préparer des cartes mémoire à partir du cours suivant :">Préparer des cartes</button><button type="button" data-prompt="Prépare un QCM à partir du cours suivant, avec les bonnes réponses et des explications :">Préparer un QCM</button><button type="button" data-prompt="Explique comment analyser ma progression dans Aurore Mémoire.">Ma progression</button></div>
+<section class="grok-chat" aria-label="Conversation avec l’assistant">
+<div class="grok-messages" id="grokMessages" aria-live="polite"><div class="grok-message assistant">Bonjour ! Je suis ton assistant pédagogique. Je peux t’aider à comprendre un cours et à préparer des cartes ou des QCM. Pour l’instant, je ne prétendrai pas avoir enregistré un contenu ni consulté ta progression sans confirmation de l’application.</div></div>
+<form class="grok-composer" id="grokForm"><textarea id="grokInput" rows="2" maxlength="12000" placeholder="Écris ta question ou colle un extrait de cours…" required></textarea><button class="grok-send" id="grokSend" type="submit">Envoyer</button></form>
+<div class="grok-status" id="grokStatus" role="status" aria-live="polite">Connexion sécurisée requise avec Aurore ID.</div>
+</section>
+<p class="grok-warning">Les réponses sont générées par Grok. Vérifie les éléments importants de tes cours avant de les mémoriser.</p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js?v=20261023-canonical-lock-v2"></script>
+<script src="grok-assistant.js?v=20261026-v1"></script>
+<script src="app.js?v=20261026-sitewide-math-v3"></script>
+<script src="spa-router.js?v=20261023-login-gate-route-fix"></script>
+</body></html>
