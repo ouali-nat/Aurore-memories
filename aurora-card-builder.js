@@ -43,7 +43,7 @@
       if (!cards) continue;
       cards = cards.map(function (card) {
         return { front: safeText(card && (card.front || card.question), 5000), back: safeText(card && (card.back || card.answer), 5000) };
-      }).filter(function (card) { return card.front && card.back; }).slice(0, 40);
+      }).filter(function (card) { return card.front && card.back; }).slice(0, 20);
       if (cards.length) return { title: safeText(candidate.title || (candidate.action && candidate.action.title), 100), cards: cards };
     }
     return null;
@@ -135,13 +135,13 @@
       var session = await auth.getSession();
       if (!session || !session.access_token) throw new Error("Connecte-toi avec Aurore ID pour demander à Aurora de créer tes cartes.");
       var mode = document.querySelector('input[name="cardMode"]:checked')?.value || "simple";
-      var count = countInput.value === "auto" ? "un nombre adapté au contenu (maximum 30)" : countInput.value;
+      var count = countInput.value === "auto" ? "un nombre adapté au contenu (maximum 20)" : countInput.value;
       var instructions = [
         "Tu es Aurora, l'assistante pédagogique d'Aurore Mémoire.",
         "Prépare des cartes recto-verso pour l'éditeur existant.",
         "Retourne UNIQUEMENT un objet JSON valide, sans Markdown ni commentaire, de la forme {\"title\":\"titre court\",\"cards\":[{\"front\":\"question ou notion au recto\",\"back\":\"réponse exacte et pédagogique au verso\"}]} .",
         "Chaque carte doit être autonome, exacte, concise et utile pour le rappel actif. N'invente pas de faits. Si le cours est insuffisant ou ambigu, précise les limites dans les réponses plutôt que de fabriquer des informations.",
-        "Nombre demandé : " + count + ". Maximum 30 cartes. Titre maximum 100 caractères.",
+        "Nombre demandé : " + count + ". Maximum 20 cartes. Titre maximum 100 caractères.",
         "Mode : " + (mode === "scientific" ? "scientifique. Utilise des formules LaTeX quand nécessaire, avec \( ... \) pour les formules en ligne et \\[ ... \\] pour les formules en affichage." : "simple. Privilégie du texte clair et n'utilise pas de LaTeX sauf demande explicite."),
         "Demande et contenu de l'utilisateur :\n" + request
       ].join("\n\n");
