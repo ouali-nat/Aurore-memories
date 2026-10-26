@@ -4,7 +4,7 @@
 if (typeof window.__auroreAudioCleanup === "function") { try { window.__auroreAudioCleanup(); } catch (_) {} }
 if (!document.getElementById("audioLibraryList")) return;
 
-var DB = "aurore-audio-library-v1", STORE = "blobs", MANIFEST_KEY = "aurore-audio-manifest-v1", CLOUD_MANIFEST = "audios/manifest.json";
+var DB = "aurore-audio-library-v1", STORE = "blobs", MANIFEST_KEY = "aurore-audio-manifest-v1", CLOUD_MANIFEST = "audios/manifest.json", PENDING_SYNC_KEY = "aurore-audio-manifest-needs-sync-v1";
 var MAX_MS = 6 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
 var PROFILES = [
   { id: "aurore", label: "Aurore · naturelle", gender: "f", pitch: 1, rate: 1 },
@@ -49,6 +49,7 @@ async function syncManifest() {
   try {
     var r = await api("/api/storage?key=" + encodeURIComponent(CLOUD_MANIFEST), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: 1, records: records.map(publicMeta), sequences: sequences, updatedAt: new Date().toISOString() }) });
     if (!r.ok) throw Error("Synchronisation impossible (" + r.status + ").");
+    try { localStorage.removeItem(PENDING_SYNC_KEY); } catch (_) {}
   } catch (e) { status("audioAccountStatus", "Conservé sur cet appareil. Synchronisation cloud en attente : " + e.message, true); }
 }
 async function loadCloud() {
@@ -435,10 +436,25 @@ async function saveSequence() {
 /* ---------- Bibliothèque ---------- */
 function render() {
   var box = $("audioLibraryList"); if (!box) return; box.textContent = "";
-  if (!sequences.length) {
-    var e = document.createElement("p"); e.className = "audio-empty";
-    e.textContent = document.body.dataset.page === "audio-sequences" ? "Aucune séquence enregistrée pour le moment. Appuie sur « Ajouter un audio » pour créer tes pistes, puis compose une séquence." : "Aucune séquence enregistrée pour le moment. Crée une séquence à partir de tes audios ci-dessus.";
-    box.append(e); renderSequenceBuilder(); return;
+  if (records.length) {
+    var recordsHeading = document.createElement("h3"); recordsHeading.className = "audio-library-subheading"; recordsHeading.textContent = "Mes pistes audio"; box.append(recordsHeading);
+    records.forEach(function (record) {
+      var row = document.createElement("article"); row.className = "draft-card audio-library-item audio-record-card";
+      var main = document.createElement("div"); main.className = "audio-item-main";
+      var title = document.createElement("strong"); title.textContent = record.name || "Audio sans titre";
+      var meta = document.createElement("small"); meta.textContent = (record.kind === "speech" ? "Texte lu par synthèse vocale" : "Enregistrement audio") + (record.durationMs ? " · " + clock(record.durationMs) : "") + " · " + new Date(record.createdAt || Date.now()).toLocaleDateString("fr-FR");
+      main.append(title, meta);
+      var actions = document.createElement("div"); actions.className = "audio-item-actions";
+      var listen = document.createElement("button"); listen.className = "primary-btn"; listen.type = "button"; listen.textContent = "Écouter"; listen.addEventListener("click", function () { openPlayer("audio", record); });
+      actions.append(listen); row.append(main, actions); box.append(row);
+    });
+  } else {
+    var noRecords = document.createElement("p"); noRecords.className = "audio-empty"; noRecords.textContent = "Aucune piste audio pour le moment. Ajoute un enregistrement ou demande à Aurora de préparer un audio."; box.append(noRecords);
+  }
+  if (sequences.length) {
+    var sequencesHeading = document.createElement("h3"); sequencesHeading.className = "audio-library-subheading"; sequencesHeading.textContent = "Mes séquences"; box.append(sequencesHeading);
+  } else {
+    var noSequences = document.createElement("p"); noSequences.className = "audio-empty"; noSequences.textContent = "Aucune séquence enregistrée pour le moment. Tu peux composer une séquence avec les pistes ci-dessus."; box.append(noSequences);
   }
   sequences.forEach(function (seq) {
     var row = document.createElement("article"); row.className = "draft-card audio-library-item audio-sequence-card";
@@ -519,7 +535,7 @@ function init() {
   bind(); render();
   var accountSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary();
   status("audioAccountStatus", accountSummary);
-  loadCloudWithRetry().then(function () { render(); var updatedSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary(); status("audioAccountStatus", updatedSummary); }).catch(function () {});
+  loadCloudWithRetry().then(function () { render(); var updatedSummary = document.body.dataset.page === "audio-sequences" ? sequences.length + " séquence(s) enregistrée(s)." : summary(); status("audioAccountStatus", updatedSummary); if (localStorage.getItem(PENDING_SYNC_KEY) === "1") return syncManifest().then(function () { render(); }); }).catch(function () {});
   syncPending();
 }
 try { init(); } catch (e) { status("audioAccountStatus", "Erreur d’initialisation : " + e.message, true); }
