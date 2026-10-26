@@ -5,7 +5,7 @@ if (typeof window.__auroreAudioCleanup === "function") { try { window.__auroreAu
 if (!document.getElementById("audioLibraryList")) return;
 
 var DB = "aurore-audio-library-v1", STORE = "blobs", MANIFEST_KEY = "aurore-audio-manifest-v1", CLOUD_MANIFEST = "audios/manifest.json", PENDING_SYNC_KEY = "aurore-audio-manifest-needs-sync-v1";
-var MAX_MS = 6 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
+var MAX_MS = 10 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
 var PROFILES = [
   { id: "aurore", label: "Aurore · naturelle", gender: "f", pitch: 1, rate: 1 },
   { id: "claire", label: "Claire · claire et vive", gender: "f", pitch: 1.18, rate: 1.05 },
@@ -182,7 +182,7 @@ function speakMessage(r) {
   var m = { unsupported: "La synthèse vocale n’est pas prise en charge par ce navigateur. Essaie Chrome à jour.", empty: "Il n’y a rien à lire.", silent: "Aucune voix n’a répondu. Active un moteur vocal dans les réglages du téléphone (Synthèse vocale) ou choisis une autre voix.", error: "La voix n’a pas pu lire le texte. Essaie une autre voix." };
   return m[r] || ("La voix n’a pas pu démarrer (" + r + ").");
 }
-function estimateDuration(text, rate) { return Math.ceil(String(text || "").trim().split(/\s+/).filter(Boolean).length / 2.5 / Math.max(0.6, rate || 1) * 60) * 1000; }
+function estimateDuration(text, rate) { return Math.ceil(String(text || "").trim().split(/\s+/).filter(Boolean).length / (2.5 * Math.max(0.6, rate || 1)) * 1000); }
 
 /* ---------- Enregistrement ---------- */
 function mimeType() { if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return ""; var t = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/mp4"]; for (var i = 0; i < t.length; i++) if (MediaRecorder.isTypeSupported(t[i])) return t[i]; return ""; }
@@ -193,7 +193,7 @@ function setRecordingUi(on) {
 }
 function tick() {
   var elapsed = Date.now() - startedAt, t = $("audioRecordTimer"), m = $("audioRecordMeter");
-  if (t) t.textContent = clock(elapsed) + " / 6:00";
+  if (t) t.textContent = clock(elapsed) + " / 10:00";
   if (m) m.style.width = Math.min(100, elapsed / MAX_MS * 100) + "%";
 }
 function releaseStream() { if (stream) { stream.getTracks().forEach(function (t) { try { t.stop(); } catch (_) {} }); stream = null; } clearInterval(tickTimer); clearTimeout(stopTimer); }
@@ -225,7 +225,7 @@ async function startRecording() {
     setRecordingUi(true); tick();
     tickTimer = setInterval(tick, 250);
     stopTimer = setTimeout(function () { if (recorder && recorder.state === "recording") recorder.stop(); }, MAX_MS);
-    status("audioRecordStatus", "● Enregistrement en cours… arrêt automatique à 6 minutes.");
+    status("audioRecordStatus", "● Enregistrement en cours… arrêt automatique à 10 minutes.");
   } catch (e) { releaseStream(); setRecordingUi(false); status("audioRecordStatus", micError(e), true); }
 }
 function stopRecording() { if (recorder && recorder.state === "recording") { try { recorder.stop(); } catch (e) { status("audioRecordStatus", e.message, true); } } }
@@ -257,7 +257,7 @@ function importFile() {
   a.preload = "metadata";
   a.onloadedmetadata = async function () {
     URL.revokeObjectURL(url);
-    if (isFinite(a.duration) && a.duration > 360) { status("audioRecordStatus", "Durée maximale dépassée : 6 minutes.", true); return; }
+    if (isFinite(a.duration) && a.duration > 600) { status("audioRecordStatus", "Durée maximale dépassée : 10 minutes.", true); return; }
     try { await acceptBlob(f, f.name.replace(/\.[^.]+$/, ""), isFinite(a.duration) ? a.duration * 1000 : null); } catch (e) { status("audioRecordStatus", e.message, true); }
   };
   a.onerror = function () { URL.revokeObjectURL(url); status("audioRecordStatus", "Impossible de lire ce fichier audio.", true); };
@@ -270,7 +270,7 @@ async function previewText() {
   var text = textField ? textField.value.trim() : "";
   if (!text) return status("audioTextStatus", "Écris d’abord un texte à lire.", true);
   var rate = Number(($("audioRate") || {}).value) || 1;
-  if (estimateDuration(text, rate) > MAX_MS) return status("audioTextStatus", "Le texte dépasse environ six minutes.", true);
+  if (estimateDuration(text, rate) > MAX_MS) return status("audioTextStatus", "Le texte dépasse environ dix minutes.", true);
   status("audioTextStatus", "Démarrage de la voix du navigateur…");
   /* Annuler la lecture précédente, puis lancer la nouvelle depuis le geste utilisateur. */
   if (window.speechSynthesis) { try { speechSynthesis.cancel(); speechSynthesis.resume(); } catch (_) {} }
@@ -292,7 +292,7 @@ async function addText() {
   var text = $("audioText").value.trim(), name = $("audioTextName").value.trim();
   if (!text) return status("audioTextStatus", "Écris d’abord le texte à lire.", true);
   var rate = Number($("audioRate").value) || 1, d = estimateDuration(text, rate);
-  if (d > MAX_MS) return status("audioTextStatus", "Le texte dépasse environ six minutes. Raccourcis-le ou crée plusieurs pistes.", true);
+  if (d > MAX_MS) return status("audioTextStatus", "Le texte dépasse environ dix minutes. Raccourcis-le ou crée plusieurs pistes.", true);
   records.unshift({ id: uid(), kind: "speech", name: (name || text.slice(0, 45)).slice(0, 100), text: text, language: $("audioLanguage").value, voice: $("audioVoice").value, rate: rate, durationMs: d, createdAt: new Date().toISOString(), public: false, repeat: 1 });
   writeLocal(); render();
   $("audioText").value = ""; $("audioTextName").value = "";

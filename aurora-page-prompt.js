@@ -44,7 +44,7 @@
     var title = String(action.title || action.name || "Audio Aurora").trim().slice(0, 100) || "Audio Aurora", text = String(action.text || action.content || "").trim();
     if (!text) throw new Error("Aurora n’a généré aucun texte à lire.");
     var words = text.split(/\s+/).filter(Boolean).length;
-    if (words > 850) throw new Error("Le texte généré dépasse la durée prévue. Demande à Aurora une version de six minutes maximum.");
+    if (words > 1500) throw new Error("Le texte généré dépasse la durée prévue. Demande à Aurora une version de dix minutes maximum.");
     var nameField = document.getElementById("audioTextName"), textField = document.getElementById("audioText"), saveButton = document.getElementById("audioTextSave");
     if (!nameField || !textField || !saveButton) throw new Error("Le créateur audio n’est pas prêt sur cette page.");
     nameField.value = title; textField.value = text; textField.dispatchEvent(new Event("input", { bubbles: true }));

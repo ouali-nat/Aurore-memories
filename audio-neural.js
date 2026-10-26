@@ -15,7 +15,7 @@ window.__auroreCloudflareVoiceCleanup = function () {
 };
 
 const DB = "aurore-audio-library-v1", STORE = "blobs", MANIFEST = "aurore-audio-manifest-v1";
-const MAX_MS = 6 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
+const MAX_MS = 10 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_WORKER_URL = "https://aurore-memories.oualikevin6.workers.dev";
 const $ = id => document.getElementById(id);
 let healthReady = false;
@@ -426,9 +426,12 @@ function cloudflareDialog() {
       saveButton.disabled = false;
       try { await player.play(); $("audioCloudflareStop").disabled = false; } catch (_) {}
       await refreshVoiceQuota();
-      const generatedSeconds = Number(response.headers.get("X-Aurore-Audio-Seconds")) || estimate;
-      setStatus("Voix générée (" + quotaTime(generatedSeconds) + "). Il te reste " +
-        quotaTime(quotaSnapshot ? quotaSnapshot.remainingSeconds : 0) + " aujourd’hui. Tu peux écouter la piste ou l’ajouter à ta bibliothèque.");
+      const headerSeconds = Number(response.headers.get("X-Aurore-Audio-Seconds"));
+      const mediaSeconds = Number.isFinite(player.duration) && player.duration > 0 ? Math.ceil(player.duration) : 0;
+      const generatedSeconds = headerSeconds > 0 ? headerSeconds : mediaSeconds;
+      setStatus(generatedSeconds > 0
+        ? "Voix générée (" + quotaTime(generatedSeconds) + "). Le compteur quotidien vient d’être actualisé depuis le service. Il te reste " + quotaTime(quotaSnapshot ? quotaSnapshot.remainingSeconds : 0) + " aujourd’hui."
+        : "Voix générée. Le compteur quotidien vient d’être actualisé depuis le service. Il te reste " + quotaTime(quotaSnapshot ? quotaSnapshot.remainingSeconds : 0) + " aujourd’hui. Tu peux écouter la piste ou l’ajouter à ta bibliothèque.");
     } catch (error) {
       setStatus(error.message || "Impossible de générer la voix.", true);
       await refreshVoiceQuota();
