@@ -34,13 +34,15 @@ LATEX SCIENTIFIQUE : lorsque appContext indique cardMode=scientific, les rectos 
 
 N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authentifié (contexte technique non divulgable) : ${String(user.id)}.` };
   const generationPurpose = body.appContext && typeof body.appContext === "object" ? (body.appContext as Record<string, unknown>).purpose : undefined;
-  if (generationPurpose === "draft_memory_in_existing_editor" || ((body.appContext as Record<string, unknown> | undefined)?.task === "direct-create" && (body.appContext as Record<string, unknown> | undefined)?.kind === "memory")) {
-    system.content += "\\n\\nMODE CRÉATION DE MÉMOIRE DANS L'ÉDITEUR : la demande est explicitement une demande de création de mémoire. Tu DOIS renvoyer action.type=\\\"create_memory\\\" avec action.chunks sous forme d'un tableau non vide de passages courts, autonomes, exacts et ordonnés. N'écris pas les passages seulement dans reply. Le titre doit être clair. Fournis 4 à 12 passages pour un sujet général si aucun nombre n'est précisé, et respecte le cours fourni sans inventer d'informations. Retourne l'enveloppe JSON {\\\"reply\\\":\\\"Mémoire prête à vérifier\\\",\\\"action\\\":{\\\"type\\\":\\\"create_memory\\\",\\\"title\\\":\\\"...\\\",\\\"chunks\\\":[\\\"passage 1\\\",\\\"passage 2\\\"]}}. L'application remplira les champs de l'éditeur ; ne prétends pas que la mémoire est déjà enregistrée.";
+  const appTask = body.appContext && typeof body.appContext === "object" ? body.appContext as Record<string, unknown> : {};
+  if (generationPurpose === "draft_memory_in_existing_editor" || (appTask.task === "direct-create" && appTask.kind === "memory")) {
+    system.content += "\n\nMODE CRÉATION DE MÉMOIRE DANS L'ÉDITEUR : la demande est explicitement une demande de création de mémoire. Tu DOIS renvoyer une action de type \"create_memory\" avec action.chunks sous forme d'un tableau non vide de passages courts, autonomes, exacts et ordonnés. N'écris pas les passages seulement dans reply. Le titre doit être clair. Fournis 4 à 12 passages pour un sujet général si aucun nombre n'est précisé, et respecte le cours fourni sans inventer d'informations. Retourne l'enveloppe JSON {\"reply\":\"Mémoire prête à vérifier\",\"action\":{\"type\":\"create_memory\",\"title\":\"...\",\"chunks\":[\"passage 1\",\"passage 2\"]}}. L'application remplira les champs de l'éditeur ; ne prétends pas que la mémoire est déjà enregistrée.";
   }
   if (generationPurpose === "draft_flashcards_in_existing_editor") system.content += "\n\nMODE CRÉATION DE CARTES DANS L'ÉDITEUR : la demande est explicitement une demande de création de cartes recto-verso. Tu DOIS renvoyer action.type=\"create_flashcards\" et action.cards sous forme de tableau non vide contenant exactement le nombre demandé si celui-ci est précisé. Chaque élément doit avoir deux chaînes non vides : front et back. N'utilise jamais action=null pour cette tâche. Respecte le format enveloppe JSON déjà imposé : {\"reply\":\"Proposition de cartes prête à vérifier\",\"action\":{\"type\":\"create_flashcards\",\"title\":\"...\",\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]}}. N'enregistre rien toi-même : l'éditeur présente un brouillon que l'utilisateur pourra vérifier.";
   const latestUserMessage = [...messages].reverse().find((message: any) => message.role === "user")?.content || "";
   const cardTask = /\b(cartes?|flashcards?)\b/i.test(latestUserMessage)
-    || generationPurpose === "draft_flashcards_in_existing_editor";
+    || generationPurpose === "draft_flashcards_in_existing_editor"
+    || (appTask.task === "direct-create" && /^(?:cards|flashcards|cartes)$/i.test(String(appTask.kind || "")));
   const requestedCardCountMatch = latestUserMessage.match(/Nombre demandé\s*:\s*(\d+)/i);
   const requestedCardCount = requestedCardCountMatch
     ? Math.max(1, Math.min(20, Number.parseInt(requestedCardCountMatch[1], 10) || 10))
@@ -53,7 +55,7 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
     : /\b(mémoires?|mémorisation|passages)\b/i.test(latestUserMessage) ? 3400
     : /\b(audio|voix|lecture vocale)\b/i.test(latestUserMessage) ? 1800 : 2600;
   let aiResp: Response;
-  const model = "@cf/meta/llama-3.1-8b-instruct-fp8";
+  const model = "@cf/meta/llama-3.1-8b-instruct-fast";
   try {
     aiResp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/ai/run/${model}`, {
       method: "POST",
