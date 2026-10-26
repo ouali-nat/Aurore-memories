@@ -39,9 +39,20 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
     : /\b(cartes?|flashcards?)\b/i.test(latestUserMessage) ? 4200
     : /\b(mémoires?|mémorisation|passages)\b/i.test(latestUserMessage) ? 3400
     : /\b(audio|voix|lecture vocale)\b/i.test(latestUserMessage) ? 1800 : 2600;
-  const xaiResp = await fetch("https://api.x.ai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "grok-4.7", messages: [system, ...messages], temperature: 0.4, max_tokens: outputTokenBudget, stream: false }), signal: AbortSignal.timeout(45000) });
+  let xaiResp: Response;
+  try {
+    xaiResp = await fetch("https://api.x.ai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "grok-4.7", messages: [system, ...messages], temperature: 0.4, max_tokens: outputTokenBudget, stream: false }), signal: AbortSignal.timeout(45000) });
+  } catch (error) {
+    const detail = error instanceof Error ? `${error.name}: ${error.message}`.slice(0, 300) : "Erreur réseau inconnue";
+    console.error("aurore-grok: échec de connexion au fournisseur xAI", detail);
+    return json({ error: "Supabase n’a pas réussi à joindre le service Grok.", details: detail }, 502, origin);
+  }
   const xaiData = await xaiResp.json().catch(() => ({}));
-  if (!xaiResp.ok) return json({ error: "Le service Grok n’a pas répondu correctement.", provider_status: xaiResp.status, details: typeof xaiData?.error?.message === "string" ? xaiData.error.message.slice(0, 400) : undefined }, 502, origin);
+  if (!xaiResp.ok) {
+    const detail = typeof xaiData?.error?.message === "string" ? xaiData.error.message.slice(0, 400) : `Réponse fournisseur HTTP ${xaiResp.status}`;
+    console.error("aurore-grok: réponse xAI non valide", xaiResp.status, detail);
+    return json({ error: "Le service Grok n’a pas répondu correctement.", provider_status: xaiResp.status, details: detail }, 502, origin);
+  }
   const reply = xaiData?.choices?.[0]?.message?.content;
   if (typeof reply !== "string" || !reply.trim()) return json({ error: "Grok a renvoyé une réponse vide." }, 502, origin);
   return json({ reply, model: xaiData.model || "grok-4.7" }, 200, origin);

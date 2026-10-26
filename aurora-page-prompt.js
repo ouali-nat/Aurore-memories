@@ -1,7 +1,89 @@
-(function(){
-"use strict";
-var panel=document.getElementById("auroraPagePromptPanel");if(!panel)return;
-var input=document.getElementById("auroraPagePrompt"),button=document.getElementById("auroraPagePromptSubmit"),status=document.getElementById("auroraPagePromptStatus"),kind=panel.getAttribute("data-aurora-kind")||"study";
-var instructions={memory:"Crée et enregistre une mémoire de révision à partir de la demande ou du cours ci-dessous. Découpe le contenu en passages courts, autonomes, exacts et ordonnés. Titre clair, sans inventer d’informations.",qcm:"Crée et enregistre un QCM à partir de la demande ou du cours ci-dessous. Prépare des questions pertinentes, quatre choix lorsque possible, indique explicitement la bonne réponse et ajoute une explication pédagogique pour chaque question.",audio:"Prépare un audio de révision en français à partir de la demande ou du cours ci-dessous. Rédige un texte oral naturel, clair et fidèle, inférieur à six minutes, puis propose de l’ajouter à la bibliothèque audio pour lecture avec la voix Aurore."};
-button.addEventListener("click",function(){var value=String(input.value||"").trim();if(!value){status.textContent="Écris ta demande ou colle ton cours avant de continuer.";input.focus();return;}var prompt=(instructions[kind]||"Aide-moi à réviser à partir du contenu ci-dessous.")+"\n\n"+value;try{sessionStorage.setItem("aurore-aurora-pending-prompt-v1",prompt);}catch(e){status.textContent="Impossible de transmettre la demande sur cet appareil. Réessaie ou ouvre directement Aurora.";return;}button.disabled=true;button.textContent="Ouverture d’Aurora…";status.textContent="Ta demande est prête. Aurora va s’ouvrir pour la traiter.";window.location.href="assistant.html";});
+(function () {
+  "use strict";
+  var panel = document.getElementById("auroraPagePromptPanel");
+  if (!panel) return;
+  var input = document.getElementById("auroraPagePrompt"), button = document.getElementById("auroraPagePromptSubmit"), status = document.getElementById("auroraPagePromptStatus"), kind = panel.getAttribute("data-aurora-kind") || "study";
+  var STORE = "aurore-memory-cards-v1";
+  function say(message, error) { status.textContent = message; status.setAttribute("data-state", error ? "error" : "ok"); }
+  function uid(prefix) { return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
+  function parseAction(raw) {
+    var value = String(raw || "").trim();
+    try { var parsed = JSON.parse(value); if (parsed && typeof parsed === "object") return parsed; } catch (_) {}
+    var match = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (match) { try { return JSON.parse(match[1]); } catch (_) {} }
+    throw new Error("Aurora a répondu, mais le contenu généré n’est pas structuré correctement. Réessaie avec une demande plus courte.");
+  }
+  function state() { var d; try { d = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (_) { d = {}; } if (!d || typeof d !== "object") d = {}; if (!Array.isArray(d.cards)) d.cards = []; if (!Array.isArray(d.qcms)) d.qcms = []; return d; }
+  function persist(d) { localStorage.setItem(STORE, JSON.stringify(d)); if (window.auroreMemoryCloudSync && typeof window.auroreMemoryCloudSync.schedule === "function") window.auroreMemoryCloudSync.schedule(d); }
+  function makeMemory(action) {
+    var title = String(action.title || "Mémoire Aurora").trim().slice(0, 120) || "Mémoire Aurora";
+    var chunks = (Array.isArray(action.chunks) ? action.chunks : Array.isArray(action.passages) ? action.passages : []).map(function (c) { return String(typeof c === "string" ? c : c && (c.text || c.content || c.back) || "").trim(); }).filter(Boolean).slice(0, 30);
+    if (!chunks.length) throw new Error("Aurora n’a généré aucun paragraphe exploitable.");
+    var draft = { version: 1, deck: "", title: title, source: chunks.join("\n\n"), chunks: chunks.map(function (back) { return { id: null, back: back, mode: "Première lettre", extracted: false }; }), selectionCutUsed: false, pendingSelection: null, updatedAt: Date.now() };
+    localStorage.setItem("aurore-memory-workspace-draft-v1:__nouvelle_memoire__", JSON.stringify(draft));
+    try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "Mémoire préparée : " + chunks.length + " paragraphes sont déjà remplis. Vérifie-les puis appuie sur « Enregistrer la mémoire »."); } catch (_) {}
+    location.reload();
+  }
+  function makeQcm(action) {
+    var questions = (Array.isArray(action.questions) ? action.questions : []).slice(0, 30);
+    if (!questions.length) throw new Error("Aurora n’a généré aucune question de QCM.");
+    var q = { id: uid("qcm"), title: String(action.title || "QCM Aurora").trim().slice(0, 120) || "QCM Aurora", questions: [], attempts: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    questions.forEach(function (item) {
+      var opts = (Array.isArray(item.options) ? item.options : []).map(function (option) { return String(typeof option === "string" ? option : option && (option.text || option.label) || "").trim(); }).filter(Boolean).slice(0, 6);
+      var correct = Number(item.correctIndex);
+      if (opts.length < 2 || !Number.isInteger(correct) || correct < 0 || correct >= opts.length) throw new Error("Une question générée ne contient pas de bonne réponse valide. Relance la création pour éviter un QCM incomplet.");
+      q.questions.push({ id: uid("question"), prompt: String(item.prompt || item.question || "").trim(), options: opts.map(function (text) { return { id: uid("option"), text: text }; }), correctOptionId: "", explanation: String(item.explanation || "").trim() });
+      q.questions[q.questions.length - 1].correctOptionId = q.questions[q.questions.length - 1].options[correct].id;
+      if (!q.questions[q.questions.length - 1].prompt) throw new Error("Une question générée est vide. Relance la création.");
+    });
+    localStorage.setItem("aurore-qcm-editor-draft-v1", JSON.stringify({ deckId: null, q: q, at: 0, updatedAt: Date.now() }));
+    try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "QCM préparé : " + q.questions.length + " questions, réponses et explications sont remplies. Vérifie-les puis enregistre le QCM."); } catch (_) {}
+    location.reload();
+  }
+  function makeAudio(action) {
+    var title = String(action.title || action.name || "Audio Aurora").trim().slice(0, 100) || "Audio Aurora", text = String(action.text || action.content || "").trim();
+    if (!text) throw new Error("Aurora n’a généré aucun texte à lire.");
+    var words = text.split(/\s+/).filter(Boolean).length;
+    if (words > 850) throw new Error("Le texte généré dépasse la durée prévue. Demande à Aurora une version de six minutes maximum.");
+    var nameField = document.getElementById("audioTextName"), textField = document.getElementById("audioText"), saveButton = document.getElementById("audioTextSave");
+    if (!nameField || !textField || !saveButton) throw new Error("Le créateur audio n’est pas prêt sur cette page.");
+    nameField.value = title; textField.value = text; textField.dispatchEvent(new Event("input", { bubbles: true }));
+    say("Texte généré. Ajout de la piste à la bibliothèque audio…"); saveButton.click();
+    window.setTimeout(function () { var result = document.getElementById("audioTextStatus"); if (result && result.textContent) say(result.textContent, /impossible|erreur|échec/i.test(result.textContent)); else say("Le texte est rempli. Vérifie le statut du bouton « Ajouter » dans le créateur audio."); }, 900);
+  }
+  function apply(action) {
+    if (!action || typeof action !== "object") throw new Error("Aurora n’a pas renvoyé d’action de création. Vérifie la demande puis réessaie.");
+    if (kind === "memory" && action.type === "create_memory") return makeMemory(action);
+    if (kind === "qcm" && action.type === "create_qcm") return makeQcm(action);
+    if (kind === "audio" && action.type === "create_audio") return makeAudio(action);
+    throw new Error("Aurora a renvoyé un format différent de celui attendu pour cette page. Aucune donnée n’a été enregistrée.");
+  }
+  button.addEventListener("click", async function () {
+    var value = String(input.value || "").trim();
+    if (!value) { say("Écris ta demande ou colle ton cours avant de continuer.", true); input.focus(); return; }
+    button.disabled = true; var oldLabel = button.textContent; button.textContent = "Génération en cours…";
+    say("Aurora génère le contenu directement dans ce créateur. Ne ferme pas cette page…");
+    try {
+      if (!window.auroreAuthReady) throw new Error("Le service Aurore ID n’est pas prêt. Actualise la page puis réessaie.");
+      var auth = await window.auroreAuthReady, session = await auth.getSession();
+      if (!session) throw new Error("Connecte-toi avec Aurore ID avant de créer du contenu.");
+      var instruction = kind === "memory"
+        ? "Tu dois créer une mémoire pour l’éditeur Aurore Mémoire. Génère un titre et entre 4 et 16 passages courts, exacts et ordonnés. Retourne uniquement un JSON {\"reply\":\"Mémoire prête\",\"action\":{\"type\":\"create_memory\",\"title\":\"...\",\"chunks\":[\"passage 1\",\"passage 2\"]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
+        : kind === "qcm"
+          ? "Tu dois remplir le créateur de QCM Aurore Mémoire. Génère 5 à 12 questions selon la longueur du cours, 4 choix distincts et plausibles par question, une seule bonne réponse et une explication. correctIndex est un entier commençant à zéro. Retourne uniquement un JSON {\"reply\":\"QCM prêt\",\"action\":{\"type\":\"create_qcm\",\"title\":\"...\",\"questions\":[{\"prompt\":\"...\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"...\"}]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
+          : "Tu dois remplir le créateur audio Aurore Mémoire. Prépare un script oral naturel en français, fidèle au cours, sans tableaux, sous 600 mots. Retourne uniquement un JSON {\"reply\":\"Audio prêt\",\"action\":{\"type\":\"create_audio\",\"title\":\"...\",\"text\":\"...\",\"language\":\"fr-FR\",\"rate\":1}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n";
+      var response = await auth.client.functions.invoke("aurore-grok", { body: { messages: [{ role: "user", content: instruction + value }], appContext: { task: "direct-create", kind: kind } } });
+      if (response.error) {
+        var detail = response.data && (response.data.details || response.data.error);
+        try { var context = response.error.context; if (!detail && context && typeof context.clone === "function") { var errorBody = await context.clone().json(); detail = errorBody && (errorBody.details || errorBody.error); } } catch (_) {}
+        throw new Error(detail || response.error.message || "Le service Aurora a échoué.");
+      }
+      var envelope = response.data || {}, parsed = parseAction(envelope.reply || ""), action = parsed.action || parsed;
+      apply(action);
+    } catch (error) {
+      say(error && error.message ? error.message : "La création a échoué. Aucun contenu n’a été enregistré.", true);
+      button.disabled = false; button.textContent = oldLabel;
+    }
+  });
+  try { var notice = sessionStorage.getItem("aurore-aurora-created-notice-v1"); if (notice) { sessionStorage.removeItem("aurore-aurora-created-notice-v1"); say(notice); } } catch (_) {}
 })();
