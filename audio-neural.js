@@ -15,7 +15,7 @@ window.__auroreCloudflareVoiceCleanup = function () {
 };
 
 const DB = "aurore-audio-library-v1", STORE = "blobs", MANIFEST = "aurore-audio-manifest-v1";
-const MAX_MS = 6 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
+const MAX_MS = 10 * 60 * 1000, MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_WORKER_URL = "https://aurore-memories.oualikevin6.workers.dev";
 const $ = id => document.getElementById(id);
 let healthReady = false;
