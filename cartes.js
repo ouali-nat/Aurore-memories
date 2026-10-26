@@ -40,7 +40,20 @@ if(!back){back=document.createElement("button");back.type="button";back.classNam
 field.blur();window.setTimeout(function(){if(activeField)activeField.focus()},40)}
 function initLatexTools(row){Array.prototype.forEach.call(row.querySelectorAll(".latex-keyboard"),function(k){k.innerHTML=""});Array.prototype.forEach.call(row.querySelectorAll(".card-question,.card-answer"),function(field){field.addEventListener("focus",function(){activeField=field;showLatexTools(field)});field.addEventListener("input",function(){updateLatexPreview(row,field)})})}
 function showLatexTools(field){var k=ensureScientificKeyboard();if(!k||activeMode!=="scientific"||!field||nativeTextMode){if(k)k.hide();if(field)field.readOnly=false;return}activeField=field;field.readOnly=true;k.show(field);Array.prototype.forEach.call(list.querySelectorAll("[data-latex-tools]"),function(tool){tool.hidden=true})}
-function previewMathSource(value){var source=String(value||"").trim();if(!source)return "";if((source.indexOf("\\[")===0&&source.slice(-2)==="\\]")||(source.indexOf("\\(")===0&&source.slice(-2)==="\\)")||(source.indexOf("$$")===0&&source.slice(-2)==="$$")||(source.charAt(0)==="$"&&source.slice(-1)==="$"&&source.charAt(1)!=="$"&&source.indexOf("\n")===-1))return source;var display=/\\begin\s*\{(matrix|cases|aligned|gathered|pmatrix|bmatrix|Bmatrix|array)\}/.test(source)||source.indexOf("\n")!==-1;return display?"\\["+source+"\\]":"\\("+source+"\\)"}
+function previewMathSource(value){
+var source=String(value||"").trim();
+if(!source)return "";
+/* Keep explicit delimiters, including formulas embedded in an ordinary sentence. */
+if(/\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(source))return source;
+/* Do not send natural-language questions to KaTeX: math mode discards word spacing. */
+var hasLatexCommand=/\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|mathrm|mathbf|mathbb|mathcal|left|right|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|psi|omega|Gamma|Delta|Sigma|Omega|times|cdot|pm|mp|leq|geq|neq|infty|partial|nabla|circ|to|rightarrow|leftarrow|overline|vec|hat|bar|text|begin|end)\b/.test(source);
+var hasIndexedVariable=/\b[A-Za-z][A-Za-z0-9]*\s*(?:\^|_)(?:\{[^}]+\}|[A-Za-z0-9+\-]+)/.test(source);
+var hasEquation=/(?:^|\s)[A-Za-z][A-Za-z0-9]*\s*(?:=|≤|≥|≈|≠|<|>)\s*[-+]?\s*(?:[A-Za-z0-9]+|\\[A-Za-z]+)/.test(source);
+var hasCompactExpression=/^[A-Za-z0-9\s\\{}()[\]^_.,;:+*/=<>\-−≤≥≈≠×÷±√∑∫∞|]+$/.test(source)&&/[=^_+*/]/.test(source)&&/[A-Za-z0-9]/.test(source);
+if(!hasLatexCommand&&!hasIndexedVariable&&!hasEquation&&!hasCompactExpression)return source;
+var display=/\\begin\s*\{(matrix|cases|aligned|gathered|pmatrix|bmatrix|Bmatrix|array)\}/.test(source)||/[\r\n]/.test(source);
+return display?"\\["+source+"\\]":"\\("+source+"\\)";
+}
 function updateLatexPreview(row,field){var previews=row.querySelectorAll("[data-latex-preview]");var box=previews[field.classList.contains("card-answer")?1:0];if(!box)return;box.hidden=activeMode!=="scientific"||!field.value.trim();var content=box.querySelector(".latex-preview-content");if(content){content.textContent=previewMathSource(field.value);if(window.renderAuroreMath)window.renderAuroreMath(content)}}
 function updateScienceMode(){activeMode=modeInputs.some(function(input){return input.checked&&input.value==="scientific"})?"scientific":"simple";document.body.classList.toggle("scientific-card-mode",activeMode==="scientific");Array.prototype.forEach.call(list.querySelectorAll("[data-latex-tools]"),function(tool){tool.hidden=true});Array.prototype.forEach.call(list.querySelectorAll("[data-flashcard-row]"),function(row){Array.prototype.forEach.call(row.querySelectorAll("[data-latex-preview]"),function(el){if(activeMode!=="scientific")el.hidden=true});Array.prototype.forEach.call(row.querySelectorAll(".card-question,.card-answer"),function(field){updateLatexPreview(row,field);if(field!==activeField)field.readOnly=false})});if(activeMode!=="scientific"){if(sci)sci.hide();document.body.classList.remove("science-keyboard-open");if(activeField)activeField.readOnly=false}else if(activeField&&list.contains(activeField)&&!nativeTextMode)showLatexTools(activeField)}
 modeInputs.forEach(function(input){input.addEventListener("change",function(){nativeTextMode=false;updateScienceMode()})});

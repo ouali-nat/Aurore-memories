@@ -877,3 +877,106 @@ html[data-theme="dark"] .aurore-network-status-copy span{color:var(--muted,#b8b2
 .has-compact-actions.group-card .group-card-top{padding-right:38px;}
 .has-compact-actions.memory-block-card .memory-block-card-head{padding-right:38px;}
 .has-compact-actions.public-learning-card>.section-kicker{padding-right:38px;}
+
+
+/* Aurore Mémoire — refined, compact options menu (library only). */
+body[data-page="library"] .compact-action-dialog{
+  width:min(400px,calc(100vw - 24px));max-width:400px;max-height:min(82dvh,680px);
+  border-radius:18px;box-shadow:0 22px 64px rgba(0,0,0,.32);
+}
+body[data-page="library"] .compact-action-header{gap:10px;padding:15px 15px 11px;}
+body[data-page="library"] .compact-action-heading .section-kicker{margin-bottom:3px;font-size:.59rem;letter-spacing:.12em;}
+body[data-page="library"] .compact-action-heading h2{font-size:1rem;line-height:1.32;}
+body[data-page="library"] .compact-action-close{width:31px;height:31px;flex-basis:31px;border-radius:9px;font-size:1.18rem;}
+body[data-page="library"] .compact-action-content{gap:6px;padding:11px 12px 12px;}
+body[data-page="library"] .compact-action-download{min-height:40px;padding:8px 11px;border-radius:10px;box-shadow:none;font-size:.81rem;}
+body[data-page="library"] .compact-action-extra{grid-template-columns:minmax(0,1fr);gap:4px;}
+body[data-page="library"] .compact-action-extra button{
+  justify-content:flex-start;min-height:37px;padding:8px 10px;border:1px solid transparent;border-radius:9px;
+  background:transparent;box-shadow:none;text-align:left;font-size:.77rem;line-height:1.3;transition:background .15s,border-color .15s;
+}
+body[data-page="library"] .compact-action-extra button:hover,
+body[data-page="library"] .compact-action-extra button:focus-visible{border-color:var(--border);background:var(--soft);transform:none;outline:none;}
+body[data-page="library"] .compact-action-dialog .compact-action-list{gap:4px;padding-top:6px;border-top:1px solid var(--border);}
+body[data-page="library"] .compact-action-dialog .compact-action-list>*{
+  min-height:38px;padding:8px 10px;border-radius:9px;font-size:.79rem;line-height:1.32;box-shadow:none;transition:background .15s,border-color .15s;
+}
+body[data-page="library"] .compact-action-dialog .compact-action-list>.secondary-btn{
+  border-color:transparent;background:transparent;
+}
+body[data-page="library"] .compact-action-dialog .compact-action-list>.secondary-btn:hover,
+body[data-page="library"] .compact-action-dialog .compact-action-list>.secondary-btn:focus-visible{
+  border-color:var(--border);background:var(--soft);transform:none;outline:none;
+}
+body[data-page="library"] .compact-action-dialog .compact-action-list>.primary-btn{min-height:38px;box-shadow:none;}
+body[data-page="library"] .compact-action-dialog .compact-action-list .groups-btn{border-radius:9px;}
+body[data-page="library"] .compact-action-error{font-size:.76rem;}
+@media(max-width:560px){
+  body[data-page="library"] .compact-action-dialog{width:calc(100vw - 20px);max-height:84dvh;border-radius:16px;}
+  body[data-page="library"] .compact-action-header{padding:13px 13px 10px;}
+  body[data-page="library"] .compact-action-content{gap:5px;padding:9px 10px 10px;}
+}
+
+
+/* Aurore Mémoire — breathing room between navigation actions, including refresh. */
+.topbar .top-actions{
+  gap:8px;
+  padding:6px 8px;
+}
+.topbar .top-actions .nav-link{
+  flex-basis:72px;
+}
+.topbar .top-actions .nav-link.aurore-refresh-app{
+  flex-basis:94px;
+  border:1px solid color-mix(in srgb,var(--accent) 14%,var(--border));
+  background:color-mix(in srgb,var(--surface-raised) 72%,transparent);
+}
+.topbar .top-actions .nav-link.aurore-refresh-app::before{content:none;}
+.topbar .top-actions .nav-link.aurore-refresh-app:hover{
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface-raised));
+}
+@media(max-width:760px){
+  .topbar .top-actions{gap:7px;padding:5px 7px;}
+  .topbar .top-actions .nav-link{flex-basis:68px;}
+  .topbar .top-actions .nav-link.aurore-refresh-app{flex-basis:94px;}
+}
+@media(max-width:560px){
+  .topbar .top-actions{gap:7px;padding:5px 7px;}
+  .topbar .top-actions .nav-link{flex:0 0 68px;}
+  .topbar .top-actions .nav-link.aurore-refresh-app{flex:0 0 94px;}
+}
+
+/* Aurore Mémoire — clearer spacing in the community library and its resource tabs. */
+body[data-page="public-cards"] .topbar .top-actions{
+  gap:9px;
+  padding:6px 8px;
+}
+body[data-page="public-cards"] .topbar .top-actions .nav-link{
+  flex-basis:76px;
+}
+body[data-page="public-cards"] .topbar .top-actions .nav-link.aurore-refresh-app{
+  flex-basis:96px;
+}
+body[data-page="public-cards"] .public-resource-tabs{
+  gap:12px;
+  padding:10px 2px 14px;
+  margin:14px 0 18px;
+  scroll-padding-inline:10px;
+}
+body[data-page="public-cards"] .public-resource-tabs button{
+  min-height:42px;
+  padding:10px 16px;
+  flex:0 0 auto;
+  white-space:nowrap;
+  box-shadow:0 2px 7px color-mix(in srgb,var(--bg) 20%,transparent);
+}
+body[data-page="public-cards"] .public-resource-tabs button[aria-pressed="true"]{
+  box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+@media(max-width:560px){
+  body[data-page="public-cards"] .topbar .top-actions{gap:8px;padding:5px 7px;}
+  body[data-page="public-cards"] .topbar .top-actions .nav-link{flex:0 0 70px;}
+  body[data-page="public-cards"] .topbar .top-actions .nav-link.aurore-refresh-app{flex:0 0 96px;}
+  body[data-page="public-cards"] .public-resource-tabs{gap:10px;margin:12px 0 16px;padding:9px 2px 12px;}
+  body[data-page="public-cards"] .public-resource-tabs button{min-height:40px;padding:9px 14px;}
+}
