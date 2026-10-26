@@ -23,28 +23,32 @@
     return String(value == null ? "" : value).trim().slice(0, max || 5000);
   }
   function extractPayload(value) {
-    var candidates = [value];
-    if (value && typeof value.reply === "string") candidates.push(value.reply);
-    if (value && value.action) candidates.push(value.action);
-    for (var i = 0; i < candidates.length; i += 1) {
-      var candidate = candidates[i];
+    var queue = [value], seen = 0;
+    while (queue.length && seen < 24) {
+      var candidate = queue.shift();
+      seen += 1;
       if (typeof candidate === "string") {
         var text = candidate.trim().replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
-        try { candidate = JSON.parse(text); } catch (_) {
+        var parsed = null;
+        try { parsed = JSON.parse(text); } catch (_) {
           var match = text.match(/\{[\s\S]*\}/);
-          if (match) { try { candidate = JSON.parse(match[0]); } catch (ignored) { continue; } }
-          else continue;
+          if (match) { try { parsed = JSON.parse(match[0]); } catch (ignored) {} }
         }
+        if (parsed !== null) queue.unshift(parsed);
+        continue;
       }
       if (!candidate || typeof candidate !== "object") continue;
-      var cards = Array.isArray(candidate.cards) ? candidate.cards :
-        (candidate.type === "create_flashcards" && Array.isArray(candidate.cards) ? candidate.cards : null);
+      var cards = Array.isArray(candidate.cards) ? candidate.cards : null;
       if (!cards && candidate.action && Array.isArray(candidate.action.cards)) cards = candidate.action.cards;
-      if (!cards) continue;
-      cards = cards.map(function (card) {
-        return { front: safeText(card && (card.front || card.question), 5000), back: safeText(card && (card.back || card.answer), 5000) };
-      }).filter(function (card) { return card.front && card.back; }).slice(0, 20);
-      if (cards.length) return { title: safeText(candidate.title || (candidate.action && candidate.action.title), 100), cards: cards };
+      if (cards) {
+        cards = cards.map(function (card) {
+          return { front: safeText(card && (card.front || card.question || card.recto), 5000), back: safeText(card && (card.back || card.answer || card.verso), 5000) };
+        }).filter(function (card) { return card.front && card.back; }).slice(0, 20);
+        if (cards.length) return { title: safeText(candidate.title || (candidate.action && candidate.action.title), 100), cards: cards };
+      }
+      ["action", "reply", "content", "response", "output_text", "result", "data"].forEach(function (key) {
+        if (candidate[key] !== undefined && candidate[key] !== null) queue.push(candidate[key]);
+      });
     }
     return null;
   }
@@ -147,7 +151,7 @@
       var instructions = [
         "Tu es Aurora, l'assistante pédagogique d'Aurore Mémoire.",
         "Prépare des cartes recto-verso pour l'éditeur existant.",
-        "Retourne UNIQUEMENT un objet JSON valide, sans Markdown ni commentaire, de la forme {\"title\":\"titre court\",\"cards\":[{\"front\":\"question ou notion au recto\",\"back\":\"réponse exacte et pédagogique au verso\"}]} .",
+        "Retourne un objet JSON valide, sans Markdown, conforme à cette enveloppe exacte : {\"reply\":\"Proposition prête à vérifier\",\"action\":{\"type\":\"create_flashcards\",\"title\":\"titre court\",\"cards\":[{\"front\":\"question ou notion au recto\",\"back\":\"réponse exacte et pédagogique au verso\"}]}}. Le tableau cards doit être dans action, pas à la racine. N’ajoute aucun texte hors JSON.",
         "Chaque carte doit être autonome, exacte, concise et utile pour le rappel actif. N'invente pas de faits. Si le cours est insuffisant ou ambigu, précise les limites dans les réponses plutôt que de fabriquer des informations.",
         "Nombre demandé : " + count + ". Maximum 20 cartes. Titre maximum 100 caractères.",
         "Mode : " + (mode === "scientific" ? "SCIENTIFIQUE STRICT : le recto et le verso doivent être du LaTeX pur valide, sans Markdown, sans bloc de code et sans prose hors LaTeX. Utilise \\(...\\) pour les expressions en ligne et \\[...\\] pour les formules affichées. Toute phrase explicative doit être encapsulée dans \\text{...} en mode mathématique ; utilise \\[\\begin{aligned} ... \\end{aligned}\\] pour les développements sur plusieurs lignes. N’utilise pas les dollars comme délimiteurs. Échappe correctement chaque antislash dans les chaînes JSON." : "simple. Privilégie du texte clair et n’utilise pas de LaTeX sauf demande explicite."),
