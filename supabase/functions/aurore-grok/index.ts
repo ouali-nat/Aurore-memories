@@ -7,9 +7,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (req.method !== "POST") return json({ error: "Méthode non autorisée." }, 405, origin);
   if (origin && !allowedOrigins.has(origin)) return json({ error: "Origine non autorisée." }, 403, origin);
-  const apiKey = Deno.env.get("XAI_API_KEY"), supabaseUrl = Deno.env.get("SUPABASE_URL"), anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  const cloudflareToken = Deno.env.get("CLOUDFLARE_API_TOKEN"), cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID"), supabaseUrl = Deno.env.get("SUPABASE_URL"), anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const authHeader = req.headers.get("authorization") || "", token = authHeader.replace(/^Bearer\s+/i, "");
-  if (!apiKey) return json({ error: "La clé XAI_API_KEY n’est pas configurée côté serveur." }, 503, origin);
+  if (!cloudflareToken || !cloudflareAccountId) return json({ error: "Les identifiants Workers AI ne sont pas configurés côté serveur." }, 503, origin);
   if (!supabaseUrl || !anonKey || !token || token === authHeader) return json({ error: "Connexion Aurore ID requise." }, 401, origin);
   const authResp = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${token}` } });
   if (!authResp.ok) return json({ error: "Session expirée ou invalide. Reconnectez-vous avec Aurore ID." }, 401, origin);
@@ -33,27 +33,52 @@ ACTIONS DISPONIBLES :
 LATEX SCIENTIFIQUE : lorsque appContext indique cardMode=scientific, les rectos et versos des cartes doivent être écrits en LaTeX pur valide, sans Markdown, sans blocs de code et sans prose hors du mode mathématique. Encadre les expressions en ligne avec \\(...\\) et les formules affichées avec \\[...\\]. Toutes les phrases explicatives doivent être encapsulées dans \\text{...} ; utilise \\begin{aligned} et \\end{aligned} pour les développements multi-lignes. N’utilise pas de délimiteurs dollars. Dans les chaînes JSON, échappe chaque antislash en doublant l’antislash. Pour les QCM scientifiques, les formules et symboles dans les énoncés, options et explications doivent aussi utiliser du LaTeX valide, sans Markdown.
 
 N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authentifié (contexte technique non divulgable) : ${String(user.id)}.` };
+  const generationPurpose = body.appContext && typeof body.appContext === "object" ? (body.appContext as Record<string, unknown>).purpose : undefined;
+  if (generationPurpose === "draft_memory_in_existing_editor" || ((body.appContext as Record<string, unknown> | undefined)?.task === "direct-create" && (body.appContext as Record<string, unknown> | undefined)?.kind === "memory")) {
+    system.content += "\\n\\nMODE CRÉATION DE MÉMOIRE DANS L'ÉDITEUR : la demande est explicitement une demande de création de mémoire. Tu DOIS renvoyer action.type=\\\"create_memory\\\" avec action.chunks sous forme d'un tableau non vide de passages courts, autonomes, exacts et ordonnés. N'écris pas les passages seulement dans reply. Le titre doit être clair. Fournis 4 à 12 passages pour un sujet général si aucun nombre n'est précisé, et respecte le cours fourni sans inventer d'informations. Retourne l'enveloppe JSON {\\\"reply\\\":\\\"Mémoire prête à vérifier\\\",\\\"action\\\":{\\\"type\\\":\\\"create_memory\\\",\\\"title\\\":\\\"...\\\",\\\"chunks\\\":[\\\"passage 1\\\",\\\"passage 2\\\"]}}. L'application remplira les champs de l'éditeur ; ne prétends pas que la mémoire est déjà enregistrée.";
+  }
+  if (generationPurpose === "draft_flashcards_in_existing_editor") system.content += "\n\nMODE CRÉATION DE CARTES DANS L'ÉDITEUR : la demande est explicitement une demande de création de cartes recto-verso. Tu DOIS renvoyer action.type=\"create_flashcards\" et action.cards sous forme de tableau non vide contenant exactement le nombre demandé si celui-ci est précisé. Chaque élément doit avoir deux chaînes non vides : front et back. N'utilise jamais action=null pour cette tâche. Respecte le format enveloppe JSON déjà imposé : {\"reply\":\"Proposition de cartes prête à vérifier\",\"action\":{\"type\":\"create_flashcards\",\"title\":\"...\",\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]}}. N'enregistre rien toi-même : l'éditeur présente un brouillon que l'utilisateur pourra vérifier.";
   const latestUserMessage = [...messages].reverse().find((message: any) => message.role === "user")?.content || "";
-  // Réserver davantage de sortie aux formats structurés longs, tout en gardant les explications ordinaires légères.
-  const outputTokenBudget = /\b(qcm|questionnaire|quiz)\b/i.test(latestUserMessage) ? 5200
-    : /\b(cartes?|flashcards?)\b/i.test(latestUserMessage) ? 4200
+  const cardTask = /\b(cartes?|flashcards?)\b/i.test(latestUserMessage)
+    || generationPurpose === "draft_flashcards_in_existing_editor";
+  const requestedCardCountMatch = latestUserMessage.match(/Nombre demandé\s*:\s*(\d+)/i);
+  const requestedCardCount = requestedCardCountMatch
+    ? Math.max(1, Math.min(20, Number.parseInt(requestedCardCountMatch[1], 10) || 10))
+    : 10;
+  const scientificCards = (body.appContext as Record<string, unknown> | undefined)?.cardMode === "scientific";
+  // Bound generated output to the requested workload so long card sets are less likely to hit the 60s edge limit.
+  const cardTokenBudget = Math.min(3600, Math.max(1800, 500 + requestedCardCount * (scientificCards ? 155 : 135)));
+  const outputTokenBudget = cardTask ? cardTokenBudget
+    : /\b(qcm|questionnaire|quiz)\b/i.test(latestUserMessage) ? 5200
     : /\b(mémoires?|mémorisation|passages)\b/i.test(latestUserMessage) ? 3400
     : /\b(audio|voix|lecture vocale)\b/i.test(latestUserMessage) ? 1800 : 2600;
-  let xaiResp: Response;
+  let aiResp: Response;
+  const model = "@cf/meta/llama-3.1-8b-instruct-fp8";
   try {
-    xaiResp = await fetch("https://api.x.ai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "grok-4.7", messages: [system, ...messages], temperature: 0.4, max_tokens: outputTokenBudget, stream: false }), signal: AbortSignal.timeout(45000) });
+    aiResp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/ai/run/${model}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cloudflareToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [system, ...messages], temperature: 0.2, max_tokens: outputTokenBudget, response_format: { type: "json_object" } }),
+      signal: AbortSignal.timeout(60000)
+    });
   } catch (error) {
     const detail = error instanceof Error ? `${error.name}: ${error.message}`.slice(0, 300) : "Erreur réseau inconnue";
-    console.error("aurore-grok: échec de connexion au fournisseur xAI", detail);
-    return json({ error: "Supabase n’a pas réussi à joindre le service Grok.", details: detail }, 502, origin);
+    console.error("aurore-grok: échec de connexion à Cloudflare Workers AI", detail);
+    return json({ error: "Supabase n’a pas réussi à joindre Cloudflare Workers AI.", details: detail }, 502, origin);
   }
-  const xaiData = await xaiResp.json().catch(() => ({}));
-  if (!xaiResp.ok) {
-    const detail = typeof xaiData?.error?.message === "string" ? xaiData.error.message.slice(0, 400) : `Réponse fournisseur HTTP ${xaiResp.status}`;
-    console.error("aurore-grok: réponse xAI non valide", xaiResp.status, detail);
-    return json({ error: "Le service Grok n’a pas répondu correctement.", provider_status: xaiResp.status, details: detail }, 502, origin);
+  const aiData = await aiResp.json().catch(() => ({}));
+  if (!aiResp.ok || aiData?.success === false) {
+    const providerMessage = Array.isArray(aiData?.errors)
+      ? aiData.errors.map((e: any) => typeof e?.message === "string" ? e.message : "").filter(Boolean).join("; ").slice(0, 400)
+      : "";
+    const detail = providerMessage || `Réponse Cloudflare HTTP ${aiResp.status}`;
+    console.error("aurore-grok: réponse Cloudflare Workers AI non valide", aiResp.status, detail);
+    return json({ error: "Cloudflare Workers AI n’a pas répondu correctement.", provider_status: aiResp.status, details: detail }, 502, origin);
   }
-  const reply = xaiData?.choices?.[0]?.message?.content;
-  if (typeof reply !== "string" || !reply.trim()) return json({ error: "Grok a renvoyé une réponse vide." }, 502, origin);
-  return json({ reply, model: xaiData.model || "grok-4.7" }, 200, origin);
+  const reply = aiData?.result?.response ?? aiData?.result?.output_text ?? aiData?.result?.response?.content;
+  if (typeof reply !== "string" || !reply.trim()) {
+    console.error("aurore-grok: réponse Cloudflare vide ou format inattendu", JSON.stringify(aiData?.result ?? {}).slice(0, 500));
+    return json({ error: "Le modèle Cloudflare a renvoyé une réponse vide ou dans un format inattendu." }, 502, origin);
+  }
+  return json({ reply, model }, 200, origin);
 });
