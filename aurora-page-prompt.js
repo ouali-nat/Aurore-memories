@@ -24,8 +24,11 @@
     try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "Mémoire préparée : " + chunks.length + " paragraphes sont déjà remplis. Vérifie-les puis appuie sur « Enregistrer la mémoire »."); } catch (_) {}
     location.reload();
   }
-  function makeQcm(action) {
-    var questions = (Array.isArray(action.questions) ? action.questions : []).slice(0, 30);
+  function makeQcm(action, requestText) {
+    var countMatch = String(requestText || "").match(/\b(\d{1,2})\s*(?:qcm\b|questions?\b|questionnaires?\b|quiz\b)/i), desiredCount = countMatch ? Math.min(30, Math.max(1, Number(countMatch[1]) || 1)) : 0;
+    var generated = Array.isArray(action.questions) ? action.questions : [];
+    if (desiredCount && generated.length < desiredCount) throw new Error("Aurora n’a généré que " + generated.length + " questions sur les " + desiredCount + " demandées. Réessaie avec un sujet plus précis.");
+    var questions = generated.slice(0, desiredCount || 30);
     if (!questions.length) throw new Error("Aurora n’a généré aucune question de QCM.");
     var q = { id: uid("qcm"), title: String(action.title || "QCM Aurora").trim().slice(0, 120) || "QCM Aurora", questions: [], attempts: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     questions.forEach(function (item) {
@@ -38,7 +41,7 @@
     });
     localStorage.setItem("aurore-qcm-editor-draft-v1", JSON.stringify({ deckId: null, q: q, at: 0, updatedAt: Date.now() }));
     try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "QCM préparé : " + q.questions.length + " questions, réponses et explications sont remplies. Vérifie-les puis enregistre le QCM."); } catch (_) {}
-    location.reload();
+    window.location.href = location.pathname + "?fromAurora=" + encodeURIComponent(q.id) + location.hash;
   }
   function makeAudio(action) {
     var title = String(action.title || action.name || "Audio Aurora").trim().slice(0, 100) || "Audio Aurora", text = String(action.text || action.content || "").trim();
@@ -54,7 +57,7 @@
   function apply(action) {
     if (!action || typeof action !== "object") throw new Error("Aurora n’a pas renvoyé d’action de création. Vérifie la demande puis réessaie.");
     if (kind === "memory" && action.type === "create_memory") return makeMemory(action);
-    if (kind === "qcm" && action.type === "create_qcm") return makeQcm(action);
+    if (kind === "qcm" && action.type === "create_qcm") return makeQcm(action, input.value);
     if (kind === "audio" && action.type === "create_audio") return makeAudio(action);
     throw new Error("Aurora a renvoyé un format différent de celui attendu pour cette page. Aucune donnée n’a été enregistrée.");
   }
@@ -67,10 +70,11 @@
       if (!window.auroreAuthReady) throw new Error("Le service Aurore ID n’est pas prêt. Actualise la page puis réessaie.");
       var auth = await window.auroreAuthReady, session = await auth.getSession();
       if (!session) throw new Error("Connecte-toi avec Aurore ID avant de créer du contenu.");
+      var qcmCountMatch = value.match(/\b(\d{1,2})\s*(?:qcm\b|questions?\b|questionnaires?\b|quiz\b)/i), requestedQcmCount = qcmCountMatch ? Math.min(30, Math.max(1, Number(qcmCountMatch[1]) || 1)) : 10;
       var instruction = kind === "memory"
         ? "Tu dois créer une mémoire pour l’éditeur Aurore Mémoire. Génère un titre et entre 4 et 16 passages courts, exacts et ordonnés. Retourne uniquement un JSON {\"reply\":\"Mémoire prête\",\"action\":{\"type\":\"create_memory\",\"title\":\"...\",\"chunks\":[\"passage 1\",\"passage 2\"]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
         : kind === "qcm"
-          ? "Tu dois remplir le créateur de QCM Aurore Mémoire. Génère 5 à 12 questions selon la longueur du cours, 4 choix distincts et plausibles par question, une seule bonne réponse et une explication. correctIndex est un entier commençant à zéro. Retourne uniquement un JSON {\"reply\":\"QCM prêt\",\"action\":{\"type\":\"create_qcm\",\"title\":\"...\",\"questions\":[{\"prompt\":\"...\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"...\"}]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
+          ? "Tu dois remplir le créateur de QCM Aurore Mémoire. Génère EXACTEMENT " + requestedQcmCount + " questions sur le sujet demandé, chacune avec quatre choix distincts et plausibles, une seule bonne réponse et une explication utile. correctIndex est un entier commençant à zéro. Le tableau questions doit contenir exactement " + requestedQcmCount + " éléments, ni plus ni moins. Retourne uniquement un JSON {\"reply\":\"QCM prêt à vérifier\",\"action\":{\"type\":\"create_qcm\",\"title\":\"...\",\"questions\":[{\"prompt\":\"...\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"...\"}]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
           : "Tu dois remplir le créateur audio Aurore Mémoire. Prépare un script oral naturel en français, fidèle au cours, sans tableaux, sous 600 mots. Retourne uniquement un JSON {\"reply\":\"Audio prêt\",\"action\":{\"type\":\"create_audio\",\"title\":\"...\",\"text\":\"...\",\"language\":\"fr-FR\",\"rate\":1}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n";
       var response = await auth.client.functions.invoke("aurore-grok", { body: { messages: [{ role: "user", content: instruction + value }], appContext: { task: "direct-create", kind: kind } } });
       if (response.error) {
@@ -79,9 +83,11 @@
         throw new Error(detail || response.error.message || "Le service Aurora a échoué.");
       }
       var envelope = response.data || {}, parsed = parseAction(envelope.reply || ""), action = parsed.action || parsed;
-      apply(action);
+      apply(action, value);
     } catch (error) {
-      say(error && error.message ? error.message : "La création a échoué. Aucun contenu n’a été enregistré.", true);
+      var message = error && error.message ? String(error.message) : "La création a échoué. Aucun contenu n’a été enregistré.";
+      if (/failed to send a request to the edge function|failed to fetch|networkerror|load failed/i.test(message)) message = "Connexion à Aurora impossible depuis cette origine. Vérifie la connexion Internet et utilise le site officiel ou une version à jour de l’application. Le serveur doit autoriser l’origine de ce navigateur ou de l’application Android.";
+      say(message, true);
       button.disabled = false; button.textContent = oldLabel;
     }
   });
