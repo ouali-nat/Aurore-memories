@@ -162,7 +162,18 @@
         body: { messages: [{ role: "user", content: instructions }], appContext: { purpose: "draft_flashcards_in_existing_editor", cardMode: mode } }
       });
       if (response.error) {
-        var detail = response.data && response.data.error;
+        var detail = response.data && (response.data.details || response.data.error);
+        try {
+          var context = response.error.context;
+          if (!detail && context && typeof context.clone === "function") {
+            var errorBody = await context.clone().json();
+            detail = errorBody && (errorBody.details || errorBody.error);
+          }
+        } catch (_) {}
+        var errorText = String(detail || response.error.message || "");
+        if (/timeout|timed out|signal timed out|délai dépassé/i.test(errorText)) {
+          throw new Error("Aurora a dépassé le délai de réponse. Aucune carte n’a été ajoutée. Réessaie avec moins de cartes ou une demande plus courte.");
+        }
         throw new Error(detail || response.error.message || "Aurora n’a pas pu répondre.");
       }
       var payload = extractPayload(response.data || {});
