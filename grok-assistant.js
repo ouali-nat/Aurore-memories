@@ -74,7 +74,31 @@ return "Audio « "+audioTitle+" » ajouté à ta bibliothèque. Ouvre Ajouter un
 }
 return null;
 }
-function parseStructured(reply){var text=String(reply||"").trim();try{var data=JSON.parse(text);if(data&&typeof data.reply==="string")return data}catch(_){}var match=text.match(/```(?:json)?\s*([\s\S]*?)```/i);if(match){try{var d=JSON.parse(match[1]);if(d&&typeof d.reply==="string")return d}catch(_){}}return{reply:text,action:null}}
+function parseStructured(reply){
+var text=String(reply||"").trim(),candidates=[text],fenced=text.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);
+if(fenced)candidates.unshift(fenced[1].trim());
+var first=text.indexOf("{"),last=text.lastIndexOf("}");
+if(first>=0&&last>first)candidates.push(text.slice(first,last+1));
+function parseCandidate(candidate){try{return JSON.parse(candidate)}catch(_){return null}}
+function normalize(data,depth){
+if(depth>5||!data||typeof data!=="object")return null;
+var action=data.action;
+if(typeof action==="string"){var parsedAction=parseCandidate(action);if(parsedAction)action=parsedAction;}
+if(action&&typeof action==="object"&&action.action&&typeof action.action==="object")action=action.action;
+if(!action&&typeof data.type==="string"&&/^(create_flashcards|create_memory|create_qcm|create_audio)$/.test(data.type))action=data;
+if(action&&typeof action==="object"){
+if(action.type==="create_memory"){if(!Array.isArray(action.chunks)&&Array.isArray(action.passages))action.chunks=action.passages;if(!Array.isArray(action.chunks)&&Array.isArray(action.content))action.chunks=action.content;}
+if(action.type==="create_flashcards"&&!Array.isArray(action.cards)&&Array.isArray(action.rows))action.cards=action.rows;
+if(action.type==="create_qcm"&&!Array.isArray(action.questions)&&Array.isArray(action.qcms))action.questions=action.qcms;
+return{reply:typeof data.reply==="string"?data.reply:(typeof data.message==="string"?data.message:"Le contenu est prêt à être transféré dans l’éditeur."),action:action};
+}
+for(var key of ["response","output_text","content","result","data"]){if(typeof data[key]==="string"){var nested=parseCandidate(data[key]);if(nested){var found=normalize(nested,depth+1);if(found&&found.action)return found;}}else if(data[key]&&typeof data[key]==="object"){var nestedFound=normalize(data[key],depth+1);if(nestedFound&&nestedFound.action)return nestedFound;}}
+if(typeof data.reply==="string")return{reply:data.reply,action:null};
+return null;
+}
+for(var i=0;i<candidates.length;i++){var data=parseCandidate(candidates[i]);var result=normalize(data,0);if(result)return result;}
+return{reply:text,action:null};
+}
 async function submit(value){value=String(value||"").trim();if(!value||busy)return;var session=await checkAuth();if(!session){add("assistant","Connecte-toi avec Aurore ID pour utiliser Aurora. Ton contenu privé ne sera pas transmis sans session authentifiée.");return}if(!history.length)activeId=id();busy=true;send.disabled=true;input.disabled=true;stop.hidden=true;add("user",value);history.push({role:"user",content:value});saveAll();status("Aurora réfléchit…");aborter=new AbortController();try{var auth=await getAuth();var latestRequest=value,appContext=getProgressContext();
 if(/(?:cr[ée]e|g[ée]n[èe]re|pr[ée]pare|enregistre|fais|construis).{0,100}(?:cartes?|flashcards?)/i.test(latestRequest)||/(?:cartes?|flashcards?).{0,100}(?:cr[ée]e|g[ée]n[èe]re|pr[ée]pare)/i.test(latestRequest)){appContext.purpose="draft_flashcards_in_existing_editor";appContext.cardMode=/scientifique|latex|formules/i.test(latestRequest)?"scientific":"simple";}
 else if(/(?:cr[ée]e|g[ée]n[èe]re|pr[ée]pare|enregistre|d[ée]coupe).{0,100}(?:m[ée]moire|m[ée]morisation|passages?)/i.test(latestRequest)||/(?:m[ée]moire|m[ée]morisation).{0,100}(?:cr[ée]e|g[ée]n[èe]re|pr[ée]pare|enregistre)/i.test(latestRequest)){appContext.purpose="draft_memory_in_existing_editor";appContext.kind="memory";}
