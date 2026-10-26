@@ -16,7 +16,7 @@
   try { shareLinkSecrets = JSON.parse(localStorage.getItem(SHARE_LINK_SECRET_KEY) || "{}"); } catch (error) { shareLinkSecrets = {}; }
   var publicFeedCards = [];
   var PUBLIC_MATH_CACHE_KEY = "aurore-public-card-math-cache-v1";
-  var PUBLIC_MATH_CACHE_VERSION = "katex-0.16.22-v1";
+  var PUBLIC_MATH_CACHE_VERSION = "katex-0.16.22-v2";
   var publicMathCache = {};
   try { publicMathCache = JSON.parse(localStorage.getItem(PUBLIC_MATH_CACHE_KEY) || "{}"); } catch (error) { publicMathCache = {}; }
   var DAY_MS = 86400000;
@@ -258,10 +258,15 @@
 
   function formatCardMathText(value, card) {
     var input = String(value == null ? "" : value), trimmed = input.trim();
-    var wrapped = /^(?:\\\[[\s\S]*\\\]|\\\([\s\S]*\\\)|\$\$[\s\S]*\$\$|\$[^$\n]+\$)$/.test(trimmed);
+    var wrapped = /^(?:\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$\$[\s\S]*?\$\$|\$[^$\n]+\$)$/.test(trimmed);
     var hasEnvironment = /\\begin\s*\{(equation\*?|align\*?|alignat\*?|gather\*?|multline\*?|CD|split|cases)\}/.test(input);
-    var looksMath = /\\(?:lim|int|sqrt|frac|sum|prod|log|ln|sin|cos|tan|alpha|beta|gamma|delta|theta|lambda|pi|infty|to|left|right|mathrm|text|partial|nabla|cdot|times|approx|neq|leq|geq|begin|overline|widehat)\b/.test(input) || /(?:\^|_)\s*\{/.test(input);
-    if (trimmed && !wrapped && !hasEnvironment && ((card && card.cardMode === "scientific") || looksMath)) input = "\\[" + input + "\\]";
+    var hasLatexCommand = /\\(?:lim|int|sqrt|frac|sum|prod|log|ln|exp|lfloor|rfloor|lceil|rceil|sin|cos|tan|alpha|beta|gamma|delta|theta|lambda|pi|infty|to|left|right|mathrm|text|partial|nabla|cdot|times|approx|neq|leq|geq|begin|overline|widehat)\b/.test(input);
+    var hasScript = /(?:\^|_)\s*(?:\{[^}]+\}|[A-Za-z0-9])/.test(input);
+    var hasMathSymbol = /[=≤≥≠→←∫∑∏√∞±×÷]/.test(input);
+    var looksMath = hasLatexCommand || hasScript || hasMathSymbol;
+    var plainWords = input.replace(/\\[A-Za-z]+/g, " ").replace(/[{}_^$]/g, " ").match(/[A-Za-zÀ-ÿ]{3,}/g) || [];
+    var isNaturalLanguage = plainWords.length >= 3;
+    if (trimmed && !wrapped && !hasEnvironment && looksMath && !isNaturalLanguage) input = "\\[" + input + "\\]";
     return formatMathText(input);
   }
 
@@ -1292,7 +1297,7 @@
         var previewMarkup;
         if (kind === "flashcard" && previewCard) {
           var cached = previewCard.mathCache && previewCard.mathCache.front;
-          var cacheValid = cached && cached.source === String(preview) && cached.version === "katex-0.16.22-v1";
+          var cacheValid = cached && cached.source === String(preview) && cached.version === "katex-0.16.22-v2";
           previewMarkup = '<small class="card-math-preview" data-card-id="' + escapeHtml(String(previewCard.id)) + '" data-card-side="front">' + (cacheValid ? cached.html : formatCardMathText(preview, previewCard)) + '</small>';
         } else {
           previewMarkup = '<small>' + formatMathText(preview) + '</small>';
@@ -1367,7 +1372,7 @@
       var id = node.getAttribute("data-card-id");
       var card = state.cards.filter(function (item) { return String(item.id) === id && isFlashcard(item); })[0];
       var cache = card && card.mathCache && card.mathCache.front;
-      if (card && !(cache && cache.source === String(card.front || "") && cache.version === "katex-0.16.22-v1")) {
+      if (card && !(cache && cache.source === String(card.front || "") && cache.version === "katex-0.16.22-v2")) {
         if (typeof window.renderAuroreMath === "function") window.renderAuroreMath(node);
       }
     });

@@ -59,7 +59,7 @@ var CATS=[
 ["\\sin","sin","Sinus"],["\\cos","cos","Cosinus"],["\\tan","tan","Tangente"],["\\cot","cot","Cotangente"],["\\sec","sec","Sécante"],["\\csc","csc","Cosécante"],
 ["\\arcsin","arcsin","Arc sinus"],["\\arccos","arccos","Arc cosinus"],["\\arctan","arctan","Arc tangente"],
 ["\\sinh","sh","Sinus hyperbolique"],["\\cosh","ch","Cosinus hyperbolique"],["\\tanh","th","Tangente hyperbolique"],
-["\\ln","ln","Logarithme népérien"],["\\log","log","Logarithme décimal"],["\\log_{\\square}(\\square)","logₐ","Logarithme de base a"],["\\exp","exp","Exponentielle"],["\\mathrm{e}^{\\square}","eˣ","e puissance x"],
+["\\ln(\\square)","ln(x)","Logarithme népérien avec argument"],["\\log(\\square)","log(x)","Logarithme décimal avec argument"],["\\log_{\\square}(\\square)","logₐ(x)","Logarithme de base a"],["\\exp(\\square)","exp(x)","Exponentielle avec argument"],["\\mathrm{e}^{\\square}","eˣ","Exponentielle e puissance x"],["\\left\\lfloor\\square\\right\\rfloor","⌊x⌋","Partie entière inférieure"],["\\left\\lceil\\square\\right\\rceil","⌈x⌉","Partie entière supérieure"],
 ["\\max","max","Maximum"],["\\min","min","Minimum"],["\\sup","sup","Borne supérieure"],["\\inf","inf","Borne inférieure"],
 ["\\det","det","Déterminant"],["\\dim","dim","Dimension"],["\\ker","ker","Noyau"],["\\gcd","pgcd","PGCD"],["\\operatorname{ppcm}","ppcm","PPCM"],["\\bmod","mod","Modulo"],["\\pmod{\\square}","(mod n)","Congruence"],
 ["\\arg","arg","Argument"],["\\Re","ℜ","Partie réelle"],["\\Im","ℑ","Partie imaginaire"],["\\operatorname{Card}","Card","Cardinal"],["\\operatorname{Id}","Id","Identité"],["\\operatorname{sgn}","sgn","Signe"]

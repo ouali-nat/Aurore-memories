@@ -25,7 +25,7 @@ html[data-theme="light"] {
 
 /* ---- 1. Barre du haut : capsule d'accent, onglet actif en tuile avec point ---- */
 :root:root:root .top-actions {
-  padding: 5px; gap: 2px; border-radius: 999px;
+  padding: 7px 9px; gap: 12px; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
   background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
   box-shadow: 6px 6px 14px color-mix(in srgb, var(--bg) 24%, #000 76%),
@@ -34,6 +34,25 @@ html[data-theme="light"] {
 :root:root:root .nav-link { position: relative; min-height: 40px; padding: 8px 16px 11px; border-radius: 999px; color: var(--muted); }
 :root:root:root .nav-link:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--text); }
 :root:root:root .nav-link.active { color: var(--text); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); box-shadow: inset 3px 3px 7px color-mix(in srgb, var(--bg) 28%, #000 72%), inset -3px -3px 7px color-mix(in srgb, var(--surface) 88%, #fff 12%); }
+
+/* Navigation lisible : les commandes ne doivent pas se toucher, même sur mobile. */
+:root:root:root .topbar .top-actions .nav-link {
+  flex: 0 0 78px;
+  min-width: 78px;
+  padding-inline: 10px;
+}
+:root:root:root .topbar .top-actions .nav-link.aurore-refresh-app {
+  flex-basis: 104px;
+  min-width: 104px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+}
+@media (max-width: 760px) {
+  :root:root:root .topbar .top-actions { gap: 11px; padding: 6px 8px; }
+  :root:root:root .topbar .top-actions .nav-link { flex-basis: 76px; min-width: 76px; }
+  :root:root:root .topbar .top-actions .nav-link.aurore-refresh-app { flex-basis: 104px; min-width: 104px; }
+}
+
 :root:root:root .nav-link.active::after {
   content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #fff;
 }
