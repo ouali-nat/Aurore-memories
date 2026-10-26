@@ -6,25 +6,48 @@
 <title>Assistant — Aurore Mémoire</title>
 <link rel="stylesheet" href="style.css?v=20261026-navigation-spacing-v1">
 <link rel="stylesheet" href="memoire.css?v=20261026-sitewide-math-v1">
+<link rel="stylesheet" href="aurora-assistant.css?v=20261026-aurora-clone-v1">
 <style>
-.grok-wrap{max-width:900px;margin:0 auto;padding:18px 14px 34px}.grok-head{margin:8px 0 18px}.grok-head h1{margin:.35rem 0}.grok-sub{color:var(--muted,#aaa)}.grok-chat{border:1px solid var(--border,rgba(150,150,170,.3));border-radius:18px;overflow:hidden;background:var(--surface,rgba(120,120,140,.07))}.grok-messages{display:flex;flex-direction:column;gap:12px;padding:16px;min-height:260px;max-height:58vh;overflow:auto}.grok-message{max-width:92%;padding:12px 14px;border:1px solid var(--border,rgba(150,150,170,.24));border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}.grok-message.user{align-self:flex-end;background:var(--accent-soft,rgba(210,90,150,.12))}.grok-message.assistant{align-self:flex-start}.grok-composer{border-top:1px solid var(--border,rgba(150,150,170,.3));padding:12px;display:flex;gap:9px;align-items:flex-end}.grok-composer textarea{flex:1;min-width:0;resize:vertical;min-height:48px;max-height:180px;border:1px solid var(--border,rgba(150,150,170,.3));border-radius:12px;padding:12px;background:var(--surface,#181722);color:inherit;font:inherit}.grok-send{border:0;border-radius:12px;padding:13px 16px;background:var(--accent,#bb548d);color:white;font:inherit;cursor:pointer}.grok-send:disabled{opacity:.55;cursor:wait}.grok-status{padding:0 14px 12px;font-size:.88rem;color:var(--muted,#aaa)}.grok-shortcuts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}.grok-shortcuts button{border:1px solid var(--border,rgba(150,150,170,.3));border-radius:999px;padding:8px 12px;background:transparent;color:inherit;cursor:pointer}.grok-warning{font-size:.88rem;opacity:.8;margin-top:12px}@media(max-width:520px){.grok-composer{align-items:stretch}.grok-send{padding:10px}.grok-message{max-width:100%}}
+/* Adaptation d’Aurora aux couleurs et à la navigation d’Aurore Mémoire. */
+#screen-aurore-ia{display:block!important;position:fixed;inset:0;z-index:120;width:100%;height:100dvh;background:#09070f;overflow:hidden}
+#screen-aurore-ia .aurore-ia-app{height:100%;width:100%;}
+#screen-aurore-ia .aurore-ia-main{grid-template-columns:minmax(0,1fr);}
+#screen-aurore-ia .aurore-ia-sidebar{display:none}
+#screen-aurore-ia .aurore-ia-brand-copy span{max-width:42vw}
+#screen-aurore-ia .aurore-ia-top-actions{gap:6px}
+#screen-aurore-ia .aurore-ia-new{white-space:nowrap}
+#screen-aurore-ia .aurore-ia-minimize{display:none}
+#screen-aurore-ia .aurore-ia-conversation{padding:clamp(16px,4vw,38px);}
+#screen-aurore-ia .aurore-ia-welcome h1{font-size:clamp(1.7rem,5vw,2.8rem)}
+#screen-aurore-ia .aurore-ia-composer-zone{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+#screen-aurore-ia .aurore-ia-message-content{white-space:pre-wrap;overflow-wrap:anywhere}
+#screen-aurore-ia .aurore-ia-history-panel{z-index:20}
+#screen-aurore-ia .aurore-ia-history-overlay{z-index:19}
+#screen-aurore-ia .aurore-ia-login{border:1px solid var(--ia-border);background:rgba(255,255,255,.05);color:#f7f4ff;border-radius:12px;padding:9px 11px;font:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
+#screen-aurore-ia .aurore-ia-login[hidden]{display:none}
+#screen-aurore-ia .aurore-ia-status i{background:#d6a3ff}
+#screen-aurore-ia .aurore-ia-tool-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px auto;max-width:620px}
+#screen-aurore-ia .aurore-ia-tool-actions button{border:1px solid var(--ia-border);background:rgba(255,255,255,.035);color:#e9e2f2;border-radius:999px;padding:9px 13px;font:inherit;font-size:.76rem;cursor:pointer}
+#screen-aurore-ia .aurore-ia-action-confirm{margin:10px 0;padding:12px;border:1px solid color-mix(in srgb,var(--ia-accent-3) 30%,transparent);border-radius:14px;background:rgba(255,255,255,.035)}
+#screen-aurore-ia .aurore-ia-action-confirm button{margin:8px 8px 0 0;border:1px solid var(--ia-border);border-radius:10px;padding:8px 12px;background:rgba(255,255,255,.06);color:#fff}
+@media(max-width:620px){#screen-aurore-ia .aurore-ia-topbar{gap:6px;padding:0 10px;height:64px;min-height:64px;flex-basis:64px}#screen-aurore-ia .aurore-ia-brand{gap:7px}#screen-aurore-ia .aurore-ia-mark{width:34px;height:34px;flex-basis:34px;border-radius:12px}#screen-aurore-ia .aurore-ia-brand-copy strong{font-size:.9rem}#screen-aurore-ia .aurore-ia-brand-copy span{font-size:.61rem;max-width:33vw}#screen-aurore-ia .aurore-ia-status{padding:6px 7px;font-size:.6rem}#screen-aurore-ia .aurore-ia-new{min-height:34px;padding:0 8px;font-size:.65rem}#screen-aurore-ia .aurore-ia-back{display:none}#screen-aurore-ia .aurore-ia-status span{display:none}#screen-aurore-ia .aurore-ia-new span:last-child{display:none}#screen-aurore-ia .aurore-ia-login{padding:8px 9px;font-size:.65rem}#screen-aurore-ia .aurore-ia-tool-actions button{font-size:.7rem;padding:8px 10px}}
 </style>
 </head>
 <body data-page="grok-assistant">
-<header class="topbar"><div class="wrap topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aurore</strong><small>Mémoire</small></span></a><div class="header-right"><nav class="top-actions"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link" href="mes-memoires.html">Mes mémorisations</a><a class="nav-link active" href="assistant.html">Assistant</a></nav></div></div></header>
-<main class="grok-wrap">
-<section class="grok-head"><p class="section-kicker">TUTEUR PERSONNEL</p><h1>Assistant Aurore</h1><p class="grok-sub">Pose une question sur ton cours, demande une explication ou prépare des cartes et des QCM.</p></section>
-<div class="grok-shortcuts"><button type="button" data-prompt="Aide-moi à comprendre une notion difficile.">Comprendre un cours</button><button type="button" data-prompt="Aide-moi à préparer des cartes mémoire à partir du cours suivant :">Préparer des cartes</button><button type="button" data-prompt="Prépare un QCM à partir du cours suivant, avec les bonnes réponses et des explications :">Préparer un QCM</button><button type="button" data-prompt="Explique comment analyser ma progression dans Aurore Mémoire.">Ma progression</button></div>
-<section class="grok-chat" aria-label="Conversation avec l’assistant">
-<div class="grok-messages" id="grokMessages" aria-live="polite"><div class="grok-message assistant">Bonjour ! Je suis ton assistant pédagogique. Je peux t’aider à comprendre un cours et à préparer des cartes ou des QCM. Pour l’instant, je ne prétendrai pas avoir enregistré un contenu ni consulté ta progression sans confirmation de l’application.</div></div>
-<form class="grok-composer" id="grokForm"><textarea id="grokInput" rows="2" maxlength="12000" placeholder="Écris ta question ou colle un extrait de cours…" required></textarea><button class="grok-send" id="grokSend" type="submit">Envoyer</button></form>
-<div class="grok-status" id="grokStatus" role="status" aria-live="polite">Connexion sécurisée requise avec Aurore ID.</div>
-</section>
-<p class="grok-warning">Les réponses sont générées par Grok. Vérifie les éléments importants de tes cours avant de les mémoriser.</p>
-</main>
+<section aria-labelledby="auroreIATitle" class="screen aurore-ia-screen" id="screen-aurore-ia">
+<div class="aurore-ia-app">
+<header class="aurore-ia-topbar"><div class="aurore-ia-left">
+<button aria-label="Ouvrir l’historique des discussions" aria-expanded="false" class="aurore-ia-menu-btn" id="auroreIAMenuBtn" type="button"><span class="aurore-ia-menu-btn-icon"><span></span><span></span><span></span></span></button>
+<div class="aurore-ia-brand"><div class="aurore-ia-mark" id="auroreIAMark" aria-hidden="true"><span>A</span></div><div class="aurore-ia-brand-copy"><strong id="auroreIATitle">Aurora</strong><span>Votre assistante dans Aurore Mémoire</span></div></div></div>
+<div class="header-right" style="display:none" aria-hidden="true"></div><div class="aurore-ia-top-actions"><span class="aurore-ia-status"><i></i><span id="auroreIAStatusText">Initialisation…</span></span><button class="aurore-ia-login" id="auroreAssistantLogin" type="button">Connexion Aurore ID</button><button class="aurore-ia-new" id="auroreIANew" type="button"><span>＋</span><span>Nouvelle discussion</span></button><a class="aurore-ia-back" href="index.html"><span>←</span><span>Retour</span></a></div></header>
+<div class="aurore-ia-history-overlay" hidden id="auroreIAHistoryOverlay"></div>
+<aside aria-hidden="true" aria-label="Historique des discussions Aurora" class="aurore-ia-history-panel" id="auroreIAHistoryPanel"><div class="aurore-ia-history-head"><div><p class="aurore-ia-kicker">Aurora</p><h2>Historique des discussions</h2></div><button class="aurore-ia-history-close" id="auroreIAHistoryClose" type="button" aria-label="Fermer l’historique">✕</button></div><button class="aurore-ia-history-new" id="auroreIAHistoryNew" type="button">＋ Nouvelle discussion</button><div class="aurore-ia-history-list" id="auroreIAHistoryList"><p class="aurore-ia-history-empty">Aucune discussion pour le moment.</p></div></aside>
+<div class="aurore-ia-main"><section aria-label="Conversation avec Aurora" class="aurore-ia-chat"><div aria-live="polite" class="aurore-ia-conversation" id="auroreIAConversation"><div class="aurore-ia-welcome"><div class="aurore-ia-welcome-orbit" aria-hidden="true"><div class="aurore-ia-welcome-mark">A</div></div><p class="aurore-ia-kicker">Aurora · Aurore Mémoire</p><h1>Le savoir, <span>simplement.</span></h1><p>Comprends tes cours, crée des cartes de révision, prépare des QCM et fais le point sur tes progrès.</p><div class="aurore-ia-tool-actions"><button type="button" data-prompt="Aide-moi à comprendre une notion de mon cours.">Comprendre un cours</button><button type="button" data-prompt="Prépare des cartes mémoire à partir du cours que je vais coller. Propose le recto et le verso de chaque carte. Ne dis pas qu’elles sont enregistrées tant que je ne l’ai pas confirmé.">Créer des cartes</button><button type="button" data-prompt="Crée un QCM de révision à partir du cours que je vais coller, avec quatre choix, la bonne réponse et une explication.">Créer un QCM</button><button type="button" data-prompt="Analyse ma progression et mes résultats de révision dans Aurore Mémoire. Utilise les données disponibles, sinon explique ce qui manque.">Ma progression</button></div></div></div>
+<div class="aurore-ia-composer-zone"><form autocomplete="off" class="aurore-ia-composer" id="auroreIAForm"><div class="aurore-ia-input-shell"><textarea aria-label="Message à Aurora" id="auroreIAInput" maxlength="12000" placeholder="Écris à Aurora…" rows="1" required></textarea><button aria-label="Envoyer" class="aurore-ia-send" id="auroreIASend" type="submit"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 3 10.2 13.8"></path><path d="m21 3-6.2 18-4.6-7.2L3 9.2 21 3Z"></path></svg></button><button aria-label="Arrêter Aurora" class="aurore-ia-stop" hidden id="auroreIAStop" type="button">■</button></div><div class="aurore-ia-composer-bottom"><span>Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span><span>Aurora</span></div></form><p class="aurore-ia-disclaimer">Les réponses peuvent contenir des erreurs. Vérifie les informations importantes avant de les mémoriser.</p></div></section></div>
+</div></section>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js?v=20261023-canonical-lock-v2"></script>
-<script src="grok-assistant.js?v=20261026-v1"></script>
+<script src="grok-assistant.js?v=20261026-aurora-clone-v1"></script>
 <script src="app.js?v=20261026-sitewide-math-v3"></script>
 <script src="spa-router.js?v=20261023-login-gate-route-fix"></script>
 </body></html>
