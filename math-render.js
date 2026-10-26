@@ -24,9 +24,33 @@
   };
   function asElement(root) { if (!root) return null; return root.nodeType === 3 ? root.parentElement : root; }
   function isInsideMath(root) { return !!(root && root.closest && root.closest(".katex, .katex-display")); }
-  function bareMathPattern(text) { if (!text || /\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(text)) return false; return /\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|mathrm|mathbf|mathbb|mathcal|left|right|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|psi|omega|kappa|iota|zeta|xi|eta|nu|chi|Gamma|Delta|Sigma|Omega|times|cdot|pm|mp|leq|geq|neq|infty|partial|nabla|circ|to|rightarrow|leftarrow|overline|vec|hat|bar|text|begin|end)\b/.test(text) || /(?:^|\s)[A-Za-z][A-Za-z0-9]*\s*(?:\^\{[^}]+\}|_\{[^}]+\})/.test(text); }
-  function hasMathSource(root) { var text = root && (root.nodeType === 3 ? root.nodeValue : root.textContent); if (!text) return false; return /\\\[|\\\(|\$\$/.test(text) || /(^|[^$])\$[^$\n]+\$(?!\$)/.test(text) || bareMathPattern(text); }
-  function normalizeBareLatex(root) { var target = asElement(root); if (!target || !document.createTreeWalker || isInsideMath(target)) return; var walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT), nodes = [], node; while ((node = walker.nextNode())) { var parent = node.parentElement; if (!parent || /^(SCRIPT|STYLE|TEXTAREA|PRE|CODE|NOSCRIPT|OPTION|INPUT|BUTTON|SELECT)$/.test(parent.tagName) || parent.closest(".katex, .katex-display, [contenteditable='true'], [data-no-math-normalize]")) continue; if (bareMathPattern(node.nodeValue)) nodes.push(node); } nodes.forEach(function (textNode) { var raw = textNode.nodeValue || ""; if (/\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(raw)) return; var match = /\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|mathrm|mathbf|mathbb|mathcal|left|right|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|psi|omega|kappa|iota|zeta|xi|eta|nu|chi|Gamma|Delta|Sigma|Omega|times|cdot|pm|mp|leq|geq|neq|infty|partial|nabla|circ|to|rightarrow|leftarrow|overline|vec|hat|bar|text|begin|end)\b/.exec(raw); var start = match ? match.index : 0, prefix = raw.slice(0, start), formula = raw.slice(start).trim(); if (formula) textNode.nodeValue = prefix + "\\(" + formula + "\\)"; }); }
+  var bareCommandPattern = /\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|lim|sin|cos|tan|log|ln|exp|mathrm|mathbf|boldsymbol|mathit|mathsf|mathtt|mathfrak|mathbb|mathcal|operatorname|text|textbf|displaystyle|textstyle|left|right|lfloor|rfloor|lceil|rceil|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|psi|omega|kappa|iota|zeta|xi|eta|nu|chi|Gamma|Delta|Sigma|Omega|times|cdot|cdots|ldots|vdots|ddots|pm|mp|leq|geq|le|ge|neq|approx|equiv|propto|in|notin|infty|partial|nabla|circ|to|mapsto|longmapsto|Rightarrow|Leftarrow|Leftrightarrow|rightarrow|leftarrow|longrightarrow|longleftarrow|hookrightarrow|twoheadrightarrow|overline|underline|overbrace|underbrace|vec|hat|bar|begin|end|forall|exists|neg|land|lor|bmod|pmod|Re|Im|det|dim|ker|gcd|arg|top|bot)\b/;
+  function bareMathPattern(text) {
+    if (!text || /\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(text)) return false;
+    return bareCommandPattern.test(text) || /(?:^|\s)[A-Za-z][A-Za-z0-9]*\s*(?:\^\{[^}]+\}|_\{[^}]+\})/.test(text);
+  }
+  function hasMathSource(root) {
+    var text = root && (root.nodeType === 3 ? root.nodeValue : root.textContent);
+    if (!text) return false;
+    return /\\\[|\\\(|\$\$/.test(text) || /(^|[^$])\$[^$\n]+\$(?!\$)/.test(text) || bareMathPattern(text);
+  }
+  function normalizeBareLatex(root) {
+    var target = asElement(root);
+    if (!target || !document.createTreeWalker || isInsideMath(target)) return;
+    var walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT), nodes = [], node;
+    while ((node = walker.nextNode())) {
+      var parent = node.parentElement;
+      if (!parent || /^(SCRIPT|STYLE|TEXTAREA|PRE|CODE|NOSCRIPT|OPTION|INPUT|BUTTON|SELECT)$/.test(parent.tagName) || parent.closest(".katex, .katex-display, [contenteditable='true'], [data-no-math-normalize]")) continue;
+      if (bareMathPattern(node.nodeValue)) nodes.push(node);
+    }
+    nodes.forEach(function (textNode) {
+      var raw = textNode.nodeValue || "";
+      if (/\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(raw)) return;
+      var match = bareCommandPattern.exec(raw), start = match ? match.index : 0;
+      var prefix = raw.slice(0, start), formula = raw.slice(start).trim();
+      if (formula) textNode.nodeValue = prefix + "\\(" + formula + "\\)";
+    });
+  }
   function addRoot(collection, root) {
     var target = asElement(root);
     if (!target || isInsideMath(target) || !hasMathSource(target)) return;

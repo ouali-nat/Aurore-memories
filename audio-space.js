@@ -36,6 +36,8 @@ function getBlob(id) { return db("readonly", function (s) { return s.get(id); })
 function delBlob(id) { return db("readwrite", function (s) { return s.delete(id); }); }
 function readLocal() { try { var m = JSON.parse(localStorage.getItem(MANIFEST_KEY) || "{}"); return { records: Array.isArray(m.records) ? m.records : [], sequences: Array.isArray(m.sequences) ? m.sequences : [] }; } catch (_) { return { records: [], sequences: [] }; } }
 function writeLocal() { try { localStorage.setItem(MANIFEST_KEY, JSON.stringify({ version: 1, records: records, sequences: sequences, updatedAt: new Date().toISOString() })); } catch (_) {} }
+var AUDIO_PROGRESS_KEY = "aurore-audio-learning-progress-v1";
+function recordAudioLearning(record, type, parent) { if (!record || !record.id) return; try { var history=JSON.parse(localStorage.getItem(AUDIO_PROGRESS_KEY)||"[]"); if(!Array.isArray(history))history=[]; history.push({id:uid(),audioId:String(record.id),audioName:String(record.name||"Audio sans titre"),audioKind:String(record.kind||"audio"),parentType:type==="sequence"?"sequence":"audio",parentId:String(parent&&parent.id||record.id),parentName:String(parent&&(parent.name||parent.title)||record.name||"Audio"),timestamp:Date.now(),day:String(Math.floor(Date.now()/86400000))}); if(history.length>5000)history=history.slice(-5000);localStorage.setItem(AUDIO_PROGRESS_KEY,JSON.stringify(history));}catch(_){} }
 
 /* ---------- Cloud (facultatif, si Aurore ID est connecté) ---------- */
 async function api(path, opts) { if (!window.auroreAuth || !window.auroreAuth.api) throw Error("Connecte-toi avec Aurore ID pour synchroniser le cloud."); return window.auroreAuth.api(path, opts || {}); }
@@ -379,6 +381,7 @@ async function playTrack() {
     if (i < t.repeat - 1) await sleep(400);
   }
   if (my !== token) return;
+  recordAudioLearning(t.record, current.type, current.item);
   if (currentTrack < tracks.length - 1) { currentTrack++; playTrack(); }
   else if (current.type === "sequence" && sequenceRound < Math.max(1, Math.min(20, Number(current.sequenceRepeat) || 1))) { sequenceRound++; currentTrack = 0; playTrack(); }
   else { playing = false; paused = false; currentTrack = 0; sequenceRound = 1; statusLine = "terminé"; showPlayer(); }

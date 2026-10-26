@@ -2,7 +2,7 @@
   "use strict";
   if (document.querySelector('script[src*="math-render.js"]')) return;
   var script = document.createElement("script");
-  script.src = "math-render.js?v=20261024-global-math-normalizer-v1";
+  script.src = "math-render.js?v=20261026-sitewide-math-v3";
   script.defer = true;
   document.head.appendChild(script);
 })();
