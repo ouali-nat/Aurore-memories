@@ -31,6 +31,7 @@
 .audio-voice-options .field-label:first-child,.audio-voice-options select:first-of-type{grid-column:1/-1}
 .audio-voice-options input[type=range],.audio-voice-options .field-label:nth-of-type(4){grid-column:1/-1}
 .audio-sequence-builder,.audio-library-list{display:grid;gap:10px;margin:13px 0}
+.audio-library-subheading{grid-column:1/-1;margin:16px 0 2px;font-size:1rem;font-weight:750;color:var(--text,#f4f0fa)}.audio-library-subheading:first-child{margin-top:0}.audio-record-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:14px 16px;margin:0}.audio-record-card .audio-item-actions{flex:0 0 auto}
 .audio-empty{margin:0;padding:17px;border:1px dashed var(--soft-border);border-radius:20px;color:var(--muted);font-size:.8rem;line-height:1.6}
 .audio-page .audio-library-item,.audio-page .audio-sequence-track{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:14px 16px;margin:0}
 .audio-item-main{min-width:0;flex:1}

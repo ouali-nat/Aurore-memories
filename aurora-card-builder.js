@@ -48,6 +48,12 @@
     }
     return null;
   }
+  function formatScientificLatex(value) {
+    var text = safeText(value, 5000).replace(/^```(?:latex|tex)?\s*/i, "").replace(/\s*```$/, "").trim();
+    if (!text) return "";
+    if (text.indexOf("\\(") >= 0 || text.indexOf("\\[") >= 0 || text.indexOf("$$") >= 0 || /(^|[^$])\$[^$\n]+\$(?!\$)/.test(text)) return text;
+    return /\n|\\begin\{(?:aligned|cases|array|gathered|matrix)\}/.test(text) ? "\\[\n" + text + "\n\\]" : "\\(" + text + "\\)";
+  }
   function renderResults() {
     resultList.replaceChildren();
     pending.forEach(function (card, index) {
@@ -69,6 +75,7 @@
     $("#auroraCardResultsTitle").textContent = pendingTitle || "Cartes proposées";
     $("#auroraCardResultsCount").textContent = pending.length + (pending.length > 1 ? " cartes" : " carte");
     results.hidden = false;
+    if (window.renderAuroreMath) window.renderAuroreMath(results);
   }
   function currentRows() {
     return Array.prototype.slice.call(document.querySelectorAll("#flashcardDrafts [data-flashcard-row]"));
@@ -118,6 +125,7 @@
     }
     var title = $("#seriesTitle");
     if (pendingTitle && title && !title.value.trim()) title.value = pendingTitle.slice(0, 100);
+    if (window.renderAuroreMath) window.renderAuroreMath(list);
     if (typeof window.auroreToast === "function") window.auroreToast(index + " carte(s) ajoutée(s) à l’éditeur. Relis-les avant d’enregistrer.");
     message(index + " carte(s) transférée(s) dans l’éditeur. Rien n’a encore été enregistré.");
     results.hidden = true;
@@ -142,7 +150,7 @@
         "Retourne UNIQUEMENT un objet JSON valide, sans Markdown ni commentaire, de la forme {\"title\":\"titre court\",\"cards\":[{\"front\":\"question ou notion au recto\",\"back\":\"réponse exacte et pédagogique au verso\"}]} .",
         "Chaque carte doit être autonome, exacte, concise et utile pour le rappel actif. N'invente pas de faits. Si le cours est insuffisant ou ambigu, précise les limites dans les réponses plutôt que de fabriquer des informations.",
         "Nombre demandé : " + count + ". Maximum 20 cartes. Titre maximum 100 caractères.",
-        "Mode : " + (mode === "scientific" ? "scientifique. Utilise des formules LaTeX quand nécessaire, avec \( ... \) pour les formules en ligne et \\[ ... \\] pour les formules en affichage." : "simple. Privilégie du texte clair et n'utilise pas de LaTeX sauf demande explicite."),
+        "Mode : " + (mode === "scientific" ? "SCIENTIFIQUE STRICT : le recto et le verso doivent être du LaTeX pur valide, sans Markdown, sans bloc de code et sans prose hors LaTeX. Utilise \\(...\\) pour les expressions en ligne et \\[...\\] pour les formules affichées. Toute phrase explicative doit être encapsulée dans \\text{...} en mode mathématique ; utilise \\[\\begin{aligned} ... \\end{aligned}\\] pour les développements sur plusieurs lignes. N’utilise pas les dollars comme délimiteurs. Échappe correctement chaque antislash dans les chaînes JSON." : "simple. Privilégie du texte clair et n’utilise pas de LaTeX sauf demande explicite."),
         "Demande et contenu de l'utilisateur :\n" + request
       ].join("\n\n");
       message("Aurora prépare les rectos et les versos…");
@@ -155,7 +163,7 @@
       }
       var payload = extractPayload(response.data || {});
       if (!payload) throw new Error("La réponse d’Aurora ne contient pas de cartes structurées exploitables. Réessaie en précisant davantage le sujet.");
-      pending = payload.cards;
+      pending = mode === "scientific" ? payload.cards.map(function (card) { return { front: formatScientificLatex(card.front), back: formatScientificLatex(card.back) }; }) : payload.cards;
       pendingTitle = payload.title || "";
       renderResults();
       message("Proposition prête : relis l’aperçu, puis ajoute les cartes à l’éditeur.");
