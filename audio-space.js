@@ -19,7 +19,7 @@ var MALE = /(thomas|daniel|henri|paul|claude|remy|rémy|mathieu|antoine|guillaum
 var $ = function (id) { return document.getElementById(id); };
 var records = [], sequences = [], seqPick = [];
 var recorder = null, stream = null, chunks = [], startedAt = 0, tickTimer = 0, stopTimer = 0;
-var current = null, currentTrack = 0, playing = false, paused = false, playerAudio = null, playerUrl = null, token = 0, statusLine = "", activeSpeakEnd = null, sequenceRound = 1;
+var current = null, currentTrack = 0, playing = false, paused = false, playerAudio = null, playerUrl = null, token = 0, statusLine = "", activeSpeakEnd = null, sequenceRound = 1, progressState = { percent: 0, current: 0, total: 0 };
 
 function uid() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "au-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10); }
 function status(id, msg, error) { var el = $(id); if (el) { el.textContent = msg || ""; el.dataset.error = error ? "true" : "false"; } }
@@ -153,13 +153,13 @@ function splitText(text) {
   if (buf) out.push(buf);
   return out;
 }
-function speak(text, sel, lang, rate) {
+function speak(text, sel, lang, rate, onProgress) {
   return new Promise(function (resolve) {
     var synth = window.speechSynthesis;
     if (!synth || !window.SpeechSynthesisUtterance) { resolve({ ok: false, reason: "unsupported" }); return; }
     var parts = splitText(text); if (!parts.length) { resolve({ ok: false, reason: "empty" }); return; }
-    var cfg = resolveVoice(sel, lang), i = 0, done = false, wd = 0;
-    function end(r) { if (done) return; done = true; clearTimeout(wd); activeSpeakEnd = null; resolve(r); }
+    var cfg = resolveVoice(sel, lang), i = 0, done = false, wd = 0, progressTimer = 0, partStartedAt = 0, charOffset = 0, totalChars = parts.reduce(function (sum, part) { return sum + part.length; }, 0), estimatedSeconds = estimateDuration(text, rate) / 1000;
+    function end(r) { if (done) return; done = true; clearTimeout(wd); clearInterval(progressTimer); activeSpeakEnd = null; if(r&&r.ok&&typeof onProgress==="function")onProgress(1,estimatedSeconds); resolve(r); }
     activeSpeakEnd = function () { end({ ok: false, reason: "canceled" }); };
     try { synth.cancel(); } catch (_) {}
     function next() {
@@ -167,8 +167,10 @@ function speak(text, sel, lang, rate) {
       if (i >= parts.length) { end({ ok: true }); return; }
       var u = new SpeechSynthesisUtterance(parts[i++]), started = false;
       u.lang = lang || "fr-FR"; u.rate = Math.max(0.5, Math.min(4, (rate || 1) * cfg.rate)); u.pitch = cfg.pitch; if (cfg.voice) u.voice = cfg.voice;
-      u.onstart = function () { started = true; clearTimeout(wd); };
-      u.onend = function () { clearTimeout(wd); next(); };
+      var thisPart = parts[i - 1];
+      u.onstart = function () { started = true; clearTimeout(wd); partStartedAt=Date.now(); clearInterval(progressTimer); progressTimer=setInterval(function(){if(typeof onProgress==="function"&&totalChars>0&&partStartedAt){var elapsed=(Date.now()-partStartedAt)/1000,partEstimate=estimateDuration(thisPart,rate)/1000,fraction=Math.min(0.98,elapsed/Math.max(0.2,partEstimate));onProgress(Math.min(1,(charOffset+fraction*thisPart.length)/totalChars),estimatedSeconds);}},250); };
+      u.onboundary = function (event) { if (typeof onProgress === "function" && totalChars > 0 && Number.isFinite(event.charIndex)) onProgress(Math.min(1,(charOffset+event.charIndex)/totalChars),estimatedSeconds); };
+      u.onend = function () { clearTimeout(wd); clearInterval(progressTimer); charOffset += thisPart.length; if (typeof onProgress === "function" && totalChars > 0) onProgress(Math.min(1,charOffset/totalChars),estimatedSeconds); next(); };
       u.onerror = function (e) { clearTimeout(wd); var er = e && e.error; end({ ok: false, reason: (er === "canceled" || er === "interrupted") ? "canceled" : (er || "error") }); };
       wd = setTimeout(function () { if (!started && !done && !synth.speaking) end({ ok: false, reason: "silent" }); }, 8000);
       try { synth.speak(u); if (synth.resume) synth.resume(); } catch (e) { end({ ok: false, reason: "error" }); }
@@ -183,6 +185,16 @@ function speakMessage(r) {
   return m[r] || ("La voix n’a pas pu démarrer (" + r + ").");
 }
 function estimateDuration(text, rate) { return Math.ceil(String(text || "").trim().split(/\s+/).filter(Boolean).length / (2.5 * Math.max(0.6, rate || 1)) * 1000); }
+function clockSeconds(value) { var n=Math.max(0,Math.floor(Number(value)||0)); return Math.floor(n/60)+":"+String(n%60).padStart(2,"0"); }
+function updatePlaybackProgress(percent, currentSeconds, totalSeconds) {
+  var p=$("playerSeek"), elapsed=$("playerElapsed"), duration=$("playerDuration");
+  progressState.percent=Math.max(0,Math.min(100,Number(percent)||0));
+  progressState.current=Math.max(0,Number(currentSeconds)||0); progressState.total=Math.max(0,Number(totalSeconds)||0);
+  if(p){p.value=String(Math.round(progressState.percent*10));p.disabled=!(playerAudio&&Number.isFinite(playerAudio.duration)&&playerAudio.duration>0);}
+  if(elapsed)elapsed.textContent=clockSeconds(progressState.current);
+  if(duration)duration.textContent=progressState.total>0?clockSeconds(progressState.total):"--:--";
+  var note=$("playerProgressNote"); if(note)note.textContent=playerAudio?"Lecture audio : tu peux déplacer le curseur pour avancer ou revenir.":(current&&selectedTracks()[currentTrack]&&selectedTracks()[currentTrack].record.kind==="speech"?"Progression estimée pendant la lecture du texte.":"La progression s’affichera pendant la lecture.");
+}
 
 /* ---------- Enregistrement ---------- */
 function mimeType() { if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return ""; var t = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/mp4"]; for (var i = 0; i < t.length; i++) if (MediaRecorder.isTypeSupported(t[i])) return t[i]; return ""; }
@@ -313,7 +325,7 @@ function stopPlayback() {
 function selectedTracks() {
   if (!current) return [];
   if (current.type === "sequence") return current.item.tracks.map(function (t) { return { record: records.find(function (r) { return r.id === t.id; }), repeat: Math.max(1, Math.min(20, Number(t.repeat) || 1)), rate: Math.max(0.6, Math.min(4, Number(t.rate) || 1)) }; }).filter(function (t) { return t.record; });
-  return [{ record: current.item, repeat: Math.max(1, Math.min(20, Number(current.item.repeat) || 1)) }];
+  return [{ record: current.item, repeat: Math.max(1, Math.min(20, Number(current.item.repeat) || 1)), rate: Math.max(0.6, Math.min(4, Number(current.item.rate) || 1)) }];
 }
 function showPlayer() {
   var p = $("audioPlayerPanel"); if (!p || !current) return;
@@ -332,6 +344,8 @@ function showPlayer() {
     download.addEventListener("click", function () { downloadAudio(track.record); });
     box.append(download);
     $("playerRepeat").value = String(track.repeat || 1);
+    var trackDuration = Number(track.record.durationMs) > 0 ? Number(track.record.durationMs)/1000 : (track.record.kind === "speech" ? estimateDuration(track.record.text, (track.rate||1))/1000 : 0);
+    updatePlaybackProgress(progressState.percent, progressState.current, trackDuration || progressState.total);
   }
   $("playerRepeat").disabled = false;
   $("playerRate").value = String(track && track.rate || current.rate || 1);
@@ -352,7 +366,10 @@ async function playBlob(rec, rate, my) {
     return await new Promise(function (resolve) {
       playerUrl = URL.createObjectURL(blob);
       var a = new Audio(playerUrl); playerAudio = a; a.playbackRate = rate;
-      a.onended = function () { cleanupAudio(); resolve(true); };
+      a.ontimeupdate = function () { var total=Number.isFinite(a.duration)?a.duration:0; updatePlaybackProgress(total>0?a.currentTime/total*100:0,a.currentTime,total); };
+      a.onloadedmetadata = function () { updatePlaybackProgress(0,0,a.duration); };
+      a.onseeking = function () { var total=Number.isFinite(a.duration)?a.duration:0; updatePlaybackProgress(total>0?a.currentTime/total*100:0,a.currentTime,total); };
+      a.onended = function () { updatePlaybackProgress(100,Number.isFinite(a.duration)?a.duration:progressState.total,Number.isFinite(a.duration)?a.duration:progressState.total); cleanupAudio(); resolve(true); };
       a.onerror = function () { cleanupAudio(); status("audioAccountStatus", "Lecture impossible : format audio non pris en charge.", true); resolve(false); };
       var p = a.play(); if (p && p.catch) p.catch(function (e) { cleanupAudio(); status("audioAccountStatus", "Lecture bloquée : " + (e && e.message ? e.message : "autorisation requise") + ". Appuie de nouveau sur Lire.", true); resolve(false); });
     });
@@ -360,7 +377,7 @@ async function playBlob(rec, rate, my) {
 }
 async function playOnce(rec, rate, my) {
   if (rec.kind === "speech") {
-    var r = await speak(rec.text, rec.voice, rec.language, rate * (rec.rate || 1));
+    var r = await speak(rec.text, rec.voice, rec.language, rate, function (fraction, duration) { updatePlaybackProgress(fraction*100, fraction*duration, duration); });
     if (my !== token) return false;
     if (!r.ok && r.reason !== "canceled") status("audioAccountStatus", speakMessage(r.reason), true);
     return r.ok;
@@ -371,6 +388,7 @@ async function playTrack() {
   var tracks = selectedTracks(); if (!tracks.length) return;
   if (currentTrack >= tracks.length) currentTrack = 0;
   var t = tracks[currentTrack], my = ++token;
+  progressState = { percent: 0, current: 0, total: Number(t.record.durationMs)>0 ? Number(t.record.durationMs)/1000 : (t.record.kind === "speech" ? estimateDuration(t.record.text, (t.rate||1))/1000 : 0) };
   playing = true; paused = false; statusLine = ""; showPlayer();
   for (var i = 0; i < t.repeat; i++) {
     if (my !== token) return;
@@ -426,7 +444,7 @@ async function saveSequence() {
   if (!name) return status("sequenceStatus", "Donne un nom à la séquence.", true);
   if (!seqPick.length) return status("sequenceStatus", "Coche au moins un audio (l’ordre des coches = l’ordre de lecture).", true);
   var tracks = seqPick.map(function (id) { var inp = $("sequenceBuilder").querySelector('[data-repeat-for="' + id + '"]'); return { id: id, repeat: Math.max(1, Math.min(20, Number(inp && inp.value) || 1)) }; });
-  sequences.unshift({ id: uid(), name: name.slice(0, 100), tracks: tracks.map(function(t){return {id:t.id,repeat:t.repeat,rate:1};}), createdAt: new Date().toISOString(), public: false });
+  sequences.unshift({ id: uid(), name: name.slice(0, 100), tracks: tracks.map(function(t){var record=records.find(function(r){return r.id===t.id;});return {id:t.id,repeat:t.repeat,rate:Math.max(0.6,Math.min(4,Number(record&&record.rate)||1))};}), createdAt: new Date().toISOString(), public: false });
   seqPick = []; $("sequenceName").value = "";
   writeLocal(); render();
   status("sequenceStatus", "Séquence enregistrée.");
@@ -500,7 +518,8 @@ function bind() {
   on("playerNext", "click", function () { var n = selectedTracks().length; stopPlayback(); if (currentTrack < n - 1) currentTrack++; statusLine = ""; showPlayer(); playTrack(); });
   on("playerPrevious", "click", function () { stopPlayback(); currentTrack = Math.max(0, currentTrack - 1); statusLine = ""; showPlayer(); playTrack(); });
   on("playerClose", "click", function () { stopPlayback(); $("audioPlayerPanel").hidden = true; });
-  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) { t.rate=Math.max(0.6,Math.min(4,v)); writeLocal(); } } if (playerAudio) playerAudio.playbackRate = v; });
+  on("playerSeek", "input", function () { if(playerAudio&&Number.isFinite(playerAudio.duration)&&playerAudio.duration>0){playerAudio.currentTime=(Number(this.value)/1000)*playerAudio.duration;} });
+  on("playerRate", "input", function () { var v = Number(this.value); $("playerRateLabel").textContent = v.toFixed(1) + "×"; if (current) { current.rate = v; var t=current.item.tracks && current.item.tracks[currentTrack]; if(current.type==="sequence" && t) { t.rate=Math.max(0.6,Math.min(4,v)); writeLocal(); } else if(current.type==="audio") { current.item.rate=Math.max(0.6,Math.min(4,v)); writeLocal(); } } if (playerAudio) playerAudio.playbackRate = v; });
   on("playerRepeat", "change", function () { if (!current) return; var value=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.type==="sequence" && current.item.tracks[currentTrack]) current.item.tracks[currentTrack].repeat=value; else if(current.type==="audio") current.item.repeat=value; writeLocal(); showPlayer(); });
   on("playerSequenceRepeat", "change", function () { if (!current || current.type!=="sequence") return; current.sequenceRepeat=Math.max(1,Math.min(20,Number(this.value)||1)); if(current.item) current.item.sequenceRepeat=current.sequenceRepeat; sequenceRound=1; showPlayer(); writeLocal(); });
   on("sequenceSave", "click", saveSequence);

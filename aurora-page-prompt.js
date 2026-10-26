@@ -51,8 +51,10 @@
     var nameField = document.getElementById("audioTextName"), textField = document.getElementById("audioText"), saveButton = document.getElementById("audioTextSave");
     if (!nameField || !textField || !saveButton) throw new Error("Le créateur audio n’est pas prêt sur cette page.");
     nameField.value = title; textField.value = text; textField.dispatchEvent(new Event("input", { bubbles: true }));
-    say("Texte généré. Ajout de la piste à la bibliothèque audio…"); saveButton.click();
-    window.setTimeout(function () { var result = document.getElementById("audioTextStatus"); if (result && result.textContent) say(result.textContent, /impossible|erreur|échec/i.test(result.textContent)); else say("Le texte est rempli. Vérifie le statut du bouton « Ajouter » dans le créateur audio."); }, 900);
+    say("Le texte est prêt dans le champ. Relis-le, règle la voix et la vitesse, puis appuie toi-même sur « Ajouter » pour enregistrer la piste.");
+    textField.focus();
+    textField.scrollIntoView({ behavior: "smooth", block: "center" });
+    saveButton.removeAttribute("aria-busy");
   }
   function apply(action) {
     if (!action || typeof action !== "object") throw new Error("Aurora n’a pas renvoyé d’action de création. Vérifie la demande puis réessaie.");

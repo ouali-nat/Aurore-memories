@@ -184,3 +184,5 @@
 
 /* Mes audios : espace distinct, centré sur les séquences enregistrées. */
 body[data-page="audio-sequences"] .audio-create-grid, body[data-page="audio-sequences"] .audio-sequence-panel { display:none !important; }
+
+.audio-playback-progress{display:grid;gap:5px;margin:12px 0 8px;min-width:0}.audio-playback-times{display:flex;justify-content:space-between;gap:12px;color:var(--muted,var(--text));font-size:.72rem;font-variant-numeric:tabular-nums}.audio-playback-progress input[type=range]{display:block;width:100%;min-width:0;margin:0;accent-color:var(--accent,#e85d94);cursor:pointer}.audio-playback-progress input[type=range]:disabled{opacity:.65;cursor:default}.audio-playback-progress .form-help{margin:0;font-size:.68rem}
