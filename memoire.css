@@ -441,7 +441,13 @@
 .single-card-appearance .card-image-status{margin:0;color:var(--muted);font-size:.7rem}
 .single-card-appearance .card-mini-image-preview{min-height:96px;margin-top:2px;border-radius:10px}
 .single-card-appearance .card-mini-image-preview strong{font-size:.95rem}
-@media(max-width:520px){.single-card-appearance{padding:10px}.single-card-appearance .secondary-btn{width:100%;justify-content:center}}
+.card-bg-palette-disclosure{min-width:0;border:1px solid var(--border);border-radius:11px;background:var(--surface);overflow:hidden}
+.card-bg-palette-disclosure>summary{padding:10px 11px;color:var(--text);font-size:.76rem;font-weight:750;cursor:pointer;list-style-position:inside}
+.card-bg-palette{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;max-height:245px;overflow:auto;padding:9px;border-top:1px solid var(--border);overscroll-behavior:contain}
+.card-bg-palette .card-color-swatch{min-height:25px;border-radius:7px}
+.card-bg-palette .card-color-swatch.is-selected{outline:2px solid var(--accent-light);outline-offset:1px}
+@media(max-width:520px){.single-card-appearance{padding:10px}.single-card-appearance .secondary-btn{width:100%;justify-content:center}.card-bg-palette{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:8px}.card-bg-palette .card-color-swatch{min-height:28px}}
+
 
 
 /* Bibliothèque : trois actions rapides et une recherche claire. */
@@ -1263,8 +1269,11 @@ body[data-page="public-cards"] .secondary-btn {
 .public-audio-preview-track audio{width:100%;max-width:100%}
 
 /* Préserver les espaces et paragraphes saisis dans le texte des cartes. */
-.flashcard-face strong{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;line-height:1.65;padding-inline:2px}
-.flashcard-face{box-sizing:border-box;scrollbar-width:thin}
+.flashcard-face strong{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;line-height:1.55;padding-inline:2px}
+.flashcard-face strong .katex-display{box-sizing:border-box;max-width:100%;overflow-x:auto;overflow-y:hidden;white-space:normal;padding-bottom:3px}
+.flashcard-face strong .katex{max-width:100%}
+.flashcard-face{box-sizing:border-box;min-width:0;scrollbar-width:thin}
+
 
 
 /* Les aperçus KaTeX ne doivent pas hériter du clamp de deux lignes des descriptions. */
