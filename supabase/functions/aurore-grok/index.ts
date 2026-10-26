@@ -77,10 +77,28 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
     console.error("aurore-grok: réponse Cloudflare Workers AI non valide", aiResp.status, detail);
     return json({ error: "Cloudflare Workers AI n’a pas répondu correctement.", provider_status: aiResp.status, details: detail }, 502, origin);
   }
-  const reply = aiData?.result?.response ?? aiData?.result?.output_text ?? aiData?.result?.response?.content;
+  // Workers AI may return either its native {result:{response}} shape or an
+  // OpenAI-compatible chat.completion shape ({choices:[{message:{content}}]}).
+  const choice = Array.isArray(aiData?.choices) ? aiData.choices[0] : undefined;
+  const reply = aiData?.result?.response
+    ?? aiData?.result?.output_text
+    ?? aiData?.result?.response?.content
+    ?? choice?.message?.content
+    ?? choice?.text;
+  const finishReason = choice?.finish_reason ?? choice?.finishReason ?? aiData?.result?.finish_reason;
   if (typeof reply !== "string" || !reply.trim()) {
-    console.error("aurore-grok: réponse Cloudflare vide ou format inattendu", JSON.stringify(aiData?.result ?? {}).slice(0, 500));
-    return json({ error: "Le modèle Cloudflare a renvoyé une réponse vide ou dans un format inattendu." }, 502, origin);
+    console.error("aurore-grok: réponse Cloudflare vide ou format inattendu", JSON.stringify({
+      topLevelKeys: Object.keys(aiData || {}),
+      resultKeys: Object.keys(aiData?.result || {}),
+      choiceKeys: Object.keys(choice || {}),
+      model: aiData?.model ?? aiData?.result?.model,
+      finishReason
+    }).slice(0, 500));
+    return json({ error: "Cloudflare n’a renvoyé aucun texte exploitable.", details: "Aucune chaîne de réponse trouvée dans result.response ou choices[0].message.content." }, 502, origin);
   }
-  return json({ reply, model }, 200, origin);
+  if (finishReason === "length" || finishReason === "max_tokens") {
+    console.warn("aurore-grok: réponse probablement tronquée par la limite de tokens", finishReason, String(reply).length);
+    return json({ error: "La réponse générée est incomplète.", details: "Le modèle a atteint sa limite de sortie. Réduis le nombre de cartes ou de passages puis réessaie.", provider_finish_reason: finishReason }, 502, origin);
+  }
+  return json({ reply, model: aiData?.model ?? aiData?.result?.model ?? model }, 200, origin);
 });
