@@ -6,6 +6,12 @@ Ce dossier prépare une application Capacitor dont les pages HTML, CSS et JavaSc
 
 Le workflow `.github/workflows/android-apk.yml` se lance manuellement depuis GitHub Actions ou après une modification du socle Android. Il dépose un APK dans les artefacts du workflow ; il ne publie pas automatiquement de release.
 
+## Mises à jour web sans recompilation Android
+
+Après installation d'une version de l'APK intégrant le module Live Update, les changements compatibles du site (HTML, CSS, JavaScript et ressources web) sont empaquetés automatiquement sur chaque mise à jour de main, puis publiés comme archive web versionnée. Au démarrage, l'application vérifie ce catalogue, télécharge la nouvelle archive si elle est plus récente et l'active au prochain démarrage. Une connexion et un redémarrage de l'application après le téléchargement sont nécessaires. Si la connexion est absente, la version locale installée continue de fonctionner.
+
+Les changements du code natif Android, l'ajout ou la modification de plugins natifs, du manifeste Android, de la signature ou des permissions exigent toujours une nouvelle compilation de l'APK. Pour empêcher un bundle web d'exiger un plugin absent d'une ancienne application, toute rupture de compatibilité native doit aussi incrémenter nativeApiVersion dans android-app/live-update-compatibility.json. Le catalogue ne sert que le paquet du commit actuellement présent sur main : si sa publication n'est pas prête, l'application conserve son bundle installé au lieu de revenir à une release plus ancienne. Le module de mise à jour est auto-hébergé via les publications GitHub du dépôt : aucun service de mise à jour payant n'est requis.
+
 ## Fonctionnement hors ligne — état du socle
 
 - Les pages et ressources web suivies par Git sont copiées dans l'application.

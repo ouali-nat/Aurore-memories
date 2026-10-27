@@ -13,6 +13,11 @@
   var client = null;
 
   function loadScript(src) {
+    // The Android bundle injects the native bridge in every page before auth.js.
+    // Reusing it avoids registering the live-update plugin twice.
+    if (src === "vendor/capacitor-app-bridge.js" && window.auroreNativeApp) {
+      return Promise.resolve();
+    }
     return new Promise(function (resolve, reject) {
       var script = document.createElement("script");
       script.src = src;

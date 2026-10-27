@@ -1,0 +1,146 @@
+name: Publish Aurore Mémoire live web bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.html'
+      - '**/*.css'
+      - '**/*.js'
+      - '**/*.json'
+      - '**/*.webmanifest'
+      - '**/*.svg'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.webp'
+      - '**/*.gif'
+      - '**/*.ico'
+      - '**/*.woff'
+      - '**/*.woff2'
+      - '**/*.ttf'
+      - '**/*.otf'
+      - '**/*.pdf'
+      - '**/*.mp3'
+      - '**/*.mp4'
+      - '**/*.webm'
+      - '**/*.txt'
+      - '!android-app/**'
+      - '!supabase/**'
+      - '!worker/**'
+      - '!tests/**'
+      - '!.github/**'
+      - '!**/*.md'
+      - 'android-app/scripts/prepare-web.js'
+      - 'android-app/live-update-compatibility.json'
+      - '.github/workflows/android-web-live-update.yml'
+
+permissions:
+  contents: write
+
+# Serialize publication so an older build cannot overwrite the current manifest.
+concurrency:
+  group: aurore-memoire-live-update-main
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    name: Package and publish web assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install web build dependencies
+        working-directory: android-app
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the exact offline-compatible web bundle
+        working-directory: android-app
+        run: npm run build:web
+
+      - name: Create versioned bundle
+        id: bundle
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test -s android-app/www/index.html
+          test -s android-app/www/live-update-client.js
+          test -s android-app/www/vendor/capacitor-app-bridge.js
+          test -s android-app/www/aurore-build-info.json
+          (cd android-app/www && zip -qr "$GITHUB_WORKSPACE/Aurore-Memoire-Web.zip" .)
+          test -s Aurore-Memoire-Web.zip
+          COMMIT_DATE="$(git show -s --format=%cI "$SOURCE_SHA")"
+          NATIVE_API_VERSION="$(node -p "require('./android-app/live-update-compatibility.json').nativeApiVersion")"
+          echo "commit_date=$COMMIT_DATE" >> "$GITHUB_OUTPUT"
+          echo "native_api_version=$NATIVE_API_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bundle créé pour $SOURCE_SHA ($COMMIT_DATE)"
+          sha256sum Aurore-Memoire-Web.zip
+
+      - name: Publish versioned web bundle
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ota-${{ github.sha }}
+          target_commitish: ${{ github.sha }}
+          name: Aurore Mémoire web — ${{ github.sha }}
+          body: |
+            Automatic web bundle for Aurore Mémoire.
+
+            commitSha: ${{ github.sha }}
+            commitDate: ${{ steps.bundle.outputs.commit_date }}
+            nativeApiVersion: ${{ steps.bundle.outputs.native_api_version }}
+
+            HTML, CSS and JavaScript only. Increment nativeApiVersion when native compatibility changes.
+          files: Aurore-Memoire-Web.zip
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          fail_on_unmatched_files: true
+
+      - name: Publish small static manifest on the update branch
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          COMMIT_DATE: ${{ steps.bundle.outputs.commit_date }}
+          NATIVE_API_VERSION: ${{ steps.bundle.outputs.native_api_version }}
+          RELEASE_TAG: ota-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          export PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          node - <<'NODE' > "$RUNNER_TEMP/live-update-manifest.json"
+          const assert = require('node:assert/strict');
+          const manifest = {
+            schemaVersion: 1,
+            bundleId: process.env.RELEASE_TAG,
+            commitSha: process.env.SOURCE_SHA.toLowerCase(),
+            commitDate: process.env.COMMIT_DATE,
+            publishedAt: process.env.PUBLISHED_AT,
+            nativeApiVersion: Number(process.env.NATIVE_API_VERSION),
+            url: "https://github.com/" + process.env.GITHUB_REPOSITORY +
+              "/releases/download/" + process.env.RELEASE_TAG + "/Aurore-Memoire-Web.zip"
+          };
+          assert.match(manifest.bundleId, /^ota-[a-f0-9]{40}$/);
+          assert.equal(manifest.bundleId, "ota-" + manifest.commitSha);
+          assert.ok(Number.isSafeInteger(manifest.nativeApiVersion) && manifest.nativeApiVersion > 0);
+          assert.ok(Number.isFinite(Date.parse(manifest.publishedAt)));
+          assert.ok(Number.isFinite(Date.parse(manifest.commitDate)));
+          console.log(JSON.stringify(manifest, null, 2));
+          NODE
+          cat "$RUNNER_TEMP/live-update-manifest.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan manifest-publish
+          git rm -rf --ignore-unmatch .
+          cp "$RUNNER_TEMP/live-update-manifest.json" live-update-manifest.json
+          git add live-update-manifest.json
+          git commit -m "Publish current Aurore Mémoire live-update manifest"
+          git push --force origin HEAD:refs/heads/aurore-app-updates
