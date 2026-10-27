@@ -33,6 +33,7 @@ on:
       - '!.github/**'
       - '!**/*.md'
       - 'android-app/scripts/prepare-web.js'
+      - 'android-app/scripts/build-native-bridge.js'
       - 'android-app/live-update-compatibility.json'
       - '.github/workflows/android-web-live-update.yml'
 
@@ -85,6 +86,8 @@ jobs:
           echo "native_api_version=$NATIVE_API_VERSION" >> "$GITHUB_OUTPUT"
           echo "Bundle créé pour $SOURCE_SHA ($COMMIT_DATE)"
           sha256sum Aurore-Memoire-Web.zip
+          CHECKSUM="$(sha256sum Aurore-Memoire-Web.zip | cut -d ' ' -f1 | xxd -r -p | base64 -w0)"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
 
       - name: Publish versioned web bundle
         uses: softprops/action-gh-release@v2
@@ -112,6 +115,7 @@ jobs:
           SOURCE_SHA: ${{ github.sha }}
           COMMIT_DATE: ${{ steps.bundle.outputs.commit_date }}
           NATIVE_API_VERSION: ${{ steps.bundle.outputs.native_api_version }}
+          BUNDLE_CHECKSUM: ${{ steps.bundle.outputs.checksum }}
           RELEASE_TAG: ota-${{ github.sha }}
         run: |
           set -euo pipefail
@@ -125,12 +129,14 @@ jobs:
             commitDate: process.env.COMMIT_DATE,
             publishedAt: process.env.PUBLISHED_AT,
             nativeApiVersion: Number(process.env.NATIVE_API_VERSION),
+            checksum: process.env.BUNDLE_CHECKSUM,
             url: "https://github.com/" + process.env.GITHUB_REPOSITORY +
               "/releases/download/" + process.env.RELEASE_TAG + "/Aurore-Memoire-Web.zip"
           };
           assert.match(manifest.bundleId, /^ota-[a-f0-9]{40}$/);
           assert.equal(manifest.bundleId, "ota-" + manifest.commitSha);
           assert.ok(Number.isSafeInteger(manifest.nativeApiVersion) && manifest.nativeApiVersion > 0);
+          assert.match(manifest.checksum, /^[A-Za-z0-9+/]{43}=$/);
           assert.ok(Number.isFinite(Date.parse(manifest.publishedAt)));
           assert.ok(Number.isFinite(Date.parse(manifest.commitDate)));
           console.log(JSON.stringify(manifest, null, 2));

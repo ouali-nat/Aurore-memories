@@ -4,7 +4,7 @@
   "private": true,
   "description": "Application Android Aurore Mémoire compilée par GitHub Actions",
   "scripts": {
-    "build:web": "node scripts/prepare-web.js && node node_modules/esbuild/bin/esbuild scripts/native-app-bridge.js --bundle --platform=browser --format=iife --outfile=www/vendor/capacitor-app-bridge.js",
+    "build:web": "node scripts/prepare-web.js && node scripts/build-native-bridge.js",
     "android:sync": "cap sync android",
     "assets:generate": "capacitor-assets generate"
   },

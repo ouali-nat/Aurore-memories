@@ -47,7 +47,8 @@
     if (String(update.commitSha || "").toLowerCase() !== update.bundleId.slice(4).toLowerCase()) return false;
     if (!Number.isFinite(Date.parse(update.commitDate || "")) ||
         !Number.isFinite(Date.parse(update.publishedAt || "")) ||
-        !Number.isSafeInteger(update.nativeApiVersion) || update.nativeApiVersion < 1) return false;
+        !Number.isSafeInteger(update.nativeApiVersion) || update.nativeApiVersion < 1 ||
+        !/^[A-Za-z0-9+/]{43}=$/.test(update.checksum || "")) return false;
 
     try {
       var url = new URL(update.url);
@@ -122,7 +123,8 @@
 
         await liveUpdate.downloadBundle({
           url: latest.url,
-          bundleId: latest.bundleId
+          bundleId: latest.bundleId,
+          checksum: latest.checksum
         });
         await liveUpdate.setNextBundle({ bundleId: latest.bundleId });
         announceReadyBundle();
