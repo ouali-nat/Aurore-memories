@@ -24,23 +24,79 @@
     try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "Mémoire préparée : " + chunks.length + " paragraphes sont déjà remplis. Vérifie-les puis appuie sur « Enregistrer la mémoire »."); } catch (_) {}
     location.reload();
   }
+  function isBalancedMath(value) {
+    var text = String(value || ""), braces = 0, escaped = false, stack = [], matches = text.match(/\\\(|\\\)|\\\[|\\\]/g) || [];
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === "{" && !escaped) braces++;
+      if (ch === "}" && !escaped && --braces < 0) return false;
+      escaped = ch === "\\" && !escaped;
+      if (ch !== "\\") escaped = false;
+    }
+    if (braces !== 0) return false;
+    for (var j = 0; j < matches.length; j++) {
+      if (matches[j] === "\\(" || matches[j] === "\\[") stack.push(matches[j] === "\\(" ? "\\)" : "\\]");
+      else if (stack.pop() !== matches[j]) return false;
+    }
+    return stack.length === 0;
+  }
+  function normalizeQcmMath(value) {
+    var text = String(value == null ? "" : value).trim();
+    if (!text || /\\\(|\\\[|\$\$|(^|[^$])\$[^$\n]+\$(?!\$)/.test(text)) return text;
+    if (/\b(?:quelle|quel|calculer|déterminer|soit|résoudre|pourquoi|combien|choisir|parmi|fonction|dérivée|donner|estimer|vaut|est égale|est égal|la valeur|la dérivée|on considère)\b/i.test(text)) return text;
+    if (!/\\[a-zA-Z]+|[_^{}=<>≤≥∑∫√±×÷]/.test(text)) return text;
+    return /\n|\\begin\s*\{(?:aligned|cases|matrix|pmatrix|bmatrix|array|gathered)\}/.test(text) ? "\\[\n" + text + "\n\\]" : "\\(" + text + "\\)";
+  }
   function makeQcm(action, requestText) {
     var countMatch = String(requestText || "").match(/\b(\d{1,2})\s*(?:qcm\b|questions?\b|questionnaires?\b|quiz\b)/i), desiredCount = countMatch ? Math.min(30, Math.max(1, Number(countMatch[1]) || 1)) : 0;
     var generated = Array.isArray(action.questions) ? action.questions : [];
-    if (desiredCount && generated.length < desiredCount) throw new Error("Aurora n’a généré que " + generated.length + " questions sur les " + desiredCount + " demandées. Réessaie avec un sujet plus précis.");
+    if (desiredCount && generated.length !== desiredCount) throw new Error("Aurora a généré " + generated.length + " question(s) sur les " + desiredCount + " demandées. Aucune question n’a été transférée : réessaie avec moins de questions ou un cours plus précis.");
     var questions = generated.slice(0, desiredCount || 30);
     if (!questions.length) throw new Error("Aurora n’a généré aucune question de QCM.");
     var q = { id: uid("qcm"), title: String(action.title || "QCM Aurora").trim().slice(0, 120) || "QCM Aurora", questions: [], attempts: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    questions.forEach(function (item) {
-      var opts = (Array.isArray(item.options) ? item.options : []).map(function (option) { return String(typeof option === "string" ? option : option && (option.text || option.label) || "").trim(); }).filter(Boolean).slice(0, 6);
-      var correct = Number(item.correctIndex);
-      if (opts.length < 2 || !Number.isInteger(correct) || correct < 0 || correct >= opts.length) throw new Error("Une question générée ne contient pas de bonne réponse valide. Relance la création pour éviter un QCM incomplet.");
-      q.questions.push({ id: uid("question"), prompt: String(item.prompt || item.question || "").trim(), options: opts.map(function (text) { return { id: uid("option"), text: text }; }), correctOptionId: "", explanation: String(item.explanation || "").trim() });
-      q.questions[q.questions.length - 1].correctOptionId = q.questions[q.questions.length - 1].options[correct].id;
-      if (!q.questions[q.questions.length - 1].prompt) throw new Error("Une question générée est vide. Relance la création.");
+    function optionText(option) { return String(typeof option === "string" ? option : option && (option.text || option.label || option.value) || "").trim(); }
+    function correctIndex(item, options) {
+      var marked = [];
+      (Array.isArray(item.options) ? item.options : []).forEach(function (option, index) { if (option && typeof option === "object" && (option.isCorrect === true || option.correct === true || option.is_correct === true)) marked.push(index); });
+      if (marked.length === 1) return marked[0];
+      if (marked.length > 1) return -1;
+      var candidate = item.correctIndex;
+      if (candidate == null) candidate = item.answerIndex;
+      if (candidate == null) candidate = item.correctAnswerIndex;
+      if (candidate == null) candidate = item.correctOptionIndex;
+      if (candidate == null) candidate = item.correctAnswer;
+      if (candidate == null) candidate = item.correctOption;
+      if (candidate == null) candidate = item.answer;
+      if (candidate == null) candidate = item.correct;
+      if (typeof candidate === "string") {
+        var value = candidate.trim(), letter = value.match(/^(?:option|choix)?\s*([A-F])(?:\s*[).:\-]|\s*$)/i), number = value.match(/^(?:option|choix)?\s*([1-6])(?:\s*[).:\-]|\s*$)/i);
+        if (letter) return letter[1].toUpperCase().charCodeAt(0) - 65;
+        if (number) return Number(number[1]) - 1;
+        var normalizedAnswer = normalizeQcmMath(value).toLocaleLowerCase();
+        var exact = options.findIndex(function (option) { return option.toLocaleLowerCase() === normalizedAnswer || option.toLocaleLowerCase() === value.toLocaleLowerCase(); });
+        if (exact >= 0) return exact;
+      }
+      if (candidate === true && options.length === 2) return 0;
+      return Number(candidate);
+    }
+    questions.forEach(function (item, index) {
+      item = item && typeof item === "object" ? item : {};
+      var rawOptions = Array.isArray(item.options) ? item.options : [];
+      var opts = rawOptions.map(optionText).map(normalizeQcmMath);
+      var correct = correctIndex(item, opts);
+      var prompt = normalizeQcmMath(item.prompt || item.question || item.statement || "");
+      var explanation = normalizeQcmMath(item.explanation || item.rationale || item.justification || "");
+      if (!prompt) throw new Error("La question " + (index + 1) + " est vide. Aurora doit fournir un énoncé pour chaque question.");
+      if (opts.length < 2 || opts.length > 6 || opts.some(function (option) { return !option; })) throw new Error("La question " + (index + 1) + " doit avoir au moins deux choix non vides.");
+      if (new Set(opts.map(function (option) { return option.toLocaleLowerCase(); })).size !== opts.length) throw new Error("La question " + (index + 1) + " contient des choix répétés. Relance la génération pour éviter un QCM ambigu.");
+      if (!Number.isInteger(correct) || correct < 0 || correct >= opts.length) throw new Error("La question " + (index + 1) + " n’a pas de bonne réponse clairement identifiable. Rien n’a été transféré : relance la génération.");
+      if (!explanation) throw new Error("Il manque l’explication de la question " + (index + 1) + ". Demande à Aurora de générer des explications pour toutes les réponses.");
+      if (![prompt].concat(opts, [explanation]).every(isBalancedMath)) throw new Error("Une formule LaTeX de la question " + (index + 1) + " a des accolades ou des délimiteurs incomplets. Aucune donnée n’a été transférée ; relance la génération.");
+      var builtOptions = opts.map(function (text) { return { id: uid("option"), text: text }; });
+      q.questions.push({ id: uid("question"), prompt: prompt, options: builtOptions, correctOptionId: builtOptions[correct].id, explanation: explanation });
     });
     localStorage.setItem("aurore-qcm-editor-draft-v1", JSON.stringify({ deckId: null, q: q, at: 0, updatedAt: Date.now() }));
-    try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "QCM préparé : " + q.questions.length + " questions, réponses et explications sont remplies. Vérifie-les puis enregistre le QCM."); } catch (_) {}
+    try { sessionStorage.setItem("aurore-aurora-created-notice-v1", "QCM préparé : " + q.questions.length + " questions avec une bonne réponse et une explication chacune. Vérifie-les puis enregistre le QCM."); } catch (_) {}
     window.location.href = location.pathname + "?fromAurora=" + encodeURIComponent(q.id) + location.hash;
   }
   function makeAudio(action) {
@@ -74,9 +130,9 @@
       var instruction = kind === "memory"
         ? "Tu dois créer une mémoire pour l’éditeur Aurore Mémoire. Génère un titre et entre 4 et 16 passages courts, exacts et ordonnés. Retourne uniquement un JSON {\"reply\":\"Mémoire prête\",\"action\":{\"type\":\"create_memory\",\"title\":\"...\",\"chunks\":[\"passage 1\",\"passage 2\"]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
         : kind === "qcm"
-          ? "Tu dois remplir le créateur de QCM Aurore Mémoire. Génère EXACTEMENT " + requestedQcmCount + " questions sur le sujet demandé, chacune avec quatre choix distincts et plausibles, une seule bonne réponse et une explication utile. correctIndex est un entier commençant à zéro. Le tableau questions doit contenir exactement " + requestedQcmCount + " éléments, ni plus ni moins. Retourne uniquement un JSON {\"reply\":\"QCM prêt à vérifier\",\"action\":{\"type\":\"create_qcm\",\"title\":\"...\",\"questions\":[{\"prompt\":\"...\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"...\"}]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
+          ? "Tu dois remplir le créateur de QCM Aurore Mémoire. Génère EXACTEMENT " + requestedQcmCount + " questions sur le sujet demandé, chacune avec quatre choix distincts, non vides, sans doublons, une seule bonne réponse et une explication pédagogique non vide. Le champ correctIndex est OBLIGATOIRE, entier de 0 à 3, indexé à partir de zéro ; il doit désigner précisément l’unique bonne option. Vérifie mentalement chaque réponse avant de produire le JSON. N’utilise jamais une réponse absente, plusieurs réponses correctes, un index hors limites ou un champ réponse placé seulement dans reply. Pour les mathématiques, écris chaque expression dans \\( ... \\) et chaque formule sur plusieurs lignes dans \\[ ... \\]. Utilise uniquement une syntaxe LaTeX compatible KaTeX, équilibre toutes les accolades et les délimiteurs, n’écris jamais de LaTeX brut sans délimiteur, n’utilise pas de blocs Markdown ou de dollars. Les commandes LaTeX dans les chaînes JSON doivent avoir leurs antislashs échappés (\\). Ne mets pas tout un énoncé en mode math si une phrase française le précède : délimite seulement la formule. Retourne exactement " + requestedQcmCount + " questions, ni plus ni moins. Retourne uniquement un JSON {\"reply\":\"QCM prêt à vérifier\",\"action\":{\"type\":\"create_qcm\",\"title\":\"...\",\"questions\":[{\"prompt\":\"...\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"...\"}]}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n"
           : "Tu dois remplir le créateur audio Aurore Mémoire. Prépare un script oral naturel en français, fidèle au cours, sans tableaux, sous 600 mots. Retourne uniquement un JSON {\"reply\":\"Audio prêt\",\"action\":{\"type\":\"create_audio\",\"title\":\"...\",\"text\":\"...\",\"language\":\"fr-FR\",\"rate\":1}}. Ne demande aucune confirmation et ne renvoie pas une discussion. Demande/cours :\n";
-      var response = await auth.client.functions.invoke("aurore-grok", { body: { messages: [{ role: "user", content: instruction + value }], appContext: { task: "direct-create", kind: kind } } });
+      var response = await auth.client.functions.invoke("aurore-grok", { body: { messages: [{ role: "user", content: instruction + value }], appContext: { task: "direct-create", kind: kind, requestedQcmCount: kind === "qcm" ? requestedQcmCount : undefined, mathQcm: kind === "qcm" ? /\b(math[eé]matiques?|maths?|alg[eè]bre|d[eé]riv[eé]es?|int[eé]grales?|[eé]quations?|fonctions?|g[eé]om[eé]trie|trigonom[eé]trie|limites?|probabilit[eé]s?|matrices?|vecteurs?|calcul diff[eé]rentiel)\b/i.test(value) : undefined } } });
       if (response.error) {
         var detail = response.data && (response.data.details || response.data.error);
         try { var context = response.error.context; if (!detail && context && typeof context.clone === "function") { var errorBody = await context.clone().json(); detail = errorBody && (errorBody.details || errorBody.error); } } catch (_) {}
