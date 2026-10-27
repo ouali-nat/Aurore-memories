@@ -40,7 +40,7 @@
   var input = $("#bulkCardImportText"), status = $("#bulkCardImportStatus");
   var preview = $("#bulkCardImportPreview"), previewList = $("#bulkCardImportList");
   var analyze = $("#bulkCardAnalyze"), transfer = $("#bulkCardTransfer"), cancel = $("#bulkCardCancel");
-  var pending = [], pendingTitle = "";
+  var pending = [], pendingTitle = "", pendingScience = false;
   function message(text, error) {
     status.textContent = text || "";
     status.classList.toggle("is-error", !!error);
@@ -50,7 +50,6 @@
       .replace(/^\s*\x60{1,3}(?:latex|tex|text)?\s*/i, "")
       .replace(/\s*\x60{1,3}\s*$/, "")
       .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/^\s*[-–—]\s*/, "")
       .trim();
   }
   function extractTitle(text) {
@@ -69,6 +68,10 @@
       return /\r?\n/.test(text) ? "\\[\n" + text + "\n\\]" : "\\(" + text + "\\)";
     }
     return text;
+  }
+  function hasMath(value) {
+    var text = String(value || "");
+    return text.indexOf("\\") >= 0 || text.indexOf("$") >= 0;
   }
   function parseText(raw) {
     var text = String(raw || "").replace(/\r\n?/g, "\n").trim();
@@ -90,7 +93,7 @@
       if (front && back) cards.push({ front: normalizeFront(front), back: back });
       else incomplete.push({ number: i + 1, missing: !front && !back ? "recto et verso" : (!front ? "recto" : "verso") });
     }
-    return { cards: cards.slice(0, 100), incomplete: incomplete, title: extractTitle(text), found: matches.length };
+    return { cards: cards.slice(0, 100), incomplete: incomplete, title: extractTitle(text), found: matches.length, scientific: cards.some(function (card) { return hasMath(card.front) || hasMath(card.back); }) };
   }
   function renderPreview() {
     previewList.replaceChildren();
@@ -117,6 +120,7 @@
     var result = parseText(input.value);
     pending = result.cards;
     pendingTitle = result.title;
+    pendingScience = result.scientific;
     renderPreview();
     transfer.disabled = false;
     if (!result.found) {
@@ -139,6 +143,13 @@
   });
   transfer.addEventListener("click", function () {
     if (!pending.length || transfer.disabled) return;
+    if (pendingScience) {
+      var scienceOption = document.querySelector('input[name="cardMode"][value="scientific"]');
+      if (scienceOption && !scienceOption.checked) {
+        scienceOption.checked = true;
+        scienceOption.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
     var rows = Array.prototype.slice.call($("#flashcardDrafts").querySelectorAll("[data-flashcard-row]"));
     var index = 0;
     if (pendingTitle && !title.value.trim()) title.value = pendingTitle;
@@ -160,15 +171,17 @@
       index++;
     });
     if (window.renderAuroreMath) window.renderAuroreMath($("#flashcardDrafts"));
-    message(index + " carte(s) transférée(s) dans l’éditeur. Rien n’a encore été enregistré.");
+    message(index + " carte(s) transférée(s) dans l’éditeur. " + (pendingScience ? "Le mode scientifique a été activé. " : "") + "Rien n’a encore été enregistré.");
     preview.hidden = true;
     pending = [];
+    pendingScience = false;
     input.value = "";
     var first = $("#flashcardDrafts .card-question");
     if (first) first.focus();
   });
   cancel.addEventListener("click", function () {
     pending = [];
+    pendingScience = false;
     preview.hidden = true;
     previewList.replaceChildren();
     message("Aperçu effacé. Les cartes déjà présentes dans l’éditeur n’ont pas été modifiées.");
