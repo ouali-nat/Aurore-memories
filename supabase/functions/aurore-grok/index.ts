@@ -52,8 +52,13 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
   const latestUserMessage = [...messages].reverse().find((message: any) => message.role === "user")?.content || "";
   const directQcm = appTask.task === "direct-create" && appTask.kind === "qcm";
   const qcmCountMatch = latestUserMessage.match(/\b(\d{1,2})\s*(?:qcm\b|questions?\b|questionnaires?\b|quiz\b)/i);
-  const requestedQcmCount = qcmCountMatch ? Math.max(1, Math.min(30, Number.parseInt(qcmCountMatch[1], 10) || 10)) : 10;
-  if (directQcm) system.content += `\n\nMODE CRÉATION DE QCM DANS L'ÉDITEUR : la demande est une création de QCM, pas une conversation. Tu DOIS renvoyer action.type="create_qcm" et action.questions sous forme d'un tableau contenant EXACTEMENT ${requestedQcmCount} questions. Chaque question doit contenir prompt, 4 options distinctes et plausibles, correctIndex entier entre 0 et 3 et explanation. N'écris pas les questions uniquement dans reply, ne renvoie jamais action=null et ne réduis pas le nombre demandé. Retourne uniquement l'enveloppe JSON imposée, sans balises Markdown.`;
+  const requestedQcmCount = typeof appTask.requestedQcmCount === "number"
+    ? Math.max(1, Math.min(30, Math.trunc(appTask.requestedQcmCount) || 10))
+    : qcmCountMatch ? Math.max(1, Math.min(30, Number.parseInt(qcmCountMatch[1], 10) || 10)) : 10;
+  const mathQcm = typeof appTask.mathQcm === "boolean" ? appTask.mathQcm
+    : /\b(math[eé]matiques?|maths?|alg[eè]bre|d[eé]riv[eé]es?|int[eé]grales?|[eé]quations?|fonctions?|g[eé]om[eé]trie|trigonom[eé]trie|limites?|probabilit[eé]s?|matrices?|vecteurs?|calcul diff[eé]rentiel)\b/i.test(latestUserMessage);
+  if (directQcm) system.content += `\n\nMODE CRÉATION DE QCM DANS L'ÉDITEUR : la demande est une création de QCM, pas une conversation. Tu DOIS renvoyer action.type="create_qcm" et action.questions sous forme d'un tableau contenant EXACTEMENT ${requestedQcmCount} questions. Chaque question doit contenir un énoncé non vide, exactement quatre options distinctes et non vides, une seule bonne réponse encodée par correctIndex entier entre 0 et 3, et une explication non vide. Vérifie que correctIndex pointe réellement vers la réponse exacte ; ne déduis jamais l'index au hasard. N'écris pas les questions uniquement dans reply, ne renvoie jamais action=null, ne laisse aucune réponse vide et ne réduis pas le nombre demandé. Évite les choix absurdes ou dupliqués. Retourne uniquement l'enveloppe JSON imposée, sans balises Markdown.`;
+  if (directQcm && mathQcm) system.content += `\n\nMODE QCM MATHÉMATIQUES : chaque formule doit être syntaxiquement valide pour KaTeX, avec accolades et délimiteurs équilibrés. Encadre les formules en ligne par \\( ... \\) et les formules développées par \\[ ... \\]. N'écris aucune commande LaTeX brute sans délimiteur, aucun dollar, aucun bloc de code, aucune commande non standard. Dans une phrase française, délimite seulement l'expression mathématique au lieu de mettre toute la phrase en mode math. Utilise par exemple \\(f'(x)=2x\\), \\(\\frac{a}{b}\\) et \\[\\begin{aligned}x+2&=5\\\\x&=3\\end{aligned}\\]. Contrôle chaque formule dans les énoncés, les quatre choix, la bonne réponse et l'explication ; tous les choix doivent rester lisibles même si une formule n'est pas nécessaire.`;
   const cardTask = /\b(cartes?|flashcards?)\b/i.test(latestUserMessage)
     || generationPurpose === "draft_flashcards_in_existing_editor"
     || (appTask.task === "direct-create" && /^(?:cards|flashcards|cartes)$/i.test(String(appTask.kind || "")));
@@ -64,7 +69,9 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
   const scientificCards = (body.appContext as Record<string, unknown> | undefined)?.cardMode === "scientific";
   // Bound generated output to the requested workload so long card sets are less likely to hit the 60s edge limit.
   const cardTokenBudget = Math.min(3600, Math.max(1800, 500 + requestedCardCount * (scientificCards ? 155 : 135)));
+  const qcmTokenBudget = Math.min(8192, 900 + requestedQcmCount * (mathQcm ? 650 : 520));
   const outputTokenBudget = cardTask ? cardTokenBudget
+    : directQcm ? qcmTokenBudget
     : /\b(qcm|questionnaire|quiz)\b/i.test(latestUserMessage) ? 5200
     : /\b(mémoires?|mémorisation|passages)\b/i.test(latestUserMessage) ? 3400
     : /\b(audio|voix|lecture vocale)\b/i.test(latestUserMessage) ? 1800 : 2600;
@@ -123,7 +130,7 @@ N’inclus jamais d’identifiant personnel dans ta réponse. Utilisateur authen
   }
   if (finishReason === "length" || finishReason === "max_tokens") {
     console.warn("aurore-grok: réponse probablement tronquée par la limite de tokens", finishReason, String(reply).length);
-    return json({ error: "La réponse générée est incomplète.", details: "Le modèle a atteint sa limite de sortie. Réduis le nombre de cartes ou de passages puis réessaie.", provider_finish_reason: finishReason }, 502, origin);
+    return json({ error: "La réponse générée est incomplète.", details: "Le modèle a atteint sa limite de sortie. Réduis le nombre de questions ou de cartes puis réessaie.", provider_finish_reason: finishReason }, 502, origin);
   }
   return json({ reply, model: aiData?.model ?? aiData?.result?.model ?? model }, 200, origin);
 });
