@@ -40,7 +40,7 @@
   var input = $("#bulkCardImportText"), status = $("#bulkCardImportStatus");
   var preview = $("#bulkCardImportPreview"), previewList = $("#bulkCardImportList");
   var analyze = $("#bulkCardAnalyze"), transfer = $("#bulkCardTransfer"), cancel = $("#bulkCardCancel");
-  var pending = [], pendingTitle = [];
+  var pending = [], pendingTitle = "";
   function message(text, error) {
     status.textContent = text || "";
     status.classList.toggle("is-error", !!error);
