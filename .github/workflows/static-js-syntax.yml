@@ -26,5 +26,6 @@ jobs:
           node --check memoire.js
           node --check learning-sharing.js
           node --check public-card-flip.js
+          node --check bulk-card-import.js
       - name: Validate web app manifest
         run: node -e "JSON.parse(require('node:fs').readFileSync('site.webmanifest', 'utf8'))"
