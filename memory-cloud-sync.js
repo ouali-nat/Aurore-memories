@@ -6,6 +6,10 @@
   var DATA_KEY = "aurore-memory-cards-v1";
   var BASE_ETAG_KEY = "aurore-memory-cloud-etag-v1";
   var CLOUD_KEY = "sauvegarde-memorisations.json";
+  // Compatibility import for cards previously written by the Aurore connector
+  // to its legacy key. The source is retained; unique content is merged into
+  // the active app backup with an ETag condition before becoming visible here.
+  var CONNECTOR_BACKUP_KEY = "sauvegarde-automatique/memoires-et-cartes.json";
   var LIMIT = 10 * 1024 * 1024;
   var active = false;
   var busy = false;
@@ -140,6 +144,19 @@
     }
     return raw;
   }
+  async function readConnectorBackup() {
+    try {
+      var response = await api("/api/storage?key=" + encodeURIComponent(CONNECTOR_BACKUP_KEY), { method: "GET" });
+      var raw = await response.json();
+      if (raw && raw.schema === "aurore-memory-backup-v1" && raw.payload && typeof raw.payload === "object") return raw.payload;
+      if (raw && raw.app === "aurore-memory" && raw.data && typeof raw.data === "object") return raw.data;
+      if (raw && Array.isArray(raw.cards)) return raw;
+      throw new Error("La sauvegarde du connecteur existe, mais son format est inattendu. Elle n’a pas été modifiée.");
+    } catch (error) {
+      if (error && error.status === 404) return null;
+      throw error;
+    }
+  }
   async function putObject(key, data, condition) {
     var body = typeof data === "string" ? data : JSON.stringify(data);
     if (byteSize(body) > LIMIT) throw new Error("La sauvegarde dépasse la limite de 10 Mo du Worker.");
@@ -203,7 +220,25 @@
     try {
       var local = readLocal();
       var remoteMeta = await listCloud();
+      var connectorBackup = await readConnectorBackup();
       if (!remoteMeta) {
+        if (hasData(connectorBackup)) {
+          var firstImport = mergeData(local, connectorBackup);
+          status("Récupération des cartes sauvegardées par le connecteur…", "info");
+          try {
+            var importedFirst = await writeMainVerified(firstImport, { type: "none" });
+            savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(firstImport));
+            saveBase(importedFirst.etag);
+            conflict = null;
+            status("Les cartes du connecteur ont été réunies à votre bibliothèque. Rechargement…", "ok");
+            window.setTimeout(function () { window.location.reload(); }, 300);
+          } catch (error) {
+            if (error.status === 412) {
+              window.setTimeout(runSync, 350);
+            } else throw error;
+          }
+          return;
+        }
         if (!hasData(local)) {
           status("Connexion active. Vos prochaines modifications seront enregistrées automatiquement.", "info");
           return;
@@ -226,6 +261,18 @@
       var base = readBase();
       var remote = await readCloud();
       var remoteEtag = String(remoteMeta.etag || "").replace(/^"|"$/g, "");
+      // Import cards saved by the connector into the app's actual primary backup.
+      // The legacy source remains untouched, and the primary write is conditional.
+      if (hasData(connectorBackup)) {
+        var combinedRemote = mergeData(remote.data, connectorBackup);
+        if (!sameData(combinedRemote, remote.data)) {
+          status("Importation des cartes du connecteur dans la bibliothèque principale…", "info");
+          var imported = await writeMainVerified(combinedRemote, { type: "match", etag: remoteEtag });
+          remoteMeta = await listCloud();
+          remote = await readCloud();
+          remoteEtag = String(remoteMeta && remoteMeta.etag || imported.etag || "").replace(/^"|"$/g, "");
+        }
+      }
 
       // Nouvel appareil / nouveau navigateur : si aucune donnée locale n'existe,
       // restaurer automatiquement la sauvegarde du compte connecté. Ne jamais
@@ -336,16 +383,13 @@
           Object.prototype.hasOwnProperty.call(localQcmById, String(remoteQcm.id)) &&
           stable(localQcmById[String(remoteQcm.id)]) !== stable(remoteQcm)) return false;
     }
-    ["deckSettings", "deckStyles"].forEach(function (field) {
+    var settingsConflict = ["deckSettings", "deckStyles"].some(function (field) {
       var left = local[field] || {}, right = remote[field] || {};
-      if (Object.keys(left).some(function (key) {
+      return Object.keys(left).some(function (key) {
         return Object.prototype.hasOwnProperty.call(right, key) && stable(left[key]) !== stable(right[key]);
-      })) localCards._auroreAutoMergeConflict = true;
+      });
     });
-    if (localCards._auroreAutoMergeConflict) {
-      delete localCards._auroreAutoMergeConflict;
-      return false;
-    }
+    if (settingsConflict) return false;
     var mergedFields = {
       cards: true, qcms: true, log: true, performance: true, cardPerformance: true,
       deckSettings: true, deckStyles: true
