@@ -275,6 +275,17 @@
         return;
       }
 
+      if (canAutoMergeAdditions(local, remote.data)) {
+        status("De nouvelles cartes ou mémorisations sont disponibles dans votre espace privé. Fusion sécurisée…", "info");
+        var mergedAddition = mergeData(local, remote.data);
+        var additionWrite = await writeMainVerified(mergedAddition, { type: "match", etag: remoteEtag });
+        savedSetItem.call(localStorage, DATA_KEY, JSON.stringify(mergedAddition));
+        saveBase(additionWrite.etag);
+        conflict = null;
+        status("Les nouvelles cartes ont été ajoutées à cet appareil. Rechargement de la bibliothèque…", "ok");
+        window.setTimeout(function () { window.location.reload(); }, 300);
+        return;
+      }
       await showConflict(local, remote.data, remoteEtag);
     } catch (error) {
       if (error.status === 401) status("La session a expiré. Reconnecte-toi avec Aurore ID ; les données locales sont intactes.", "warn");
@@ -297,6 +308,57 @@
     conflict = { local: local, remote: remote, etag: etag };
     status("Une autre version de vos contenus existe en ligne. Choisissez comment réunir les deux versions ; rien ne sera remplacé sans votre accord.", "warn", true);
   }
+  function canAutoMergeAdditions(localValue, remoteValue) {
+    var local = normalizeData(localValue) || {};
+    var remote = normalizeData(remoteValue) || {};
+    var localCards = Array.isArray(local.cards) ? local.cards : [];
+    var remoteCards = Array.isArray(remote.cards) ? remote.cards : [];
+    var localById = Object.create(null);
+    localCards.forEach(function (card) { localById[String(card && card.id)] = card; });
+    var progressFields = { reps: true, lapses: true, interval: true, ease: true, due: true, updatedAt: true };
+    function sameCardExceptProgress(a, b) {
+      var left = Object.assign({}, a), right = Object.assign({}, b);
+      Object.keys(progressFields).forEach(function (key) { delete left[key]; delete right[key]; });
+      return stable(left) === stable(right);
+    }
+    for (var i = 0; i < remoteCards.length; i += 1) {
+      var card = remoteCards[i], id = String(card && card.id);
+      if (Object.prototype.hasOwnProperty.call(localById, id) &&
+          !sameCardExceptProgress(localById[id], card)) return false;
+    }
+    var localQcms = Array.isArray(local.qcms) ? local.qcms : [];
+    var remoteQcms = Array.isArray(remote.qcms) ? remote.qcms : [];
+    var localQcmById = Object.create(null);
+    localQcms.forEach(function (qcm) { if (qcm && qcm.id != null) localQcmById[String(qcm.id)] = qcm; });
+    for (var q = 0; q < remoteQcms.length; q += 1) {
+      var remoteQcm = remoteQcms[q];
+      if (remoteQcm && remoteQcm.id != null &&
+          Object.prototype.hasOwnProperty.call(localQcmById, String(remoteQcm.id)) &&
+          stable(localQcmById[String(remoteQcm.id)]) !== stable(remoteQcm)) return false;
+    }
+    ["deckSettings", "deckStyles"].forEach(function (field) {
+      var left = local[field] || {}, right = remote[field] || {};
+      if (Object.keys(left).some(function (key) {
+        return Object.prototype.hasOwnProperty.call(right, key) && stable(left[key]) !== stable(right[key]);
+      })) localCards._auroreAutoMergeConflict = true;
+    });
+    if (localCards._auroreAutoMergeConflict) {
+      delete localCards._auroreAutoMergeConflict;
+      return false;
+    }
+    var mergedFields = {
+      cards: true, qcms: true, log: true, performance: true, cardPerformance: true,
+      deckSettings: true, deckStyles: true
+    };
+    var allKeys = Object.keys(local).concat(Object.keys(remote));
+    return allKeys.every(function (key) {
+      return mergedFields[key] ||
+        !Object.prototype.hasOwnProperty.call(local, key) ||
+        !Object.prototype.hasOwnProperty.call(remote, key) ||
+        stable(local[key]) === stable(remote[key]);
+    });
+  }
+
   function newCardId() { return Date.now() + Math.random(); }
   function mergeData(localValue, remoteValue) {
     var local = normalizeData(localValue) || {};
@@ -357,6 +419,27 @@
     });
     merged.deckSettings = Object.assign({}, remote.deckSettings || {}, local.deckSettings || {});
     merged.deckStyles = Object.assign({}, remote.deckStyles || {}, local.deckStyles || {});
+    var localQcms = Array.isArray(local.qcms) ? local.qcms : [];
+    var remoteQcms = Array.isArray(remote.qcms) ? remote.qcms : [];
+    var qcms = remoteQcms.map(function (qcm) { return Object.assign({}, qcm); });
+    var qcmPositions = Object.create(null);
+    qcms.forEach(function (qcm, index) {
+      if (qcm && qcm.id != null) qcmPositions[String(qcm.id)] = index;
+    });
+    localQcms.forEach(function (qcm) {
+      if (!qcm || qcm.id == null || !Object.prototype.hasOwnProperty.call(qcmPositions, String(qcm.id))) {
+        qcms.push(Object.assign({}, qcm));
+        if (qcm && qcm.id != null) qcmPositions[String(qcm.id)] = qcms.length - 1;
+        return;
+      }
+      var position = qcmPositions[String(qcm.id)];
+      if (stable(qcms[position]) !== stable(qcm)) {
+        var copy = Object.assign({}, qcm, { id: newCardId(), syncConflictCopy: true });
+        qcms.push(copy);
+        qcmPositions[String(copy.id)] = qcms.length - 1;
+      }
+    });
+    merged.qcms = qcms;
     return merged;
   }
   async function resolveConflict(action) {
