@@ -81,18 +81,23 @@
   async function readCloud() {
     try {
       var response = await api("/api/storage?key=" + encodeURIComponent(CLOUD_KEY), { method: "GET" });
-      return { exists: true, payload: unpack(await response.json()) };
+      var etag = response.headers.get("ETag");
+      if (!etag) throw new Error("La sauvegarde cloud n’a pas fourni de version de contrôle. Rien n’a été modifié.");
+      return { exists: true, payload: unpack(await response.json()), etag: etag };
     } catch (error) {
       if (error && error.status === 404) return { exists: false, payload: null };
       throw error;
     }
   }
-  async function writeCloud(state) {
+  async function writeCloud(state, etag) {
     var body = envelope(state);
     if (new Blob([body]).size > 10 * 1024 * 1024) throw new Error("La sauvegarde dépasse la limite de 10 Mo. Les données locales sont conservées.");
+    var headers = { "Content-Type": "application/json; charset=utf-8" };
+    if (etag) headers["If-Match"] = etag;
+    else headers["If-None-Match"] = "*";
     await api("/api/storage?key=" + encodeURIComponent(CLOUD_KEY), {
       method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
+      headers: headers,
       body: body
     });
   }
@@ -118,6 +123,84 @@
     merged.deckSettings = Object.assign({}, cloudState.deckSettings || {}, localState.deckSettings || {});
     return merged;
   }
+  function stableStringify(value) {
+    if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
+    if (value && typeof value === "object") {
+      return "{" + Object.keys(value).sort().map(function (key) {
+        return JSON.stringify(key) + ":" + stableStringify(value[key]);
+      }).join(",") + "}";
+    }
+    return JSON.stringify(value);
+  }
+  function deepEqual(left, right) {
+    return stableStringify(left) === stableStringify(right);
+  }
+  function hasConflictingItems(localItems, cloudItems, keyFn) {
+    var localByKey = Object.create(null);
+    (Array.isArray(localItems) ? localItems : []).forEach(function (item) {
+      if (!item || typeof item !== "object") return;
+      localByKey[keyFn(item)] = item;
+    });
+    return (Array.isArray(cloudItems) ? cloudItems : []).some(function (item) {
+      if (!item || typeof item !== "object") return false;
+      var key = keyFn(item);
+      return Object.prototype.hasOwnProperty.call(localByKey, key) && !deepEqual(localByKey[key], item);
+    });
+  }
+  function canAutoMerge(localState, cloudState) {
+    localState = localState || {};
+    cloudState = cloudState || {};
+    if (hasConflictingItems(localState.cards, cloudState.cards, function (item) {
+      return String(item.id == null ? stableStringify(item) : item.id);
+    })) return false;
+    if (hasConflictingItems(localState.performance, cloudState.performance, function (item) {
+      return String(item.day || "") + "|" + String(item.timestamp || "") + "|" + String(item.total || "") + "|" + String(item.remembered || "");
+    })) return false;
+    if (hasConflictingItems(localState.cardPerformance, cloudState.cardPerformance, function (item) {
+      return String(item.timestamp || "") + "|" + String(item.cardId || "") + "|" + String(item.grade || "");
+    })) return false;
+    var localSettings = localState.deckSettings || {}, cloudSettings = cloudState.deckSettings || {};
+    if (Object.keys(localSettings).some(function (key) {
+      return Object.prototype.hasOwnProperty.call(cloudSettings, key) && !deepEqual(localSettings[key], cloudSettings[key]);
+    })) return false;
+    var mergedFields = { cards: true, performance: true, cardPerformance: true, log: true, deckSettings: true };
+    var allKeys = Object.keys(localState).concat(Object.keys(cloudState));
+    return allKeys.every(function (key) {
+      return mergedFields[key] ||
+        !Object.prototype.hasOwnProperty.call(localState, key) ||
+        !Object.prototype.hasOwnProperty.call(cloudState, key) ||
+        deepEqual(localState[key], cloudState[key]);
+    });
+  }
+  async function mergeAndPersist(explicit) {
+    var lastError = null;
+    for (var attempt = 0; attempt < 5; attempt += 1) {
+      var local = readLocal();
+      var remote = await readCloud();
+      if (!remote.exists) {
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(local));
+        await writeCloud(local, null);
+        return local;
+      }
+      if (!explicit && !canAutoMerge(local, remote.payload)) {
+        var conflict = new Error("Les versions locales et cloud comportent des modifications différentes. Elles restent intactes ; utilisez « Fusionner sans perdre de données » pour choisir la fusion.");
+        conflict.code = "AURORE_MERGE_CONFLICT";
+        throw conflict;
+      }
+      var merged = mergeStates(local, remote.payload);
+      // Store the union locally first. Even if the network changes concurrently,
+      // newly imported cards remain recoverable on this device.
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(merged));
+      try {
+        await writeCloud(merged, remote.etag);
+        return merged;
+      } catch (error) {
+        lastError = error;
+        if (!error || error.status !== 412 || attempt === 4) throw error;
+      }
+    }
+    throw lastError || new Error("La sauvegarde cloud change encore. Les données locales ont été conservées.");
+  }
   async function initialize() {
     if (!window.auroreAuth) { show("Connexion cloud indisponible. Les données locales restent intactes.", true); return; }
     var session = await window.auroreAuth.getSession();
@@ -138,16 +221,36 @@
     }
     var localCards = Array.isArray(latestState.cards) ? latestState.cards.length : 0;
     var remoteCards = Array.isArray(remote.payload.cards) ? remote.payload.cards.length : 0;
-    var localText = JSON.stringify(latestState);
-    var remoteText = JSON.stringify(remote.payload);
-    if (localText === remoteText) {
+    if (deepEqual(latestState, remote.payload)) {
       phase = "ready";
       show("Synchronisé : cartes, mémoires et progression sont sauvegardées dans votre espace privé.");
-    } else {
-      phase = "conflict";
-      mergeButton.hidden = false;
-      show("Une sauvegarde cloud existe déjà (" + remoteCards + " éléments), et cet appareil contient " + localCards + ". Rien n’a été écrasé. Utilisez « Fusionner sans perdre de données » pour réunir les deux versions.");
+      return;
     }
+    if (canAutoMerge(latestState, remote.payload)) {
+      try {
+        await mergeAndPersist(false);
+        phase = "ready";
+        mergeButton.hidden = true;
+        show("Les nouvelles cartes et mémoires sans conflit ont été réunies avec cet appareil. Rechargement…");
+        window.setTimeout(function () { window.location.reload(); }, 500);
+        return;
+      } catch (error) {
+        if (error && error.code === "AURORE_MERGE_CONFLICT") {
+          phase = "conflict";
+          mergeButton.hidden = false;
+          show("Une modification simultanée nécessite une fusion prudente. Rien n’a été supprimé ; utilisez « Fusionner sans perdre de données ».", true);
+          return;
+        }
+        phase = "conflict";
+        mergeButton.hidden = false;
+        show("Les données locales ont été conservées, mais la synchronisation automatique a échoué : " + (error.message || "erreur inconnue") + ".", true);
+        window.setTimeout(function () { window.location.reload(); }, 700);
+        return;
+      }
+    }
+    phase = "conflict";
+    mergeButton.hidden = false;
+    show("Une sauvegarde cloud existe déjà (" + remoteCards + " éléments), et cet appareil contient " + localCards + ". Rien n’a été supprimé. Utilisez « Fusionner sans perdre de données » pour réunir les deux versions.");
   }
   async function mergeCloudAndLocal() {
     if (busy) return;
@@ -155,14 +258,7 @@
     mergeButton.disabled = true;
     try {
       show("Fusion sécurisée des cartes, mémoires et historiques…");
-      var remote = await readCloud();
-      if (!remote.exists) {
-        await writeCloud(readLocal());
-      } else {
-        var merged = mergeStates(readLocal(), remote.payload);
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(merged));
-        await writeCloud(merged);
-      }
+      await mergeAndPersist(true);
       phase = "ready";
       mergeButton.hidden = true;
       show("Fusion terminée. Les éléments des deux versions sont réunis. Rechargement de l’application…");
