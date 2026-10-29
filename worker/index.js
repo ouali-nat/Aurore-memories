@@ -69,7 +69,9 @@ async function authenticatedUser(request, env) {
 }
 
 function normalizedEtag(value) {
-  return String(value || "").replace(/^"|"$/g, "");
+  // Cloudflare may expose large streamed objects with a weak HTTP ETag:
+  // W/"hash". Compare the underlying R2 entity tag, not the HTTP wrapper.
+  return String(value || "").trim().replace(/^W\//i, "").replace(/^"|"$/g, "");
 }
 
 function relativeKey(value) {
@@ -232,7 +234,7 @@ export default {
         service: "aurore-memories",
         authConfigured: Boolean((env.SUPABASE_URL || "https://oegxxndiuovisustjstp.supabase.co") && (env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_FALLBACK)),
         storageConfigured: Boolean(env.MEMORIES_BUCKET),
-        memorySyncVersion: "2026-10-29-atomic-backup-writes-v2-raw-etag",
+        memorySyncVersion: "2026-10-29-atomic-backup-writes-v3-weak-etag-normalization",
         conditionalWrites: true,
         aiConfigured: Boolean(env.AI),
         ttsVersion: "2026-10-22-daily-audio-quota-v2"
