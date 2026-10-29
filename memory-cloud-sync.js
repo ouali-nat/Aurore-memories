@@ -224,6 +224,7 @@
       if (!remoteMeta) {
         if (hasData(connectorBackup)) {
           var firstImport = mergeData(local, connectorBackup);
+          firstImport._auroreConnectorLegacyBackupImportedAt = new Date().toISOString();
           status("Récupération des cartes sauvegardées par le connecteur…", "info");
           try {
             var importedFirst = await writeMainVerified(firstImport, { type: "none" });
@@ -263,8 +264,9 @@
       var remoteEtag = String(remoteMeta.etag || "").replace(/^"|"$/g, "");
       // Import cards saved by the connector into the app's actual primary backup.
       // The legacy source remains untouched, and the primary write is conditional.
-      if (hasData(connectorBackup)) {
+      if (hasData(connectorBackup) && !remote.data._auroreConnectorLegacyBackupImportedAt) {
         var combinedRemote = mergeData(remote.data, connectorBackup);
+        combinedRemote._auroreConnectorLegacyBackupImportedAt = new Date().toISOString();
         if (!sameData(combinedRemote, remote.data)) {
           status("Importation des cartes du connecteur dans la bibliothèque principale…", "info");
           var imported = await writeMainVerified(combinedRemote, { type: "match", etag: remoteEtag });
