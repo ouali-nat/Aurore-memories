@@ -232,7 +232,7 @@ export default {
         service: "aurore-memories",
         authConfigured: Boolean((env.SUPABASE_URL || "https://oegxxndiuovisustjstp.supabase.co") && (env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_FALLBACK)),
         storageConfigured: Boolean(env.MEMORIES_BUCKET),
-        memorySyncVersion: "2026-10-21-cors-app-fix",
+        memorySyncVersion: "2026-10-29-atomic-backup-writes",
         conditionalWrites: true,
         aiConfigured: Boolean(env.AI),
         ttsVersion: "2026-10-22-daily-audio-quota-v2"
