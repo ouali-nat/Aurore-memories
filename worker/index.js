@@ -232,7 +232,7 @@ export default {
         service: "aurore-memories",
         authConfigured: Boolean((env.SUPABASE_URL || "https://oegxxndiuovisustjstp.supabase.co") && (env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_FALLBACK)),
         storageConfigured: Boolean(env.MEMORIES_BUCKET),
-        memorySyncVersion: "2026-10-29-atomic-backup-writes",
+        memorySyncVersion: "2026-10-29-atomic-backup-writes-v2-raw-etag",
         conditionalWrites: true,
         aiConfigured: Boolean(env.AI),
         ttsVersion: "2026-10-22-daily-audio-quota-v2"
@@ -417,7 +417,7 @@ export default {
         // has a race window: another save can commit after HEAD and before PUT.
         // R2 evaluates onlyIf at commit time and returns null on a conflict.
         const onlyIf = ifMatch
-          ? { etagMatches: current.httpEtag }
+          ? { etagMatches: current.etag }
           : ifNoneMatch === "*"
             ? { etagDoesNotMatch: "*" }
             : undefined;
