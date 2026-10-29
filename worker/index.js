@@ -391,7 +391,10 @@ export default {
         }
         const ifMatch = request.headers.get("If-Match");
         const ifNoneMatch = request.headers.get("If-None-Match");
-        const requiresCondition = key === "sauvegarde-memorisations.json" || key.startsWith("archives/");
+        const requiresCondition =
+          key === "sauvegarde-memorisations.json" ||
+          key === "sauvegarde-automatique/memoires-et-cartes.json" ||
+          key.startsWith("archives/");
         const current = await env.MEMORIES_BUCKET.head(objectKey);
         if (ifNoneMatch === "*" && current) {
           return json({ error: "Object already exists; no data was overwritten." }, 412, cors);
@@ -410,13 +413,25 @@ export default {
           return json({ error: "File exceeds 10 MB limit" }, 413, cors);
         }
         const contentType = request.headers.get("Content-Type") || "application/octet-stream";
+        // Make the comparison atomic with the R2 write itself. A HEAD check alone
+        // has a race window: another save can commit after HEAD and before PUT.
+        // R2 evaluates onlyIf at commit time and returns null on a conflict.
+        const onlyIf = ifMatch
+          ? { etagMatches: current.httpEtag }
+          : ifNoneMatch === "*"
+            ? { etagDoesNotMatch: "*" }
+            : undefined;
         const stored = await env.MEMORIES_BUCKET.put(objectKey, body, {
+          ...(onlyIf ? { onlyIf } : {}),
           httpMetadata: {
             contentType,
             cacheControl: "private, no-store"
           },
           customMetadata: { ownerId: user.id }
         });
+        if (!stored) {
+          return json({ error: "Cloud object changed during the write; refresh and retry. No data was overwritten." }, 412, cors);
+        }
         return json({ ok: true, key, etag: stored.etag }, 201, cors);
       }
 
